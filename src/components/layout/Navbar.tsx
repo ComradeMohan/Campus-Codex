@@ -1,3 +1,4 @@
+
 'use client';
 
 import Link from 'next/link';
@@ -22,51 +23,100 @@ export function Navbar() {
     setIsMounted(true);
   }, []);
 
-
   const handleSignOut = async () => {
     try {
       await signOut(auth);
       router.push('/');
+      if (isSheetOpen) {
+        setIsSheetOpen(false);
+      }
     } catch (error) {
       console.error('Sign out error:', error);
     }
   };
 
-  const navLinks = (
-    <>
-      {siteConfig.navItems.map((item) => {
-        if ((item.label === "Login" || item.label === "Register") && currentUser) return null;
-        return (
-          <SheetClose asChild key={item.label}>
-            <Button variant="ghost" asChild className="text-foreground hover:bg-primary/10">
-              <Link href={item.href}>{item.label}</Link>
-            </Button>
-          </SheetClose>
-        );
-      })}
-      {isMounted && currentUser && (
-        <>
-          {userProfile?.role === 'admin' && (
-            <SheetClose asChild>
-              <Button variant="ghost" asChild className="text-foreground hover:bg-primary/10">
-                <Link href="/admin/dashboard">Dashboard</Link>
-              </Button>
-            </SheetClose>
-          )}
-          {userProfile?.role === 'student' && (
-            <SheetClose asChild>
-              <Button variant="ghost" asChild className="text-foreground hover:bg-primary/10">
-                <Link href="/student/labs">Labs</Link>
-              </Button>
-            </SheetClose>
-          )}
-          <Button variant="ghost" onClick={handleSignOut} className="text-foreground hover:bg-destructive/10">
-            Logout
+  const createNavLinks = (isSheetItem: boolean) => {
+    const commonLinkClasses = "text-foreground hover:bg-primary/10";
+
+    const regularNavItems = siteConfig.navItems
+      .filter(item => !((item.label === "Login" || item.label === "Register") && currentUser))
+      .map((item) => {
+        const linkButtonContent = (
+          <Button variant="ghost" asChild className={commonLinkClasses}>
+            <Link href={item.href}>{item.label}</Link>
           </Button>
-        </>
-      )}
-    </>
-  );
+        );
+        if (isSheetItem) {
+          return (
+            <SheetClose asChild key={item.label}>
+              {linkButtonContent}
+            </SheetClose>
+          );
+        }
+        return (
+          <Button variant="ghost" asChild className={commonLinkClasses} key={item.label}>
+            <Link href={item.href}>{item.label}</Link>
+          </Button>
+        );
+      });
+
+    const authConditionalLinks: JSX.Element[] = [];
+    if (isMounted && currentUser) {
+      if (userProfile?.role === 'admin') {
+        const adminLink = (
+          <Button variant="ghost" asChild className={commonLinkClasses}>
+            <Link href="/admin/dashboard">Dashboard</Link>
+          </Button>
+        );
+        if (isSheetItem) {
+          authConditionalLinks.push(
+            <SheetClose asChild key="admin-dashboard">{adminLink}</SheetClose>
+          );
+        } else {
+          authConditionalLinks.push(
+             <Button variant="ghost" asChild className={commonLinkClasses} key="admin-dashboard">
+                <Link href="/admin/dashboard">Dashboard</Link>
+            </Button>
+          );
+        }
+      }
+      if (userProfile?.role === 'student') {
+        const studentLink = (
+          <Button variant="ghost" asChild className={commonLinkClasses}>
+            <Link href="/student/labs">Labs</Link>
+          </Button>
+        );
+        if (isSheetItem) {
+          authConditionalLinks.push(
+            <SheetClose asChild key="student-labs">{studentLink}</SheetClose>
+          );
+        } else {
+          authConditionalLinks.push(
+            <Button variant="ghost" asChild className={commonLinkClasses} key="student-labs">
+                <Link href="/student/labs">Labs</Link>
+            </Button>
+          );
+        }
+      }
+      authConditionalLinks.push(
+        <Button 
+          variant="ghost" 
+          onClick={handleSignOut}
+          className="text-foreground hover:bg-destructive/10"
+          key="logout"
+        >
+          Logout
+        </Button>
+      );
+    }
+
+    return (
+      <>
+        {regularNavItems}
+        {authConditionalLinks}
+      </>
+    );
+  };
   
   if (!isMounted) {
     return (
@@ -81,7 +131,6 @@ export function Navbar() {
     );
   }
 
-
   return (
     <header className="sticky top-0 z-50 w-full border-b border-border/40 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
       <div className="container flex h-16 items-center justify-between">
@@ -92,7 +141,7 @@ export function Navbar() {
 
         {/* Desktop Navigation */}
         <nav className="hidden md:flex items-center space-x-2">
-          {navLinks}
+          {createNavLinks(false)}
         </nav>
 
         {/* Mobile Navigation */}
@@ -119,7 +168,7 @@ export function Navbar() {
                   </SheetClose>
                 </div>
                 <nav className="flex flex-col space-y-3">
-                 {navLinks}
+                 {createNavLinks(true)}
                 </nav>
               </div>
             </SheetContent>
