@@ -19,7 +19,7 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
-import { Loader2, PlusCircle, Trash2, ArrowLeft, HelpCircle, ListChecks, Edit3, XCircle, FileText, Tag, Star } from 'lucide-react';
+import { Loader2, PlusCircle, Trash2, ArrowLeft, HelpCircle, ListChecks, Edit3, XCircle, FileText, Tag, Star, ClipboardEdit } from 'lucide-react';
 import type { ProgrammingLanguage, Question as QuestionType, TestCase, QuestionDifficulty } from '@/types';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 
@@ -162,7 +162,7 @@ export default function ManageQuestionsPage() {
         difficulty: data.difficulty || 'easy',
         maxScore: data.maxScore || 100,
         languageId: languageId,
-        languageName: language.name,
+        languageName: language.name, // Storing language name for easier display elsewhere
         updatedAt: serverTimestamp(),
       };
 
@@ -235,16 +235,23 @@ export default function ManageQuestionsPage() {
 
   return (
     <div className="space-y-8">
-      <div className="flex justify-between items-center">
+      <div className="flex justify-between items-center flex-wrap gap-4">
         <h1 className="text-3xl font-headline flex items-center">
           <HelpCircle className="w-8 h-8 mr-3 text-primary" />
           Manage Questions for {language.name}
         </h1>
-        <Button asChild variant="outline">
-          <Link href="/admin/courses" className="flex items-center gap-2">
-            <ArrowLeft className="h-4 w-4" /> Back to Course Management
-          </Link>
-        </Button>
+        <div className="flex gap-2">
+          <Button asChild variant="outline">
+            <Link href={`/admin/courses/${languageId}/tests/create`} className="flex items-center gap-2">
+              <ClipboardEdit className="h-4 w-4" /> Create New Test
+            </Link>
+          </Button>
+          <Button asChild variant="outline">
+            <Link href="/admin/courses" className="flex items-center gap-2">
+              <ArrowLeft className="h-4 w-4" /> Back to Courses
+            </Link>
+          </Button>
+        </div>
       </div>
 
       <Card className="shadow-lg">

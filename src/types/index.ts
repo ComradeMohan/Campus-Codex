@@ -59,6 +59,7 @@ export type QuestionDifficulty = 'easy' | 'medium' | 'hard';
 export interface Question {
   id: string;
   languageId: string; // The ID of the ProgrammingLanguage
+  languageName: string; // Name of the language, denormalized for easier display
   questionText: string;
   difficulty: QuestionDifficulty;
   maxScore: number;
@@ -68,4 +69,38 @@ export interface Question {
   testCases: TestCase[];
   createdAt: Timestamp | FieldValue;
   updatedAt: Timestamp | FieldValue;
+}
+
+export type OnlineTestStatus = 'draft' | 'published' | 'archived';
+
+export interface OnlineTest {
+  id: string;
+  languageId: string;
+  languageName: string;
+  title: string;
+  description?: string;
+  durationMinutes: number;
+  questionIds: string[];
+  questionsSnapshot: Pick<Question, 'id' | 'questionText' | 'difficulty' | 'maxScore'>[]; // Store a snapshot of key question details
+  totalScore: number;
+  status: OnlineTestStatus;
+  scheduledAt?: Timestamp; // Optional: for future scheduling
+  createdAt: Timestamp | FieldValue;
+  updatedAt: Timestamp | FieldValue;
+  createdBy: string; // UID of the admin who created it
+}
+
+
+export interface EnrolledLanguageProgress {
+  languageId: string;
+  languageName: string;
+  iconName?: string;
+  enrolledAt: Timestamp | FieldValue;
+  currentScore: number;
+  completedQuestions: {
+    [questionId: string]: {
+      scoreAchieved: number;
+      completedAt: Timestamp | FieldValue;
+    };
+  };
 }
