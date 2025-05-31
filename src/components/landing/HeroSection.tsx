@@ -1,3 +1,4 @@
+
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import Image from 'next/image';
@@ -9,7 +10,7 @@ export function HeroSection() {
         <div className="grid gap-8 md:grid-cols-2 md:items-center">
           <div className="space-y-6">
             <h1 className="text-4xl font-bold tracking-tight sm:text-5xl md:text-6xl lg:text-7xl font-headline">
-              Turn your ideas into apps with <span className="text-primary">AI</span>
+              Master Programming with Interactive Labs
             </h1>
             <p className="text-lg text-muted-foreground md:text-xl">
               Empowering students with code labs and online tests. Campus Codex is your partner in coding education excellence.

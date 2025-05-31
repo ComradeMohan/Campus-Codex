@@ -1,9 +1,10 @@
+
 import type { NavItem, FeatureItem } from '@/types';
 import { Code, FileText, BarChart3, Settings, Linkedin, Twitter, Github, BookOpen, ShieldCheck } from 'lucide-react';
 
 export const siteConfig = {
   name: "Campus Codex",
-  description: "Turn your ideas into apps with AI – Empowering students with code labs and online tests.",
+  description: "A learning platform for college students, offering interactive coding labs and online assessments to master programming languages.",
   url: "https://campuscoding.example.com", // Replace with your actual domain
   ogImage: "https://campuscoding.example.com/og.jpg", // Replace with your actual OG image
   links: {

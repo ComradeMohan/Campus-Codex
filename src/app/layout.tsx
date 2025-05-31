@@ -1,3 +1,4 @@
+
 import type { Metadata } from 'next';
 import { Toaster } from '@/components/ui/toaster';
 import { AuthProvider } from '@/contexts/AuthContext';
@@ -5,7 +6,7 @@ import './globals.css';
 
 export const metadata: Metadata = {
   title: 'Campus Codex',
-  description: 'Turn your ideas into apps with AI – Empowering students with code labs and online tests.',
+  description: 'A learning platform for college students, offering interactive coding labs and online assessments to master programming languages.',
 };
 
 export default function RootLayout({
