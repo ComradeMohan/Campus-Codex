@@ -9,7 +9,7 @@ import { collection, getDocs, query, orderBy, where, doc, setDoc, serverTimestam
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { AICodeAssistant } from '@/components/AICodeAssistant';
-import { Loader2, BookOpen, AlertTriangle, CheckCircle, TerminalSquare, Zap, PlayCircle } from 'lucide-react';
+import { Loader2, BookOpen, AlertTriangle, CheckCircle, TerminalSquare, Zap, PlayCircle, ListChecks } from 'lucide-react';
 import type { ProgrammingLanguage } from '@/types';
 import { useToast } from '@/hooks/use-toast';
 import Image from 'next/image';
@@ -56,7 +56,7 @@ export default function StudentCodingLabsPage() {
       const ids = new Set<string>();
       querySnapshot.forEach(langDoc => ids.add(langDoc.id));
       setEnrolledLanguageIds(ids);
-    } catch (error) { // Fixed: Added opening curly brace
+    } catch (error) {
       console.error('Error fetching enrolled languages:', error);
       toast({ title: 'Error', description: 'Failed to fetch your enrolled courses.', variant: 'destructive' });
     }
@@ -93,6 +93,8 @@ export default function StudentCodingLabsPage() {
         languageName: language.name,
         enrolledAt: serverTimestamp(),
         iconName: language.iconName || 'BookOpen', // Store icon for potential future use
+        currentScore: 0,
+        completedQuestions: {},
       });
       setEnrolledLanguageIds(prev => new Set(prev).add(language.id));
       toast({ title: 'Enrollment Successful!', description: `You have enrolled in ${language.name}.` });
@@ -195,7 +197,7 @@ export default function StudentCodingLabsPage() {
       <Card>
         <CardHeader>
           <CardTitle className="font-headline">Available Courses at {userProfile?.collegeName}</CardTitle>
-          <CardDescription>Enroll in a course to start learning and practicing.</CardDescription>
+          <CardDescription>Enroll in a course to start learning and practicing, or view available tests.</CardDescription>
         </CardHeader>
         <CardContent>
           {collegeLanguages.length === 0 && !isLoadingLanguages ? (
@@ -233,13 +235,20 @@ export default function StudentCodingLabsPage() {
                         {language.description || 'No detailed description available for this course.'}
                       </p>
                     </CardContent>
-                    <CardFooter>
+                    <CardFooter className="flex flex-col sm:flex-row gap-2">
                       {isAlreadyEnrolled ? (
-                        <Button asChild variant="secondary" className="w-full">
-                          <Link href={`/student/labs/${language.id}/practice`}>
-                            <PlayCircle className="mr-2 h-4 w-4" /> Start Practice
-                          </Link>
-                        </Button>
+                        <>
+                          <Button asChild variant="secondary" className="w-full">
+                            <Link href={`/student/labs/${language.id}/practice`}>
+                              <PlayCircle className="mr-2 h-4 w-4" /> Start Practice
+                            </Link>
+                          </Button>
+                          <Button asChild variant="outline" className="w-full">
+                            <Link href={`/student/labs/${language.id}/tests`}>
+                              <ListChecks className="mr-2 h-4 w-4" /> View Tests
+                            </Link>
+                          </Button>
+                        </>
                       ) : (
                         <Button
                           onClick={() => handleEnroll(language)}
