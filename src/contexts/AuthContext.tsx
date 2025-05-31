@@ -1,3 +1,4 @@
+
 'use client';
 
 import type { ReactNode } from 'react';
@@ -8,6 +9,10 @@ import { doc, getDoc, setDoc, collection, getDocs } from 'firebase/firestore';
 import { auth, db } from '@/lib/firebase';
 import type { UserProfile, UserRole, College } from '@/types';
 import { Skeleton } from '@/components/ui/skeleton';
+import { isFirebasePlaceholdersUsed } from '@/config/site';
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { Terminal } from 'lucide-react';
+
 
 interface AuthContextType {
   currentUser: User | null;
@@ -15,6 +20,7 @@ interface AuthContextType {
   loading: boolean;
   colleges: College[];
   refreshUserProfile: () => Promise<void>;
+  firebaseConfigWarning?: string | null;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -24,6 +30,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
   const [loading, setLoading] = useState(true);
   const [colleges, setColleges] = useState<College[]>([]);
+  const [firebaseConfigWarning, setFirebaseConfigWarning] = useState<string | null>(null);
 
   const fetchUserProfile = async (user: User | null) => {
     if (user) {
@@ -32,8 +39,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (userDocSnap.exists()) {
         setUserProfile(userDocSnap.data() as UserProfile);
       } else {
-        // This case might happen if user exists in Auth but not Firestore
-        // Or if it's a new user pending profile creation
         setUserProfile(null); 
       }
     } else {
@@ -49,6 +54,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
 
   useEffect(() => {
+    if (isFirebasePlaceholdersUsed && process.env.NODE_ENV === 'development') {
+      setFirebaseConfigWarning(
+        "Firebase configuration is using placeholder values. " +
+        "Please update your .env file with your actual Firebase project credentials. " +
+        "The app may not function correctly until this is resolved."
+      );
+    }
+
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
       setCurrentUser(user);
       await fetchUserProfile(user);
@@ -87,7 +100,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }
 
   return (
-    <AuthContext.Provider value={{ currentUser, userProfile, loading, colleges, refreshUserProfile }}>
+    <AuthContext.Provider value={{ currentUser, userProfile, loading, colleges, refreshUserProfile, firebaseConfigWarning }}>
+      {firebaseConfigWarning && process.env.NODE_ENV === 'development' && (
+        <Alert variant="destructive" className="m-4 rounded-lg border-2 border-red-500 dark:border-red-700">
+          <Terminal className="h-5 w-5" />
+          <AlertTitle className="font-bold text-lg">Development Warning: Firebase Configuration Issue</AlertTitle>
+          <AlertDescription className="text-base">
+            {firebaseConfigWarning} Ensure your <code>.env</code> file contains the correct
+            <code>NEXT_PUBLIC_FIREBASE_API_KEY</code>, <code>NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN</code>, and other
+            Firebase project settings.
+          </AlertDescription>
+        </Alert>
+      )}
       {children}
     </AuthContext.Provider>
   );

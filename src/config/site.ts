@@ -59,3 +59,9 @@ export const siteConfig = {
     appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID || "YOUR_APP_ID",
   },
 };
+
+const fbConfig = siteConfig.firebaseConfig;
+export const isFirebasePlaceholdersUsed =
+  !fbConfig.apiKey || fbConfig.apiKey === "YOUR_API_KEY" ||
+  !fbConfig.authDomain || fbConfig.authDomain === "YOUR_AUTH_DOMAIN" ||
+  !fbConfig.projectId || fbConfig.projectId === "YOUR_PROJECT_ID";
