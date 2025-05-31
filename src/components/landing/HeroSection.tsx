@@ -26,7 +26,7 @@ export function HeroSection() {
           </div>
           <div className="relative aspect-video rounded-xl overflow-hidden shadow-2xl group">
             <Image
-              src="https://storage.googleapis.com/project-pixel-prod-public/drive%2F1kYVDFQoBxr7xV8l7xZ8Z%2Fprocessed%2F1Hn8-L5rF2Qx21oT-k013_A_32d55e6f-488e-4533-86d8-5a950c9191e4.png"
+              src="https://i.ibb.co/tTCZxq7r/b48e06090403848402ed0c3f7ce984a9.jpg"
               alt="Screenshot of a coding interface with multiple panels"
               fill
               style={{ objectFit: 'cover' }}

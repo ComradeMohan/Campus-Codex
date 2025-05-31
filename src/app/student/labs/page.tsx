@@ -156,7 +156,7 @@ export default function StudentCodingLabsPage() {
         <div className="md:flex">
           <div className="md:w-1/2">
              <Image 
-              src="https://placehold.co/800x600.png" 
+              src="https://i.ibb.co/xKbbYqLX/5062a6903f9abd4afdcd2f0a8609617d.jpg" 
               alt="Student coding in a lab" 
               width={800} 
               height={600} 
