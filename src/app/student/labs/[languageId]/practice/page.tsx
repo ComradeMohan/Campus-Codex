@@ -75,7 +75,7 @@ export default function StudentPracticePage() {
       const questionsRef = collection(db, 'colleges', userProfile.collegeId, 'languages', languageId, 'questions');
       const qQuery = query(questionsRef, orderBy('createdAt', 'asc')); 
       const questionsSnap = await getDocs(qQuery);
-      const fetchedQuestions = questionsSnap.docs.map(doc => ({ id: doc.id, ...doc.data() } as QuestionType));
+      const fetchedQuestions = questionsSnap.docs.map(docSnap => ({ id: docSnap.id, ...docSnap.data() } as QuestionType));
       
       if (fetchedQuestions.length === 0) {
         toast({ title: "No Questions", description: `This ${langData.name} course doesn't have any questions yet. Check back later!`, variant: "default" });
@@ -170,6 +170,103 @@ export default function StudentPracticePage() {
       resetOutputs();
     }
   };
+
+  const handleCodeEditorKeyDown = (event: React.KeyboardEvent<HTMLTextAreaElement>) => {
+    const textarea = event.currentTarget;
+    const { selectionStart, selectionEnd } = textarea;
+    const tabSpaces = '    '; // 4 spaces for a tab
+    const currentValue = studentCode;
+
+    if (event.key === 'Tab') {
+      event.preventDefault();
+
+      // Determine the start and end lines of the selection
+      const textBeforeSelectionStart = currentValue.substring(0, selectionStart);
+      const selectedText = currentValue.substring(selectionStart, selectionEnd);
+
+      const startLineIndex = textBeforeSelectionStart.split('\n').length - 1;
+      // Correctly determine endLineIndex: if selection ends on a newline, it's the line before.
+      // If selection is empty, endLineIndex is same as startLineIndex.
+      let effectiveSelectionEnd = selectionEnd;
+      if (selectionStart !== selectionEnd && currentValue[selectionEnd - 1] === '\n') {
+        effectiveSelectionEnd = selectionEnd - 1;
+      }
+      const endLineIndex = currentValue.substring(0, effectiveSelectionEnd).split('\n').length - 1;
+      
+      const lines = currentValue.split('\n');
+      let newStudentCode = currentValue;
+      let newSelectionStart = selectionStart;
+      let newSelectionEnd = selectionEnd;
+
+      if (selectionStart !== selectionEnd && startLineIndex !== endLineIndex) { // Multi-line selection
+        let accumulatedChange = 0;
+        const modifiedLines = lines.map((line, index) => {
+          if (index >= startLineIndex && index <= endLineIndex) {
+            if (event.shiftKey) { // Un-indent
+              if (line.startsWith(tabSpaces)) {
+                const change = -tabSpaces.length;
+                if (index === startLineIndex) newSelectionStart = Math.max(textBeforeSelectionStart.lastIndexOf('\n') + 1, selectionStart + change);
+                accumulatedChange += change;
+                return line.substring(tabSpaces.length);
+              } else if (line.startsWith('\t')) {
+                const change = -1;
+                if (index === startLineIndex) newSelectionStart = Math.max(textBeforeSelectionStart.lastIndexOf('\n') + 1, selectionStart + change);
+                accumulatedChange += change;
+                return line.substring(1);
+              }
+            } else { // Indent
+              const change = tabSpaces.length;
+              if (index === startLineIndex) newSelectionStart = selectionStart + change;
+              accumulatedChange += change;
+              return tabSpaces + line;
+            }
+          }
+          return line;
+        });
+        newStudentCode = modifiedLines.join('\n');
+        newSelectionEnd = selectionEnd + accumulatedChange;
+        // Ensure newSelectionStart didn't go before line start if un-indenting
+        if (event.shiftKey && startLineIndex === endLineIndex) { // if it became single line after unindent
+             const currentLineStartAbs = textBeforeSelectionStart.lastIndexOf('\n') +1;
+             if(newSelectionStart < currentLineStartAbs) newSelectionStart = currentLineStartAbs;
+        }
+
+
+      } else { // Single line (or no selection, treat as single line at cursor)
+        const currentLineStartAbs = textBeforeSelectionStart.lastIndexOf('\n') + 1;
+        const currentLineEndAbs = lines[startLineIndex].length + currentLineStartAbs;
+
+        if (event.shiftKey) { // Un-indent current line
+          if (lines[startLineIndex].startsWith(tabSpaces)) {
+            lines[startLineIndex] = lines[startLineIndex].substring(tabSpaces.length);
+            newStudentCode = lines.join('\n');
+            const change = -tabSpaces.length;
+            newSelectionStart = Math.max(currentLineStartAbs, selectionStart + change);
+            newSelectionEnd = Math.max(currentLineStartAbs, selectionEnd + change);
+          } else if (lines[startLineIndex].startsWith('\t')) {
+            lines[startLineIndex] = lines[startLineIndex].substring(1);
+            newStudentCode = lines.join('\n');
+            const change = -1;
+            newSelectionStart = Math.max(currentLineStartAbs, selectionStart + change);
+            newSelectionEnd = Math.max(currentLineStartAbs, selectionEnd + change);
+          }
+        } else { // Indent current line (or insert tab at cursor)
+          const textToInsert = tabSpaces;
+          newStudentCode = currentValue.substring(0, selectionStart) + textToInsert + currentValue.substring(selectionEnd);
+          newSelectionStart = selectionStart + textToInsert.length;
+          newSelectionEnd = newSelectionStart; // After inserting tab, cursor is after it
+        }
+      }
+      
+      setStudentCode(newStudentCode);
+      // Defer setting selection range for React to update the value
+      setTimeout(() => {
+        textarea.focus();
+        // Ensure selection end is not before selection start
+        textarea.setSelectionRange(newSelectionStart, Math.max(newSelectionStart, newSelectionEnd));
+      }, 0);
+    }
+  };
   
   if (authLoading || isLoadingPageData && !language) {
     return (
@@ -262,10 +359,14 @@ export default function StudentPracticePage() {
                 <Textarea
                   value={studentCode}
                   onChange={(e) => setStudentCode(e.target.value)}
+                  onKeyDown={handleCodeEditorKeyDown}
                   placeholder={`Write your ${language.name} code here...`}
                   rows={15}
                   className="font-mono text-sm bg-background"
                   disabled={isRunningCode}
+                  spellCheck="false" 
+                  autoCapitalize="none" 
+                  autoCorrect="off"
                 />
               </CardContent>
             </Card>
@@ -336,3 +437,4 @@ export default function StudentPracticePage() {
     </div>
   );
 }
+
