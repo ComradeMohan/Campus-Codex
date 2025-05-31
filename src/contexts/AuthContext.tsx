@@ -5,7 +5,7 @@ import type { ReactNode } from 'react';
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import type { User } from 'firebase/auth';
 import { onAuthStateChanged } from 'firebase/auth';
-import { doc, getDoc, setDoc, collection, getDocs } from 'firebase/firestore';
+import { doc, getDoc, setDoc, collection, getDocs, updateDoc } from 'firebase/firestore';
 import { auth, db } from '@/lib/firebase';
 import type { UserProfile, UserRole, College } from '@/types';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -33,13 +33,28 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [firebaseConfigWarning, setFirebaseConfigWarning] = useState<string | null>(null);
 
   const fetchUserProfile = async (user: User | null) => {
-    if (user) {
+    if (user) { // user here is the potentially reloaded Firebase Auth user object
       const userDocRef = doc(db, 'users', user.uid);
       const userDocSnap = await getDoc(userDocRef);
+
       if (userDocSnap.exists()) {
-        setUserProfile(userDocSnap.data() as UserProfile);
+        const userProfileDataFromDb = userDocSnap.data() as UserProfile;
+        let finalProfile = userProfileDataFromDb;
+
+        // Sync Firestore with the latest from Firebase Auth if needed
+        if (user.emailVerified && !userProfileDataFromDb.isEmailVerified) {
+          try {
+            await updateDoc(userDocRef, { isEmailVerified: true });
+            finalProfile = { ...userProfileDataFromDb, isEmailVerified: true };
+          } catch (dbError) {
+            console.error("AuthContext: Failed to update isEmailVerified in Firestore:", dbError);
+            // Proceed with potentially stale DB data for now
+          }
+        }
+        setUserProfile(finalProfile);
       } else {
-        setUserProfile(null); 
+        console.warn(`AuthContext: User profile not found in Firestore for UID ${user.uid}. This might be an issue if user just registered.`);
+        setUserProfile(null);
       }
     } else {
       setUserProfile(null);
@@ -48,7 +63,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   
   const refreshUserProfile = async () => {
     if (currentUser) {
-      await fetchUserProfile(currentUser);
+      try {
+        await currentUser.reload(); // Reload the Firebase user object
+        // After reload, currentUser object is updated in-place, including emailVerified
+        await fetchUserProfile(auth.currentUser); // Pass the potentially updated auth.currentUser
+      } catch (error) {
+        console.error("AuthContext: Error reloading user:", error);
+        // If reload fails, still try to fetch profile with the current currentUser state
+        await fetchUserProfile(currentUser);
+      }
     }
   };
 
@@ -64,7 +87,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
       setCurrentUser(user);
-      await fetchUserProfile(user);
+      await fetchUserProfile(user); // Initial fetch on auth state change
       setLoading(false);
     });
 
@@ -72,7 +95,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       try {
         const collegesCollection = collection(db, 'colleges');
         const collegeSnapshot = await getDocs(collegesCollection);
-        const collegeList = collegeSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as College));
+        const collegeList = collegeSnapshot.docs.map(docSnap => ({ id: docSnap.id, ...docSnap.data() } as College));
         setColleges(collegeList);
       } catch (error) {
         console.error("Error fetching colleges: ", error);

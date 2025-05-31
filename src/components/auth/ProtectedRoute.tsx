@@ -9,7 +9,7 @@ import { Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { sendEmailVerification } from 'firebase/auth';
 import { auth } from '@/lib/firebase';
-import { toast } from '@/hooks/use-toast';
+import { useToast } from '@/hooks/use-toast';
 
 interface ProtectedRouteProps {
   children: React.ReactNode;
@@ -17,9 +17,11 @@ interface ProtectedRouteProps {
 }
 
 export function ProtectedRoute({ children, allowedRoles }: ProtectedRouteProps) {
-  const { currentUser, userProfile, loading } = useAuth();
+  const { currentUser, userProfile, loading, refreshUserProfile } = useAuth();
   const router = useRouter();
+  const { toast } = useToast();
   const [isResending, setIsResending] = useState(false);
+  const [isRefreshingStatus, setIsRefreshingStatus] = useState(false);
 
   useEffect(() => {
     if (!loading) {
@@ -31,8 +33,7 @@ export function ProtectedRoute({ children, allowedRoles }: ProtectedRouteProps) 
         else if (userProfile.role === 'student') router.push('/student/labs');
         else router.push('/');
       } else if (userProfile && userProfile.role !== 'admin' && !userProfile.isEmailVerified) {
-        // For non-admin users, if email is not verified, don't immediately redirect.
-        // The component will render the verification prompt below.
+        // For non-admin users, if email is not verified, component renders verification prompt.
       }
     }
   }, [currentUser, userProfile, loading, router, allowedRoles]);
@@ -65,6 +66,29 @@ export function ProtectedRoute({ children, allowedRoles }: ProtectedRouteProps) 
     }
   };
 
+  const handleRefreshStatus = async () => {
+    setIsRefreshingStatus(true);
+    try {
+      await refreshUserProfile();
+      // The userProfile state in AuthContext will be updated.
+      // The useEffect in this component will re-evaluate and either show children
+      // or keep showing the verification message if still not verified.
+      toast({
+        title: "Status Refreshed",
+        description: "Your email verification status has been re-checked.",
+      });
+    } catch (error: any) {
+      console.error("Refresh status error:", error);
+      toast({
+        title: "Error",
+        description: "Failed to refresh status. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsRefreshingStatus(false);
+    }
+  };
+
   if (loading) {
     return (
       <div className="flex h-screen items-center justify-center bg-background">
@@ -73,8 +97,6 @@ export function ProtectedRoute({ children, allowedRoles }: ProtectedRouteProps) 
     );
   }
   
-  // If not loading, and no current user, means redirect is in progress or will happen.
-  // Or, if user exists but profile is loading (initial load after login), show loader.
   if (!currentUser || (currentUser && !userProfile && allowedRoles)) {
      return (
       <div className="flex h-screen items-center justify-center bg-background">
@@ -83,9 +105,7 @@ export function ProtectedRoute({ children, allowedRoles }: ProtectedRouteProps) 
     );
   }
 
-  // If user is logged in, profile is loaded, but role doesn't match
   if (userProfile && allowedRoles && !allowedRoles.includes(userProfile.role)) {
-    // Redirect is handled by useEffect, show loader while redirecting
     return (
       <div className="flex h-screen items-center justify-center bg-background">
         <Loader2 className="h-12 w-12 animate-spin text-primary" />
@@ -93,28 +113,33 @@ export function ProtectedRoute({ children, allowedRoles }: ProtectedRouteProps) 
     );
   }
   
-  // Check for email verification for non-admin roles
   if (userProfile && userProfile.role !== 'admin' && !userProfile.isEmailVerified) {
      return (
       <div className="flex flex-col h-screen items-center justify-center bg-background p-4 text-center">
         <h1 className="text-2xl font-bold text-primary mb-4">Email Verification Required</h1>
-        <p className="text-muted-foreground mb-6">
-          Your email address <span className="font-semibold">{currentUser.email}</span> is not verified.
-          Please check your inbox (and spam folder) for the verification link, or request a new one.
+        <p className="text-muted-foreground mb-6 max-w-md">
+          Your email address <span className="font-semibold">{currentUser?.email}</span> is not verified.
+          Please check your inbox (and spam folder) for the verification link we sent.
+          If you&apos;ve already verified, click &quot;Refresh Status&quot;.
         </p>
-        <div className="flex flex-col sm:flex-row gap-4">
-          <Button onClick={handleResendVerification} disabled={isResending}>
-            {isResending ? (
-              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-            ) : null}
+        <div className="flex flex-col sm:flex-row items-center gap-4">
+          <Button onClick={handleResendVerification} disabled={isResending || isRefreshingStatus}>
+            {isResending ? ( <Loader2 className="mr-2 h-4 w-4 animate-spin" /> ) : null}
             Resend Verification Email
           </Button>
-          <Button variant="outline" onClick={() => router.push('/login')}>Go to Login</Button>
+          <Button 
+            onClick={handleRefreshStatus} 
+            variant="outline" 
+            disabled={isRefreshingStatus || isResending}
+          >
+            {isRefreshingStatus ? ( <Loader2 className="mr-2 h-4 w-4 animate-spin" /> ) : null}
+            Refresh Status
+          </Button>
         </div>
+         <Button variant="link" className="mt-8" onClick={() => { auth.signOut(); router.push('/login');}}>Go to Login</Button>
       </div>
     );
   }
 
-  // If all checks pass (user exists, profile loaded, role matches, email verified or admin)
   return <>{children}</>;
 }
