@@ -1,3 +1,4 @@
+
 'use client';
 
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -84,12 +85,19 @@ export function AdminRegisterForm() {
       form.reset();
     } catch (error: any) {
       console.error('Admin registration error:', error);
-      let description = error.message || 'An unexpected error occurred. Please try again.';
-      if (error.code === 'auth/operation-not-allowed') {
-        description = 'Email link sign-in (passwordless) is not enabled for this Firebase project. Please enable it in your Firebase console (Authentication > Sign-in method > Email/Password provider).';
-      } else if (error.code === 'auth/api-key-not-valid') {
-        description = 'The Firebase API key is not valid. Please check your Firebase project configuration in your .env file.';
+      let description = 'An unexpected error occurred. Please try again.';
+      if (error && typeof error === 'object' && 'code' in error) {
+        if (error.code === 'auth/operation-not-allowed') {
+          description = 'Email link sign-in (passwordless) is not enabled for this Firebase project. Please enable it in your Firebase console (Authentication > Sign-in method > Email/Password provider).';
+        } else if (error.code === 'auth/api-key-not-valid') {
+          description = 'The Firebase API key is not valid. Please check your Firebase project configuration in your .env file.';
+        } else {
+          description = error.message || description;
+        }
+      } else if (error instanceof Error) {
+        description = error.message;
       }
+      
       toast({
         title: 'Registration Error',
         description: description,
@@ -205,3 +213,5 @@ export function AdminRegisterForm() {
     </Card>
   );
 }
+
+    
