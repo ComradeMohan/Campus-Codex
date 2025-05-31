@@ -12,9 +12,18 @@ import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { useToast } from '@/hooks/use-toast';
-import { Loader2, ArrowLeft, Lightbulb, Terminal, ChevronLeft, ChevronRight, BookOpen } from 'lucide-react';
-import type { ProgrammingLanguage, Question as QuestionType } from '@/types';
+import { Loader2, ArrowLeft, Lightbulb, Terminal, ChevronLeft, ChevronRight, BookOpen, CheckCircle, XCircle, AlertTriangle } from 'lucide-react';
+import type { ProgrammingLanguage, Question as QuestionType, TestCase } from '@/types';
 import { Separator } from '@/components/ui/separator';
+
+interface TestCaseResult {
+  testCaseNumber: number;
+  input: string;
+  expectedOutput: string;
+  actualOutput: string;
+  passed: boolean;
+  error?: string;
+}
 
 export default function StudentPracticePage() {
   const { userProfile, loading: authLoading } = useAuth();
@@ -29,21 +38,28 @@ export default function StudentPracticePage() {
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
   const [studentCode, setStudentCode] = useState('');
   const [output, setOutput] = useState('');
+  const [testResults, setTestResults] = useState<TestCaseResult[]>([]);
   
   const [isLoadingPageData, setIsLoadingPageData] = useState(true);
   const [isRunningCode, setIsRunningCode] = useState(false);
+  const [executionError, setExecutionError] = useState<string | null>(null);
+  const [compileError, setCompileError] = useState<string | null>(null);
+
 
   const fetchLanguageAndQuestions = useCallback(async () => {
     if (!userProfile?.collegeId || !languageId) {
-      if(!authLoading) { // only show error if auth is done loading and still no collegeId
+      if(!authLoading) { 
          toast({ title: "Error", description: "Missing user or language information.", variant: "destructive" });
          router.push('/student/labs');
       }
       return;
     }
     setIsLoadingPageData(true);
+    setOutput('');
+    setTestResults([]);
+    setExecutionError(null);
+    setCompileError(null);
     try {
-      // Fetch language details
       const langDocRef = doc(db, 'colleges', userProfile.collegeId, 'languages', languageId);
       const langSnap = await getDoc(langDocRef);
       if (!langSnap.exists()) {
@@ -51,20 +67,21 @@ export default function StudentPracticePage() {
         router.push('/student/labs');
         return;
       }
-      setLanguage({ id: langSnap.id, ...langSnap.data() } as ProgrammingLanguage);
+      const langData = { id: langSnap.id, ...langSnap.data() } as ProgrammingLanguage;
+      setLanguage(langData);
+      setStudentCode(`// Start writing your ${langData.name} code here\n\n`);
 
-      // Fetch questions for the language
+
       const questionsRef = collection(db, 'colleges', userProfile.collegeId, 'languages', languageId, 'questions');
-      const qQuery = query(questionsRef, orderBy('createdAt', 'asc')); // Or some other order
+      const qQuery = query(questionsRef, orderBy('createdAt', 'asc')); 
       const questionsSnap = await getDocs(qQuery);
       const fetchedQuestions = questionsSnap.docs.map(doc => ({ id: doc.id, ...doc.data() } as QuestionType));
       
       if (fetchedQuestions.length === 0) {
-        toast({ title: "No Questions", description: "This course doesn't have any questions yet. Check back later!", variant: "default" });
-        // Optionally, redirect or show a specific message component
+        toast({ title: "No Questions", description: `This ${langData.name} course doesn't have any questions yet. Check back later!`, variant: "default" });
       }
       setQuestions(fetchedQuestions);
-      setCurrentQuestionIndex(0); // Start with the first question
+      setCurrentQuestionIndex(0);
 
     } catch (error) {
       console.error("Error fetching course/questions:", error);
@@ -75,7 +92,7 @@ export default function StudentPracticePage() {
   }, [userProfile?.collegeId, languageId, toast, router, authLoading]);
 
   useEffect(() => {
-    if (!authLoading) { // Ensure userProfile is resolved before fetching
+    if (!authLoading) { 
         fetchLanguageAndQuestions();
     }
   }, [authLoading, fetchLanguageAndQuestions]);
@@ -83,36 +100,74 @@ export default function StudentPracticePage() {
   const currentQuestion = questions[currentQuestionIndex];
 
   const handleRunCode = async () => {
-    setIsRunningCode(true);
-    setOutput('Simulating code execution...\n');
-    // In a real scenario, you'd send `studentCode` and `currentQuestion.testCases`
-    // to a secure code execution environment.
-    await new Promise(resolve => setTimeout(resolve, 1500)); // Simulate delay
-    setOutput(prev => prev + 'Execution finished. (This is a simulation)');
-    // Add mock test case pass/fail messages
-    if (currentQuestion?.testCases?.length > 0) {
-        setOutput(prev => prev + `\n\nMock Test Results for "${currentQuestion.questionText.substring(0,30)}...":\n`);
-        currentQuestion.testCases.forEach((tc, idx) => {
-            const pass = Math.random() > 0.3; // Simulate pass/fail
-            setOutput(prev => prev + `Test Case ${idx + 1}: ${pass ? 'PASSED ✅' : 'FAILED ❌'}\n`);
-        });
+    if (!currentQuestion || !language) {
+        toast({title: "Cannot run code", description: "Question or language not loaded.", variant: "destructive"});
+        return;
     }
-    setIsRunningCode(false);
+    setIsRunningCode(true);
+    setOutput('Executing your code...\n');
+    setTestResults([]);
+    setExecutionError(null);
+    setCompileError(null);
+
+    try {
+        const response = await fetch('/api/execute-code', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                language: language.name,
+                code: studentCode,
+                testCases: currentQuestion.testCases,
+            }),
+        });
+
+        if (!response.ok) {
+            const errorData = await response.json().catch(() => ({ executionError: "Failed to process the request. Server returned an error." }));
+            throw new Error(errorData.executionError || `Server error: ${response.status}`);
+        }
+
+        const result = await response.json();
+        
+        setOutput(result.generalOutput || '');
+        setTestResults(result.testCaseResults || []);
+        if (result.compileError) setCompileError(result.compileError);
+        if (result.executionError) setExecutionError(result.executionError);
+
+    } catch (error: any) {
+        console.error("Error running code:", error);
+        setOutput(prev => prev + `\nClient-side error during execution: ${error.message}`);
+        setExecutionError(`Client-side error: ${error.message}`);
+        toast({ title: "Execution Error", description: error.message || "Failed to run code.", variant: "destructive" });
+    } finally {
+        setIsRunningCode(false);
+    }
+  };
+
+  const resetOutputs = () => {
+    setOutput('');
+    setTestResults([]);
+    setExecutionError(null);
+    setCompileError(null);
+     if (language) {
+       setStudentCode(`// Start writing your ${language.name} code here\n\n`);
+     } else {
+       setStudentCode('');
+     }
   };
 
   const handleNextQuestion = () => {
     if (currentQuestionIndex < questions.length - 1) {
       setCurrentQuestionIndex(prev => prev + 1);
-      setStudentCode(''); // Reset code for new question
-      setOutput('');     // Reset output
+      resetOutputs();
     }
   };
 
   const handlePrevQuestion = () => {
     if (currentQuestionIndex > 0) {
       setCurrentQuestionIndex(prev => prev - 1);
-      setStudentCode('');
-      setOutput('');
+      resetOutputs();
     }
   };
   
@@ -161,12 +216,8 @@ export default function StudentPracticePage() {
         </Card>
       ) : !currentQuestion && !isLoadingPageData ? (
          <Card className="shadow-lg">
-          <CardHeader>
-            <CardTitle>Loading Question...</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <Loader2 className="h-8 w-8 animate-spin text-primary"/>
-          </CardContent>
+          <CardHeader><CardTitle>Loading Question...</CardTitle></CardHeader>
+          <CardContent><Loader2 className="h-8 w-8 animate-spin text-primary"/></CardContent>
         </Card>
       ) : currentQuestion ? (
         <>
@@ -175,10 +226,10 @@ export default function StudentPracticePage() {
               <div className="flex justify-between items-center">
                 <CardTitle className="text-xl font-semibold">Question {currentQuestionIndex + 1} of {questions.length}</CardTitle>
                 <div className="flex space-x-2">
-                  <Button onClick={handlePrevQuestion} disabled={currentQuestionIndex === 0} variant="outline" size="sm">
+                  <Button onClick={handlePrevQuestion} disabled={currentQuestionIndex === 0 || isRunningCode} variant="outline" size="sm">
                     <ChevronLeft className="h-4 w-4 mr-1" /> Prev
                   </Button>
-                  <Button onClick={handleNextQuestion} disabled={currentQuestionIndex === questions.length - 1} variant="outline" size="sm">
+                  <Button onClick={handleNextQuestion} disabled={currentQuestionIndex === questions.length - 1 || isRunningCode} variant="outline" size="sm">
                     Next <ChevronRight className="h-4 w-4 ml-1" />
                   </Button>
                 </div>
@@ -205,9 +256,7 @@ export default function StudentPracticePage() {
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             <Card className="shadow-md">
               <CardHeader>
-                <CardTitle className="text-lg flex items-center">
-                  <Terminal className="w-5 h-5 mr-2" /> Your Code
-                </CardTitle>
+                <CardTitle className="text-lg flex items-center"><Terminal className="w-5 h-5 mr-2" /> Your Code</CardTitle>
               </CardHeader>
               <CardContent>
                 <Textarea
@@ -215,31 +264,64 @@ export default function StudentPracticePage() {
                   onChange={(e) => setStudentCode(e.target.value)}
                   placeholder={`Write your ${language.name} code here...`}
                   rows={15}
-                  className="font-code text-sm bg-background"
+                  className="font-mono text-sm bg-background"
+                  disabled={isRunningCode}
                 />
               </CardContent>
             </Card>
 
             <Card className="shadow-md">
               <CardHeader>
-                <CardTitle className="text-lg flex items-center">
-                  <Lightbulb className="w-5 h-5 mr-2" /> Output / Console
-                </CardTitle>
+                <CardTitle className="text-lg flex items-center"><Lightbulb className="w-5 h-5 mr-2" /> Output / Console</CardTitle>
               </CardHeader>
               <CardContent>
+                {compileError && (
+                    <div className="mb-4 p-3 bg-destructive/10 border border-destructive text-destructive rounded-md text-sm">
+                        <div className="flex items-center font-semibold mb-1"><AlertTriangle className="w-4 h-4 mr-2" />Compilation Error:</div>
+                        <pre className="whitespace-pre-wrap font-mono">{compileError}</pre>
+                    </div>
+                )}
+                {executionError && (
+                     <div className="mb-4 p-3 bg-destructive/10 border border-destructive text-destructive rounded-md text-sm">
+                        <div className="flex items-center font-semibold mb-1"><AlertTriangle className="w-4 h-4 mr-2" />Execution Error:</div>
+                        <pre className="whitespace-pre-wrap font-mono">{executionError}</pre>
+                    </div>
+                )}
                 <Textarea
                   value={output}
                   readOnly
-                  placeholder="Code output will appear here..."
+                  placeholder="Code output and test results will appear here..."
                   rows={10}
-                  className="font-code text-sm bg-muted/50"
+                  className="font-mono text-sm bg-muted/50"
                 />
+                {testResults.length > 0 && (
+                  <div className="mt-4 space-y-3">
+                    <h4 className="text-md font-semibold">Test Case Results:</h4>
+                    {testResults.map((result) => (
+                      <Card key={result.testCaseNumber} className={`p-3 ${result.passed ? 'bg-green-500/10 border-green-500' : 'bg-red-500/10 border-red-500'}`}>
+                        <div className="flex justify-between items-center mb-1">
+                          <span className="font-medium">Test Case {result.testCaseNumber}</span>
+                          {result.passed ? (
+                            <span className="text-xs font-semibold text-green-700 bg-green-200 px-2 py-0.5 rounded-full flex items-center"><CheckCircle className="w-3 h-3 mr-1"/> PASSED</span>
+                          ) : (
+                            <span className="text-xs font-semibold text-red-700 bg-red-200 px-2 py-0.5 rounded-full flex items-center"><XCircle className="w-3 h-3 mr-1"/> FAILED</span>
+                          )}
+                        </div>
+                        <div className="text-xs space-y-1">
+                          <p><strong className="text-muted-foreground">Input:</strong> <pre className="inline whitespace-pre-wrap font-mono bg-muted/30 p-1 rounded text-xs">{result.input}</pre></p>
+                          <p><strong className="text-muted-foreground">Expected:</strong> <pre className="inline whitespace-pre-wrap font-mono bg-muted/30 p-1 rounded text-xs">{result.expectedOutput}</pre></p>
+                           {!result.passed && <p><strong className="text-muted-foreground">Actual:</strong> <pre className="inline whitespace-pre-wrap font-mono bg-muted/30 p-1 rounded text-xs">{result.actualOutput}</pre></p>}
+                           {result.error && <p className="text-red-600"><strong className="text-muted-foreground">Error:</strong> {result.error}</p>}
+                        </div>
+                      </Card>
+                    ))}
+                  </div>
+                )}
                  <div className="mt-4 flex flex-col sm:flex-row gap-2">
                     <Button onClick={handleRunCode} disabled={isRunningCode || !studentCode.trim()} className="flex-1">
-                    {isRunningCode ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
-                    Run Code (Simulated)
+                    {isRunningCode ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Terminal className="mr-2 h-4 w-4" />}
+                    Run Code
                     </Button>
-                    {/* <Button variant="secondary" className="flex-1" disabled>View Solution (Coming Soon)</Button> */}
                 </div>
               </CardContent>
             </Card>
@@ -254,4 +336,3 @@ export default function StudentPracticePage() {
     </div>
   );
 }
-
