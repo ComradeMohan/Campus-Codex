@@ -45,7 +45,7 @@ export interface ProgrammingLanguage {
   name: string;
   description?: string;
   iconName?: string; // To store the name of a Lucide icon
-  createdAt: Timestamp | FieldValue; 
+  createdAt: Timestamp | FieldValue;
 }
 
 export interface TestCase {
@@ -54,10 +54,13 @@ export interface TestCase {
   // score?: number; // Future consideration
 }
 
+export type QuestionDifficulty = 'easy' | 'medium' | 'hard';
+
 export interface Question {
   id: string;
   languageId: string; // The ID of the ProgrammingLanguage
   questionText: string;
+  difficulty: QuestionDifficulty;
   sampleInput?: string;
   sampleOutput?: string;
   solution?: string;

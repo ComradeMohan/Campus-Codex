@@ -16,9 +16,11 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
-import { Loader2, PlusCircle, Trash2, ArrowLeft, HelpCircle, ListChecks, Edit3, XCircle, FileText } from 'lucide-react';
-import type { ProgrammingLanguage, Question as QuestionType, TestCase } from '@/types';
+import { Loader2, PlusCircle, Trash2, ArrowLeft, HelpCircle, ListChecks, Edit3, XCircle, FileText, Tag } from 'lucide-react';
+import type { ProgrammingLanguage, Question as QuestionType, TestCase, QuestionDifficulty } from '@/types';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 
 const testCaseSchema = z.object({
@@ -28,6 +30,7 @@ const testCaseSchema = z.object({
 
 const questionFormSchema = z.object({
   questionText: z.string().min(20, { message: "Question text must be at least 20 characters." }),
+  difficulty: z.enum(['easy', 'medium', 'hard'], { required_error: "Please select a difficulty."}),
   sampleInput: z.string().optional(),
   sampleOutput: z.string().optional(),
   solution: z.string().optional(),
@@ -35,6 +38,8 @@ const questionFormSchema = z.object({
 });
 
 type QuestionFormData = z.infer<typeof questionFormSchema>;
+
+const difficultyLevels: QuestionDifficulty[] = ['easy', 'medium', 'hard'];
 
 export default function ManageQuestionsPage() {
   const { userProfile } = useAuth();
@@ -58,6 +63,7 @@ export default function ManageQuestionsPage() {
     resolver: zodResolver(questionFormSchema),
     defaultValues: {
       questionText: '',
+      difficulty: 'medium',
       sampleInput: '',
       sampleOutput: '',
       solution: '',
@@ -90,7 +96,7 @@ export default function ManageQuestionsPage() {
       }
     }
   }, [userProfile?.collegeId, languageId, toast, router]);
-  
+
   const fetchQuestions = useCallback(async () => {
     if (userProfile?.collegeId && languageId) {
       setIsLoadingQuestions(true);
@@ -119,10 +125,11 @@ export default function ManageQuestionsPage() {
     setEditingQuestion(question);
     form.reset({
       questionText: question.questionText,
+      difficulty: question.difficulty,
       sampleInput: question.sampleInput || '',
       sampleOutput: question.sampleOutput || '',
       solution: question.solution || '',
-      testCases: question.testCases.map(tc => ({ input: tc.input, expectedOutput: tc.expectedOutput })), // Ensure test cases structure matches form
+      testCases: question.testCases.map(tc => ({ input: tc.input, expectedOutput: tc.expectedOutput })),
     });
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
@@ -131,6 +138,7 @@ export default function ManageQuestionsPage() {
     setEditingQuestion(null);
     form.reset({
       questionText: '',
+      difficulty: 'medium',
       sampleInput: '',
       sampleOutput: '',
       solution: '',
@@ -146,7 +154,6 @@ export default function ManageQuestionsPage() {
     setIsSubmitting(true);
     try {
       if (editingQuestion) {
-        // Update existing question
         const questionDocRef = doc(db, 'colleges', userProfile.collegeId, 'languages', languageId, 'questions', editingQuestion.id);
         const updatedQuestionData = {
           ...data,
@@ -157,7 +164,6 @@ export default function ManageQuestionsPage() {
         await updateDoc(questionDocRef, updatedQuestionData);
         toast({ title: "Question Updated!", description: `Question for ${language.name} has been updated.` });
       } else {
-        // Add new question
         const questionCollectionRef = collection(db, 'colleges', userProfile.collegeId, 'languages', languageId, 'questions');
         const newQuestionData = {
           ...data,
@@ -169,8 +175,8 @@ export default function ManageQuestionsPage() {
         await addDoc(questionCollectionRef, newQuestionData);
         toast({ title: "Question Added!", description: `New question for ${language.name} has been saved.` });
       }
-      handleCancelEdit(); // Reset form and editing state
-      fetchQuestions(); // Refresh the list of questions
+      handleCancelEdit();
+      fetchQuestions();
     } catch (error) {
       console.error("Error submitting question:", error);
       toast({ title: "Error", description: `Failed to ${editingQuestion ? 'update' : 'add'} question. Please try again.`, variant: "destructive" });
@@ -184,7 +190,7 @@ export default function ManageQuestionsPage() {
       toast({ title: "Error", description: "Cannot delete question. Missing information.", variant: "destructive" });
       return;
     }
-    setIsSubmitting(true); // Reuse for delete operation
+    setIsSubmitting(true);
     try {
       const questionDocRef = doc(db, 'colleges', userProfile.collegeId, 'languages', languageId, 'questions', questionToDelete.id);
       await deleteDoc(questionDocRef);
@@ -204,7 +210,7 @@ export default function ManageQuestionsPage() {
     setQuestionToDelete(question);
     setShowDeleteConfirm(true);
   };
-  
+
   if (isLoadingLanguage) {
     return <div className="container mx-auto py-8 flex justify-center items-center"><Loader2 className="h-12 w-12 animate-spin text-primary" /> <span className="ml-4 text-lg">Loading Language Details...</span></div>;
   }
@@ -212,6 +218,16 @@ export default function ManageQuestionsPage() {
   if (!language) {
     return <div className="container mx-auto py-8 text-center">Language details could not be loaded.</div>;
   }
+  
+  const getDifficultyBadgeVariant = (difficulty: QuestionDifficulty) => {
+    switch (difficulty) {
+      case 'easy': return 'default'; // Or a specific green variant
+      case 'medium': return 'secondary'; // Or a specific yellow/orange variant
+      case 'hard': return 'destructive'; // Or a specific red variant
+      default: return 'outline';
+    }
+  };
+
 
   return (
     <div className="space-y-8">
@@ -253,6 +269,32 @@ export default function ManageQuestionsPage() {
                 )}
               />
 
+              <FormField
+                control={form.control}
+                name="difficulty"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel className="text-base">Difficulty</FormLabel>
+                    <Select onValueChange={field.onChange} defaultValue={field.value}>
+                      <FormControl>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select difficulty" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        {difficultyLevels.map(level => (
+                          <SelectItem key={level} value={level} className="capitalize">
+                            {level}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <FormField
                   control={form.control}
@@ -281,7 +323,7 @@ export default function ManageQuestionsPage() {
                   )}
                 />
               </div>
-              
+
               <FormField
                 control={form.control}
                 name="solution"
@@ -396,7 +438,14 @@ export default function ManageQuestionsPage() {
                 <Card key={q.id} className="bg-card border">
                   <CardHeader className="pb-3">
                     <CardTitle className="text-lg flex items-center justify-between">
-                      <span>Question {questions.length - index}</span>
+                        <div className="flex items-center gap-2">
+                            <span>Question {questions.length - index}</span>
+                            {q.difficulty && (
+                                <Badge variant={getDifficultyBadgeVariant(q.difficulty)} className="capitalize text-xs px-2 py-0.5">
+                                    {q.difficulty}
+                                </Badge>
+                            )}
+                        </div>
                         <div className="flex space-x-2">
                           <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => handleStartEdit(q)}>
                             <Edit3 className="h-4 w-4" />
@@ -441,4 +490,3 @@ export default function ManageQuestionsPage() {
     </div>
   );
 }
-      

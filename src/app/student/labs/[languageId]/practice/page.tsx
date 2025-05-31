@@ -11,9 +11,10 @@ import { doc, getDoc, collection, query, getDocs, orderBy } from 'firebase/fires
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
-import { Loader2, ArrowLeft, Lightbulb, Terminal, ChevronLeft, ChevronRight, BookOpen, CheckCircle, XCircle, AlertTriangle } from 'lucide-react';
-import type { ProgrammingLanguage, Question as QuestionType, TestCase } from '@/types';
+import { Loader2, ArrowLeft, Lightbulb, Terminal, ChevronLeft, ChevronRight, BookOpen, CheckCircle, XCircle, AlertTriangle, Tag } from 'lucide-react';
+import type { ProgrammingLanguage, Question as QuestionType, TestCase, QuestionDifficulty } from '@/types';
 import { Separator } from '@/components/ui/separator';
 
 interface TestCaseResult {
@@ -39,7 +40,7 @@ export default function StudentPracticePage() {
   const [studentCode, setStudentCode] = useState('');
   const [output, setOutput] = useState('');
   const [testResults, setTestResults] = useState<TestCaseResult[]>([]);
-  
+
   const [isLoadingPageData, setIsLoadingPageData] = useState(true);
   const [isRunningCode, setIsRunningCode] = useState(false);
   const [executionError, setExecutionError] = useState<string | null>(null);
@@ -48,7 +49,7 @@ export default function StudentPracticePage() {
 
   const fetchLanguageAndQuestions = useCallback(async () => {
     if (!userProfile?.collegeId || !languageId) {
-      if(!authLoading) { 
+      if(!authLoading) {
          toast({ title: "Error", description: "Missing user or language information.", variant: "destructive" });
          router.push('/student/labs');
       }
@@ -73,10 +74,10 @@ export default function StudentPracticePage() {
 
 
       const questionsRef = collection(db, 'colleges', userProfile.collegeId, 'languages', languageId, 'questions');
-      const qQuery = query(questionsRef, orderBy('createdAt', 'asc')); 
+      const qQuery = query(questionsRef, orderBy('createdAt', 'asc'));
       const questionsSnap = await getDocs(qQuery);
       const fetchedQuestions = questionsSnap.docs.map(docSnap => ({ id: docSnap.id, ...docSnap.data() } as QuestionType));
-      
+
       if (fetchedQuestions.length === 0) {
         toast({ title: "No Questions", description: `This ${langData.name} course doesn't have any questions yet. Check back later!`, variant: "default" });
       }
@@ -92,7 +93,7 @@ export default function StudentPracticePage() {
   }, [userProfile?.collegeId, languageId, toast, router, authLoading]);
 
   useEffect(() => {
-    if (!authLoading) { 
+    if (!authLoading) {
         fetchLanguageAndQuestions();
     }
   }, [authLoading, fetchLanguageAndQuestions]);
@@ -129,7 +130,7 @@ export default function StudentPracticePage() {
         }
 
         const result = await response.json();
-        
+
         setOutput(result.generalOutput || '');
         setTestResults(result.testCaseResults || []);
         if (result.compileError) setCompileError(result.compileError);
@@ -180,19 +181,16 @@ export default function StudentPracticePage() {
     if (event.key === 'Tab') {
       event.preventDefault();
 
-      // Determine the start and end lines of the selection
       const textBeforeSelectionStart = currentValue.substring(0, selectionStart);
       const selectedText = currentValue.substring(selectionStart, selectionEnd);
 
       const startLineIndex = textBeforeSelectionStart.split('\n').length - 1;
-      // Correctly determine endLineIndex: if selection ends on a newline, it's the line before.
-      // If selection is empty, endLineIndex is same as startLineIndex.
       let effectiveSelectionEnd = selectionEnd;
       if (selectionStart !== selectionEnd && currentValue[selectionEnd - 1] === '\n') {
         effectiveSelectionEnd = selectionEnd - 1;
       }
       const endLineIndex = currentValue.substring(0, effectiveSelectionEnd).split('\n').length - 1;
-      
+
       const lines = currentValue.split('\n');
       let newStudentCode = currentValue;
       let newSelectionStart = selectionStart;
@@ -225,18 +223,13 @@ export default function StudentPracticePage() {
         });
         newStudentCode = modifiedLines.join('\n');
         newSelectionEnd = selectionEnd + accumulatedChange;
-        // Ensure newSelectionStart didn't go before line start if un-indenting
-        if (event.shiftKey && startLineIndex === endLineIndex) { // if it became single line after unindent
+        if (event.shiftKey && startLineIndex === endLineIndex) {
              const currentLineStartAbs = textBeforeSelectionStart.lastIndexOf('\n') +1;
              if(newSelectionStart < currentLineStartAbs) newSelectionStart = currentLineStartAbs;
         }
-
-
-      } else { // Single line (or no selection, treat as single line at cursor)
+      } else { // Single line
         const currentLineStartAbs = textBeforeSelectionStart.lastIndexOf('\n') + 1;
-        const currentLineEndAbs = lines[startLineIndex].length + currentLineStartAbs;
-
-        if (event.shiftKey) { // Un-indent current line
+        if (event.shiftKey) {
           if (lines[startLineIndex].startsWith(tabSpaces)) {
             lines[startLineIndex] = lines[startLineIndex].substring(tabSpaces.length);
             newStudentCode = lines.join('\n');
@@ -250,24 +243,32 @@ export default function StudentPracticePage() {
             newSelectionStart = Math.max(currentLineStartAbs, selectionStart + change);
             newSelectionEnd = Math.max(currentLineStartAbs, selectionEnd + change);
           }
-        } else { // Indent current line (or insert tab at cursor)
+        } else {
           const textToInsert = tabSpaces;
           newStudentCode = currentValue.substring(0, selectionStart) + textToInsert + currentValue.substring(selectionEnd);
           newSelectionStart = selectionStart + textToInsert.length;
-          newSelectionEnd = newSelectionStart; // After inserting tab, cursor is after it
+          newSelectionEnd = newSelectionStart;
         }
       }
-      
+
       setStudentCode(newStudentCode);
-      // Defer setting selection range for React to update the value
       setTimeout(() => {
         textarea.focus();
-        // Ensure selection end is not before selection start
         textarea.setSelectionRange(newSelectionStart, Math.max(newSelectionStart, newSelectionEnd));
       }, 0);
     }
   };
-  
+
+  const getDifficultyBadgeVariant = (difficulty?: QuestionDifficulty) => {
+    if (!difficulty) return 'outline';
+    switch (difficulty) {
+      case 'easy': return 'default'; 
+      case 'medium': return 'secondary';
+      case 'hard': return 'destructive';
+      default: return 'outline';
+    }
+  };
+
   if (authLoading || isLoadingPageData && !language) {
     return (
       <div className="container mx-auto py-8 flex flex-col items-center justify-center min-h-[calc(100vh-10rem)]">
@@ -320,8 +321,15 @@ export default function StudentPracticePage() {
         <>
           <Card className="shadow-lg">
             <CardHeader>
-              <div className="flex justify-between items-center">
-                <CardTitle className="text-xl font-semibold">Question {currentQuestionIndex + 1} of {questions.length}</CardTitle>
+              <div className="flex justify-between items-start">
+                <div>
+                    <CardTitle className="text-xl font-semibold mb-1">Question {currentQuestionIndex + 1} of {questions.length}</CardTitle>
+                    {currentQuestion.difficulty && (
+                        <Badge variant={getDifficultyBadgeVariant(currentQuestion.difficulty)} className="capitalize text-xs px-2 py-0.5">
+                           <Tag className="w-3 h-3 mr-1" /> {currentQuestion.difficulty}
+                        </Badge>
+                    )}
+                </div>
                 <div className="flex space-x-2">
                   <Button onClick={handlePrevQuestion} disabled={currentQuestionIndex === 0 || isRunningCode} variant="outline" size="sm">
                     <ChevronLeft className="h-4 w-4 mr-1" /> Prev
@@ -331,7 +339,7 @@ export default function StudentPracticePage() {
                   </Button>
                 </div>
               </div>
-              <CardDescription>Read the problem statement carefully and write your solution below.</CardDescription>
+              <CardDescription className="mt-3">Read the problem statement carefully and write your solution below.</CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
               <p className="text-base whitespace-pre-wrap">{currentQuestion.questionText}</p>
@@ -364,8 +372,8 @@ export default function StudentPracticePage() {
                   rows={15}
                   className="font-mono text-sm bg-background"
                   disabled={isRunningCode}
-                  spellCheck="false" 
-                  autoCapitalize="none" 
+                  spellCheck="false"
+                  autoCapitalize="none"
                   autoCorrect="off"
                 />
               </CardContent>
@@ -437,6 +445,3 @@ export default function StudentPracticePage() {
     </div>
   );
 }
-
-
-    
