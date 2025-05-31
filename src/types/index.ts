@@ -61,6 +61,7 @@ export interface Question {
   languageId: string; // The ID of the ProgrammingLanguage
   questionText: string;
   difficulty: QuestionDifficulty;
+  maxScore: number;
   sampleInput?: string;
   sampleOutput?: string;
   solution?: string;

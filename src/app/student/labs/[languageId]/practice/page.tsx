@@ -13,7 +13,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
-import { Loader2, ArrowLeft, Lightbulb, Terminal, ChevronLeft, ChevronRight, BookOpen, CheckCircle, XCircle, AlertTriangle, Tag } from 'lucide-react';
+import { Loader2, ArrowLeft, Lightbulb, Terminal, ChevronLeft, ChevronRight, BookOpen, CheckCircle, XCircle, AlertTriangle, Tag, Star } from 'lucide-react';
 import type { ProgrammingLanguage, Question as QuestionType, TestCase, QuestionDifficulty } from '@/types';
 import { Separator } from '@/components/ui/separator';
 
@@ -74,7 +74,7 @@ export default function StudentPracticePage() {
 
 
       const questionsRef = collection(db, 'colleges', userProfile.collegeId, 'languages', languageId, 'questions');
-      const qQuery = query(questionsRef, orderBy('createdAt', 'asc'));
+      const qQuery = query(questionsRef, orderBy('createdAt', 'asc')); // Consider difficulty or other sort order later
       const questionsSnap = await getDocs(qQuery);
       const fetchedQuestions = questionsSnap.docs.map(docSnap => ({ id: docSnap.id, ...docSnap.data() } as QuestionType));
 
@@ -82,7 +82,7 @@ export default function StudentPracticePage() {
         toast({ title: "No Questions", description: `This ${langData.name} course doesn't have any questions yet. Check back later!`, variant: "default" });
       }
       setQuestions(fetchedQuestions);
-      setCurrentQuestionIndex(0);
+      setCurrentQuestionIndex(0); // Reset to first question
 
     } catch (error) {
       console.error("Error fetching course/questions:", error);
@@ -97,6 +97,18 @@ export default function StudentPracticePage() {
         fetchLanguageAndQuestions();
     }
   }, [authLoading, fetchLanguageAndQuestions]);
+  
+  // Effect to reset code and output when question changes
+  useEffect(() => {
+    if (language && questions.length > 0) {
+      setStudentCode(`// Start writing your ${language.name} code here for Question ${currentQuestionIndex + 1}\n\n`);
+      setOutput('');
+      setTestResults([]);
+      setExecutionError(null);
+      setCompileError(null);
+    }
+  }, [currentQuestionIndex, questions, language]);
+
 
   const currentQuestion = questions[currentQuestionIndex];
 
@@ -146,13 +158,13 @@ export default function StudentPracticePage() {
     }
   };
 
-  const resetOutputs = () => {
+  const resetOutputsAndCode = () => {
     setOutput('');
     setTestResults([]);
     setExecutionError(null);
     setCompileError(null);
      if (language) {
-       setStudentCode(`// Start writing your ${language.name} code here\n\n`);
+       setStudentCode(`// Start writing your ${language.name} code here for Question ${currentQuestionIndex + 1}\n\n`);
      } else {
        setStudentCode('');
      }
@@ -161,14 +173,14 @@ export default function StudentPracticePage() {
   const handleNextQuestion = () => {
     if (currentQuestionIndex < questions.length - 1) {
       setCurrentQuestionIndex(prev => prev + 1);
-      resetOutputs();
+      // resetOutputsAndCode will be triggered by useEffect on currentQuestionIndex change
     }
   };
 
   const handlePrevQuestion = () => {
     if (currentQuestionIndex > 0) {
       setCurrentQuestionIndex(prev => prev - 1);
-      resetOutputs();
+      // resetOutputsAndCode will be triggered by useEffect on currentQuestionIndex change
     }
   };
 
@@ -260,8 +272,8 @@ export default function StudentPracticePage() {
   };
 
   const getDifficultyBadgeVariant = (difficulty?: QuestionDifficulty) => {
-    if (!difficulty) return 'outline';
-    switch (difficulty) {
+    const effDifficulty = difficulty || 'easy';
+    switch (effDifficulty) {
       case 'easy': return 'default'; 
       case 'medium': return 'secondary';
       case 'hard': return 'destructive';
@@ -321,16 +333,19 @@ export default function StudentPracticePage() {
         <>
           <Card className="shadow-lg">
             <CardHeader>
-              <div className="flex justify-between items-start">
+              <div className="flex justify-between items-start flex-wrap gap-2">
                 <div>
                     <CardTitle className="text-xl font-semibold mb-1">Question {currentQuestionIndex + 1} of {questions.length}</CardTitle>
-                    {currentQuestion.difficulty && (
+                    <div className="flex items-center gap-2 flex-wrap">
                         <Badge variant={getDifficultyBadgeVariant(currentQuestion.difficulty)} className="capitalize text-xs px-2 py-0.5">
-                           <Tag className="w-3 h-3 mr-1" /> {currentQuestion.difficulty}
+                           <Tag className="w-3 h-3 mr-1" /> {currentQuestion.difficulty || 'easy'}
                         </Badge>
-                    )}
+                        <Badge variant="outline" className="text-xs px-2 py-0.5">
+                            <Star className="w-3 h-3 mr-1" /> Max Score: {currentQuestion.maxScore || 100}
+                        </Badge>
+                    </div>
                 </div>
-                <div className="flex space-x-2">
+                <div className="flex space-x-2 shrink-0">
                   <Button onClick={handlePrevQuestion} disabled={currentQuestionIndex === 0 || isRunningCode} variant="outline" size="sm">
                     <ChevronLeft className="h-4 w-4 mr-1" /> Prev
                   </Button>

@@ -19,7 +19,7 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
-import { Loader2, PlusCircle, Trash2, ArrowLeft, HelpCircle, ListChecks, Edit3, XCircle, FileText, Tag } from 'lucide-react';
+import { Loader2, PlusCircle, Trash2, ArrowLeft, HelpCircle, ListChecks, Edit3, XCircle, FileText, Tag, Star } from 'lucide-react';
 import type { ProgrammingLanguage, Question as QuestionType, TestCase, QuestionDifficulty } from '@/types';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 
@@ -31,6 +31,7 @@ const testCaseSchema = z.object({
 const questionFormSchema = z.object({
   questionText: z.string().min(20, { message: "Question text must be at least 20 characters." }),
   difficulty: z.enum(['easy', 'medium', 'hard'], { required_error: "Please select a difficulty."}),
+  maxScore: z.coerce.number().min(1, {message: "Max score must be at least 1."}).max(1000, {message: "Max score cannot exceed 1000."}).default(100),
   sampleInput: z.string().optional(),
   sampleOutput: z.string().optional(),
   solution: z.string().optional(),
@@ -63,7 +64,8 @@ export default function ManageQuestionsPage() {
     resolver: zodResolver(questionFormSchema),
     defaultValues: {
       questionText: '',
-      difficulty: 'medium',
+      difficulty: 'easy',
+      maxScore: 100,
       sampleInput: '',
       sampleOutput: '',
       solution: '',
@@ -71,7 +73,7 @@ export default function ManageQuestionsPage() {
     },
   });
 
-  const { fields, append, remove, replace } = useFieldArray({
+  const { fields, append, remove } = useFieldArray({
     control: form.control,
     name: "testCases",
   });
@@ -125,7 +127,8 @@ export default function ManageQuestionsPage() {
     setEditingQuestion(question);
     form.reset({
       questionText: question.questionText,
-      difficulty: question.difficulty,
+      difficulty: question.difficulty || 'easy',
+      maxScore: question.maxScore || 100,
       sampleInput: question.sampleInput || '',
       sampleOutput: question.sampleOutput || '',
       solution: question.solution || '',
@@ -138,7 +141,8 @@ export default function ManageQuestionsPage() {
     setEditingQuestion(null);
     form.reset({
       questionText: '',
-      difficulty: 'medium',
+      difficulty: 'easy',
+      maxScore: 100,
       sampleInput: '',
       sampleOutput: '',
       solution: '',
@@ -153,30 +157,29 @@ export default function ManageQuestionsPage() {
     }
     setIsSubmitting(true);
     try {
+      const questionDataToSave = {
+        ...data,
+        difficulty: data.difficulty || 'easy',
+        maxScore: data.maxScore || 100,
+        languageId: languageId,
+        languageName: language.name,
+        updatedAt: serverTimestamp(),
+      };
+
       if (editingQuestion) {
         const questionDocRef = doc(db, 'colleges', userProfile.collegeId, 'languages', languageId, 'questions', editingQuestion.id);
-        const updatedQuestionData = {
-          ...data,
-          languageId: languageId,
-          languageName: language.name,
-          updatedAt: serverTimestamp(),
-        };
-        await updateDoc(questionDocRef, updatedQuestionData);
+        await updateDoc(questionDocRef, questionDataToSave);
         toast({ title: "Question Updated!", description: `Question for ${language.name} has been updated.` });
       } else {
         const questionCollectionRef = collection(db, 'colleges', userProfile.collegeId, 'languages', languageId, 'questions');
-        const newQuestionData = {
-          ...data,
-          languageId: languageId,
-          languageName: language.name,
+        await addDoc(questionCollectionRef, {
+          ...questionDataToSave,
           createdAt: serverTimestamp(),
-          updatedAt: serverTimestamp(),
-        };
-        await addDoc(questionCollectionRef, newQuestionData);
+        });
         toast({ title: "Question Added!", description: `New question for ${language.name} has been saved.` });
       }
       handleCancelEdit();
-      fetchQuestions();
+      fetchQuestions(); // Refetch questions to update the list
     } catch (error) {
       console.error("Error submitting question:", error);
       toast({ title: "Error", description: `Failed to ${editingQuestion ? 'update' : 'add'} question. Please try again.`, variant: "destructive" });
@@ -219,11 +222,12 @@ export default function ManageQuestionsPage() {
     return <div className="container mx-auto py-8 text-center">Language details could not be loaded.</div>;
   }
   
-  const getDifficultyBadgeVariant = (difficulty: QuestionDifficulty) => {
-    switch (difficulty) {
-      case 'easy': return 'default'; // Or a specific green variant
-      case 'medium': return 'secondary'; // Or a specific yellow/orange variant
-      case 'hard': return 'destructive'; // Or a specific red variant
+  const getDifficultyBadgeVariant = (difficulty?: QuestionDifficulty) => {
+    const effDifficulty = difficulty || 'easy';
+    switch (effDifficulty) {
+      case 'easy': return 'default'; 
+      case 'medium': return 'secondary'; 
+      case 'hard': return 'destructive'; 
       default: return 'outline';
     }
   };
@@ -268,31 +272,45 @@ export default function ManageQuestionsPage() {
                   </FormItem>
                 )}
               />
-
-              <FormField
-                control={form.control}
-                name="difficulty"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel className="text-base">Difficulty</FormLabel>
-                    <Select onValueChange={field.onChange} defaultValue={field.value}>
-                      <FormControl>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Select difficulty" />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        {difficultyLevels.map(level => (
-                          <SelectItem key={level} value={level} className="capitalize">
-                            {level}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <FormField
+                        control={form.control}
+                        name="difficulty"
+                        render={({ field }) => (
+                        <FormItem>
+                            <FormLabel className="text-base">Difficulty</FormLabel>
+                            <Select onValueChange={field.onChange} value={field.value || 'easy'}>
+                            <FormControl>
+                                <SelectTrigger>
+                                <SelectValue placeholder="Select difficulty" />
+                                </SelectTrigger>
+                            </FormControl>
+                            <SelectContent>
+                                {difficultyLevels.map(level => (
+                                <SelectItem key={level} value={level} className="capitalize">
+                                    {level}
+                                </SelectItem>
+                                ))}
+                            </SelectContent>
+                            </Select>
+                            <FormMessage />
+                        </FormItem>
+                        )}
+                    />
+                    <FormField
+                        control={form.control}
+                        name="maxScore"
+                        render={({ field }) => (
+                        <FormItem>
+                            <FormLabel className="text-base">Max Score</FormLabel>
+                            <FormControl>
+                            <Input type="number" placeholder="e.g., 100" {...field} />
+                            </FormControl>
+                            <FormMessage />
+                        </FormItem>
+                        )}
+                    />
+              </div>
 
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -438,15 +456,16 @@ export default function ManageQuestionsPage() {
                 <Card key={q.id} className="bg-card border">
                   <CardHeader className="pb-3">
                     <CardTitle className="text-lg flex items-center justify-between">
-                        <div className="flex items-center gap-2">
+                        <div className="flex items-center gap-2 flex-wrap">
                             <span>Question {questions.length - index}</span>
-                            {q.difficulty && (
-                                <Badge variant={getDifficultyBadgeVariant(q.difficulty)} className="capitalize text-xs px-2 py-0.5">
-                                    {q.difficulty}
-                                </Badge>
-                            )}
+                            <Badge variant={getDifficultyBadgeVariant(q.difficulty)} className="capitalize text-xs px-2 py-0.5">
+                                <Tag className="w-3 h-3 mr-1" /> {q.difficulty || 'easy'}
+                            </Badge>
+                            <Badge variant="outline" className="text-xs px-2 py-0.5">
+                                <Star className="w-3 h-3 mr-1" /> Score: {q.maxScore || 100}
+                            </Badge>
                         </div>
-                        <div className="flex space-x-2">
+                        <div className="flex space-x-2 shrink-0">
                           <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => handleStartEdit(q)}>
                             <Edit3 className="h-4 w-4" />
                             <span className="sr-only">Edit Question</span>
