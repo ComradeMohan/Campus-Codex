@@ -28,10 +28,10 @@ export function HeroSection() {
             <Image
               src="https://placehold.co/600x400.png"
               alt="Coding lab illustration"
-              layout="fill"
-              objectFit="cover"
+              fill
+              style={{ objectFit: 'cover' }}
               className="transform transition-transform duration-500 group-hover:scale-105"
-              data-ai-hint="coding students collaboration"
+              data-ai-hint="abstract digital"
             />
             <div className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent"></div>
              <div className="absolute bottom-4 left-4 text-white p-2 rounded bg-black/30 backdrop-blur-sm">
@@ -44,3 +44,4 @@ export function HeroSection() {
     </section>
   );
 }
+
