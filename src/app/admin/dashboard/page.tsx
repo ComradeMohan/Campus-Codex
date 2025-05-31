@@ -1,10 +1,22 @@
 
+'use client';
+
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { BarChart3, Users, Settings, BookOpen, UserCog } from "lucide-react";
+import { BarChart3, Users, Settings, BookOpen, UserCog, Loader2 } from "lucide-react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
+import { useAuth } from "@/contexts/AuthContext";
+import { db } from "@/lib/firebase";
+import { collection, query, where, getDocs } from "firebase/firestore";
+import { useEffect, useState } from "react";
+import { useToast } from "@/hooks/use-toast";
 
 export default function AdminDashboardPage() {
+  const { userProfile } = useAuth();
+  const { toast } = useToast();
+  const [studentCount, setStudentCount] = useState<number | null>(null);
+  const [isLoadingStats, setIsLoadingStats] = useState(true);
+
   const dashboardItems = [
     { title: "User Management", description: "View and manage student and faculty accounts.", icon: Users, href: "/admin/users" },
     { title: "Course Management", description: "Create, edit, and organize courses and labs.", icon: BookOpen, href: "/admin/courses" },
@@ -13,12 +25,46 @@ export default function AdminDashboardPage() {
     { title: "System Settings", description: "Configure platform settings and integrations.", icon: Settings, href: "/admin/settings" },
   ];
 
+  useEffect(() => {
+    const fetchStats = async () => {
+      if (userProfile?.collegeId) {
+        setIsLoadingStats(true);
+        try {
+          // Fetch student count
+          const usersRef = collection(db, 'users');
+          const studentQuery = query(usersRef, where('collegeId', '==', userProfile.collegeId), where('role', '==', 'student'));
+          const studentSnapshot = await getDocs(studentQuery);
+          setStudentCount(studentSnapshot.size);
+
+          // Fetch active labs count (placeholder for now)
+          // const languagesRef = collection(db, 'colleges', userProfile.collegeId, 'languages');
+          // const languagesSnapshot = await getDocs(languagesRef);
+          // setActiveLabsCount(languagesSnapshot.size); // Example: count of languages as active labs
+
+        } catch (error) {
+          console.error("Error fetching dashboard stats:", error);
+          toast({
+            title: "Error",
+            description: "Could not load dashboard statistics.",
+            variant: "destructive",
+          });
+        } finally {
+          setIsLoadingStats(false);
+        }
+      } else if (userProfile === null) {
+        setIsLoadingStats(false);
+      }
+    };
+
+    fetchStats();
+  }, [userProfile, toast]);
+
   return (
     <div className="space-y-8">
       <Card className="shadow-lg">
         <CardHeader>
           <CardTitle className="text-3xl font-headline">Admin Dashboard</CardTitle>
-          <CardDescription>Welcome, Admin! Manage Campus Codex efficiently from here.</CardDescription>
+          <CardDescription>Welcome, {userProfile?.fullName || 'Admin'}! Manage Campus Codex efficiently from here.</CardDescription>
         </CardHeader>
         <CardContent>
           <p>This is your central hub for overseeing all aspects of the Campus Codex platform. Use the sections below to navigate to different management areas.</p>
@@ -33,7 +79,7 @@ export default function AdminDashboardPage() {
               <CardTitle className="text-xl font-headline">{item.title}</CardTitle>
             </CardHeader>
             <CardContent className="space-y-3">
-              <p className="text-sm text-muted-foreground">{item.description}</p>
+              <p className="text-sm text-muted-foreground h-16 line-clamp-3">{item.description}</p>
               <Button variant="outline" asChild className="w-full border-primary text-primary hover:bg-primary/10">
                 <Link href={item.href}>Go to {item.title}</Link>
               </Button>
@@ -41,7 +87,7 @@ export default function AdminDashboardPage() {
           </Card>
         ))}
       </div>
-       {/* Placeholder sections for future implementation */}
+       
       <div className="grid gap-6 md:grid-cols-2">
         <Card>
           <CardHeader>
@@ -54,11 +100,20 @@ export default function AdminDashboardPage() {
         </Card>
         <Card>
           <CardHeader>
-            <CardTitle>Quick Stats</CardTitle>
+            <CardTitle>Quick Stats for {userProfile?.collegeName || 'Your College'}</CardTitle>
           </CardHeader>
           <CardContent className="space-y-2">
-            <div className="flex justify-between"><span>Total Students:</span> <span className="font-semibold">0</span></div>
-            <div className="flex justify-between"><span>Active Labs:</span> <span className="font-semibold">0</span></div>
+            {isLoadingStats ? (
+              <div className="flex items-center space-x-2">
+                <Loader2 className="h-5 w-5 animate-spin text-primary" />
+                <span>Loading stats...</span>
+              </div>
+            ) : (
+              <>
+                <div className="flex justify-between"><span>Total Students:</span> <span className="font-semibold">{studentCount ?? 'N/A'}</span></div>
+                <div className="flex justify-between"><span>Active Courses/Languages:</span> <span className="font-semibold">0</span></div> {/* Placeholder */}
+              </>
+            )}
           </CardContent>
         </Card>
       </div>
