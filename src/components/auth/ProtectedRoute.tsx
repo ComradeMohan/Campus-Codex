@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useEffect } from 'react';
@@ -5,6 +6,7 @@ import { useRouter } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContext';
 import type { UserRole } from '@/types';
 import { Loader2 } from 'lucide-react';
+import { Button } from '@/components/ui/button'; // Added import
 
 interface ProtectedRouteProps {
   children: React.ReactNode;
