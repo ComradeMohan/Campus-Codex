@@ -1,3 +1,4 @@
+
 'use client';
 
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -15,7 +16,7 @@ import {
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { useToast } from '@/hooks/use-toast';
-import { signInWithEmailAndPassword, isSignInWithEmailLink, signInWithEmailLink, type Auth } from 'firebase/auth';
+import { signInWithEmailAndPassword, isSignInWithEmailLink, signInWithEmailLink, sendPasswordResetEmail, type Auth } from 'firebase/auth';
 import { auth, db } from '@/lib/firebase';
 import { doc, getDoc, setDoc, serverTimestamp, collection, addDoc } from 'firebase/firestore';
 import type { UserProfile } from '@/types';
@@ -27,7 +28,7 @@ import { Loader2, Eye, EyeOff } from 'lucide-react';
 
 const loginSchema = z.object({
   email: z.string().email({ message: 'Invalid email address.' }),
-  password: z.string().min(1, { message: 'Password is required.' }), // Password can be optional if it's magic link flow
+  password: z.string().min(1, { message: 'Password is required.' }),
 });
 
 export function LoginForm() {
@@ -38,6 +39,7 @@ export function LoginForm() {
   const [isLoading, setIsLoading] = useState(false);
   const [isMagicLinkFlow, setIsMagicLinkFlow] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
+  const [isSendingResetEmail, setIsSendingResetEmail] = useState(false);
 
   const form = useForm<z.infer<typeof loginSchema>>({
     resolver: zodResolver(loginSchema),
@@ -57,12 +59,10 @@ export function LoginForm() {
           window.localStorage.removeItem('emailForSignIn');
           const user = result.user;
           
-          // Check if user profile exists, if not, create admin profile
           const userDocRef = doc(db, 'users', user.uid);
           const userDocSnap = await getDoc(userDocRef);
 
           if (!userDocSnap.exists()) {
-            // This is a new admin from magic link, create their profile and college entry
             const role = searchParams.get('role');
             const fullName = searchParams.get('fullName');
             const collegeName = searchParams.get('collegeName');
@@ -84,7 +84,7 @@ export function LoginForm() {
                 collegeName: collegeName,
                 collegeId: collegeRef.id,
                 phoneNumber: phoneNumber || undefined,
-                isEmailVerified: true, // Magic link verifies email
+                isEmailVerified: true, 
               };
               await setDoc(userDocRef, {
                 ...adminProfile,
@@ -100,7 +100,7 @@ export function LoginForm() {
              await refreshUserProfile();
              if (userProfile.role === 'admin') router.push('/admin/dashboard');
              else if (userProfile.role === 'student') router.push('/student/labs');
-             else router.push('/'); // Fallback
+             else router.push('/'); 
           }
           toast({ title: 'Login Successful', description: 'Welcome back!' });
         })
@@ -111,11 +111,10 @@ export function LoginForm() {
             description: error.message || 'Failed to sign in with magic link.',
             variant: 'destructive',
           });
-          router.push('/login'); // Redirect to login if error
+          router.push('/login'); 
         })
         .finally(() => setIsLoading(false));
     } else {
-      // Populate email from query params if available (e.g. after registration email sent)
       const emailFromQuery = searchParams.get('email');
       if (emailFromQuery) {
         form.setValue('email', emailFromQuery);
@@ -145,17 +144,16 @@ export function LoginForm() {
 
       if (userDocSnap.exists()) {
         const userProfile = userDocSnap.data() as UserProfile;
-        await refreshUserProfile(); // Refresh context
+        await refreshUserProfile(); 
         if (userProfile.role === 'admin') {
           router.push('/admin/dashboard');
         } else if (userProfile.role === 'student') {
           router.push('/student/labs');
         } else {
-          router.push('/'); // Fallback
+          router.push('/'); 
         }
         toast({ title: 'Login Successful', description: 'Welcome back!' });
       } else {
-        // Should not happen if registration flow is correct
         throw new Error('User profile not found.');
       }
     } catch (error: any) {
@@ -175,8 +173,52 @@ export function LoginForm() {
       setIsLoading(false);
     }
   }
+
+  async function handleForgotPassword() {
+    const email = form.getValues('email');
+    const emailValidation = z.string().email({ message: "Please enter a valid email address to reset your password." }).safeParse(email);
+
+    if (!emailValidation.success) {
+      toast({
+        title: 'Invalid Email',
+        description: emailValidation.error.errors[0]?.message || "Please enter a valid email address.",
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    setIsSendingResetEmail(true);
+    try {
+      await sendPasswordResetEmail(auth, emailValidation.data);
+      toast({
+        title: 'Password Reset Email Sent',
+        description: `If an account exists for ${emailValidation.data}, a password reset link has been sent. Please check your inbox.`,
+      });
+    } catch (error: any) {
+      console.error('Forgot password error:', error);
+      let description = 'Failed to send password reset email. Please try again.';
+      if (error.code === 'auth/user-not-found') {
+        // To prevent user enumeration, we can show a generic message for user-not-found too.
+        // However, for better UX during development or specific app needs, you might show different messages.
+        // For this implementation, we'll keep the success message generic to avoid confirming email existence.
+         description = `If an account exists for ${emailValidation.data}, a password reset link has been sent. Please check your inbox.`;
+         toast({
+            title: 'Password Reset Email Sent',
+            description: description,
+        });
+      } else {
+         toast({
+            title: 'Error',
+            description: description,
+            variant: 'destructive',
+        });
+      }
+    } finally {
+      setIsSendingResetEmail(false);
+    }
+  }
   
-  if (isMagicLinkFlow || isLoading && isMagicLinkFlow) { // Keep showing loader if it's a magic link flow, even if not strictly "isLoading" locally
+  if (isMagicLinkFlow || isLoading && isMagicLinkFlow) { 
     return (
       <Card className="w-full max-w-md shadow-xl">
         <CardHeader>
@@ -191,7 +233,6 @@ export function LoginForm() {
       </Card>
     );
   }
-
 
   return (
     <Card className="w-full max-w-md shadow-xl">
@@ -222,7 +263,21 @@ export function LoginForm() {
               name="password"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Password</FormLabel>
+                  <div className="flex justify-between items-center">
+                    <FormLabel>Password</FormLabel>
+                    <Button
+                      type="button"
+                      variant="link"
+                      className="px-0 h-auto text-sm text-primary hover:underline"
+                      onClick={handleForgotPassword}
+                      disabled={isLoading || isSendingResetEmail}
+                    >
+                       {isSendingResetEmail ? (
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                       ) : null}
+                      Forgot Password?
+                    </Button>
+                  </div>
                   <FormControl>
                    <div className="relative">
                       <Input type={showPassword ? "text" : "password"} placeholder="********" {...field} />
@@ -232,6 +287,7 @@ export function LoginForm() {
                         size="sm"
                         className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent"
                         onClick={() => setShowPassword((prev) => !prev)}
+                        disabled={isLoading}
                       >
                         {showPassword ? (
                           <EyeOff className="h-4 w-4" aria-hidden="true" />
@@ -248,7 +304,7 @@ export function LoginForm() {
                 </FormItem>
               )}
             />
-            <Button type="submit" className="w-full bg-primary hover:bg-primary/90" disabled={isLoading}>
+            <Button type="submit" className="w-full bg-primary hover:bg-primary/90" disabled={isLoading || isSendingResetEmail}>
               {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
               Login
             </Button>
