@@ -13,12 +13,12 @@ import { Textarea } from '@/components/ui/textarea';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
-import { Loader2, ArrowLeft, Lightbulb, Terminal, ChevronLeft, ChevronRight, BookOpen, CheckCircle, XCircle, AlertTriangle, Tag, Star } from 'lucide-react';
+import { Loader2, ArrowLeft, Lightbulb, Terminal, ChevronLeft, ChevronRight, BookOpen, CheckCircle, XCircle, AlertTriangle, Tag, Star, Play, CheckSquare } from 'lucide-react';
 import type { ProgrammingLanguage, Question as QuestionType, TestCase, QuestionDifficulty } from '@/types';
 import { Separator } from '@/components/ui/separator';
 
 interface TestCaseResult {
-  testCaseNumber: number;
+  testCaseNumber: number | string; // Can be 'Sample'
   input: string;
   expectedOutput: string;
   actualOutput: string;
@@ -42,7 +42,7 @@ export default function StudentPracticePage() {
   const [testResults, setTestResults] = useState<TestCaseResult[]>([]);
 
   const [isLoadingPageData, setIsLoadingPageData] = useState(true);
-  const [isRunningCode, setIsRunningCode] = useState(false);
+  const [isExecutingCode, setIsExecutingCode] = useState(false); // Generic for any execution
   const [executionError, setExecutionError] = useState<string | null>(null);
   const [compileError, setCompileError] = useState<string | null>(null);
 
@@ -70,11 +70,12 @@ export default function StudentPracticePage() {
       }
       const langData = { id: langSnap.id, ...langSnap.data() } as ProgrammingLanguage;
       setLanguage(langData);
-      setStudentCode(`// Start writing your ${langData.name} code here\n\n`);
+      // Initial code snippet will be set in the useEffect for question change
 
 
       const questionsRef = collection(db, 'colleges', userProfile.collegeId, 'languages', languageId, 'questions');
-      const qQuery = query(questionsRef, orderBy('createdAt', 'asc')); // Consider difficulty or other sort order later
+      // Consider difficulty or other sort order later. For now, using createdAt to maintain some consistency.
+      const qQuery = query(questionsRef, orderBy('createdAt', 'asc')); 
       const questionsSnap = await getDocs(qQuery);
       const fetchedQuestions = questionsSnap.docs.map(docSnap => ({ id: docSnap.id, ...docSnap.data() } as QuestionType));
 
@@ -82,7 +83,7 @@ export default function StudentPracticePage() {
         toast({ title: "No Questions", description: `This ${langData.name} course doesn't have any questions yet. Check back later!`, variant: "default" });
       }
       setQuestions(fetchedQuestions);
-      setCurrentQuestionIndex(0); // Reset to first question
+      setCurrentQuestionIndex(0);
 
     } catch (error) {
       console.error("Error fetching course/questions:", error);
@@ -98,42 +99,53 @@ export default function StudentPracticePage() {
     }
   }, [authLoading, fetchLanguageAndQuestions]);
   
-  // Effect to reset code and output when question changes
   useEffect(() => {
-    if (language && questions.length > 0) {
-      setStudentCode(`// Start writing your ${language.name} code here for Question ${currentQuestionIndex + 1}\n\n`);
+    if (language && questions.length > 0 && questions[currentQuestionIndex]) {
+      setStudentCode(`// Start writing your ${language.name} code here for Question ${currentQuestionIndex + 1}\n// ${questions[currentQuestionIndex].questionText.substring(0,50)}...\n\n`);
       setOutput('');
       setTestResults([]);
       setExecutionError(null);
       setCompileError(null);
+    } else if (language && questions.length === 0) {
+      // Handle case where language is loaded but no questions
+      setStudentCode(`// No questions available for ${language.name} yet.\n`);
+      setOutput('');
+      setTestResults([]);
     }
   }, [currentQuestionIndex, questions, language]);
 
 
   const currentQuestion = questions[currentQuestionIndex];
 
-  const handleRunCode = async () => {
+  const executeCodeApiCall = async (executionType: 'run' | 'submit') => {
     if (!currentQuestion || !language) {
         toast({title: "Cannot run code", description: "Question or language not loaded.", variant: "destructive"});
         return;
     }
-    setIsRunningCode(true);
-    setOutput('Executing your code...\n');
+    setIsExecutingCode(true);
+    setOutput(`Executing your code (${executionType} mode)...\n`);
     setTestResults([]);
     setExecutionError(null);
     setCompileError(null);
 
     try {
+        const payload: any = {
+            language: language.name,
+            code: studentCode,
+            executionType: executionType,
+        };
+
+        if (executionType === 'run') {
+            payload.sampleInput = currentQuestion.sampleInput || "";
+            payload.sampleOutput = currentQuestion.sampleOutput || "";
+        } else { // submit
+            payload.testCases = currentQuestion.testCases;
+        }
+
         const response = await fetch('/api/execute-code', {
             method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({
-                language: language.name,
-                code: studentCode,
-                testCases: currentQuestion.testCases,
-            }),
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload),
         });
 
         if (!response.ok) {
@@ -142,45 +154,45 @@ export default function StudentPracticePage() {
         }
 
         const result = await response.json();
-
         setOutput(result.generalOutput || '');
         setTestResults(result.testCaseResults || []);
         if (result.compileError) setCompileError(result.compileError);
         if (result.executionError) setExecutionError(result.executionError);
 
+        if (executionType === 'submit') {
+            const allPassed = result.testCaseResults?.every((tc: TestCaseResult) => tc.passed);
+            if (result.testCaseResults?.length > 0) {
+                toast({
+                    title: allPassed ? "All Tests Passed!" : "Some Tests Failed",
+                    description: allPassed ? "Great job! Your solution passed all test cases." : "Review the results below and try again.",
+                    variant: allPassed ? "default" : "destructive",
+                });
+            }
+        }
+
     } catch (error: any) {
-        console.error("Error running code:", error);
+        console.error(`Error ${executionType}ing code:`, error);
         setOutput(prev => prev + `\nClient-side error during execution: ${error.message}`);
         setExecutionError(`Client-side error: ${error.message}`);
-        toast({ title: "Execution Error", description: error.message || "Failed to run code.", variant: "destructive" });
+        toast({ title: `${executionType === 'run' ? 'Run' : 'Submission'} Error`, description: error.message || `Failed to ${executionType} code.`, variant: "destructive" });
     } finally {
-        setIsRunningCode(false);
+        setIsExecutingCode(false);
     }
   };
 
-  const resetOutputsAndCode = () => {
-    setOutput('');
-    setTestResults([]);
-    setExecutionError(null);
-    setCompileError(null);
-     if (language) {
-       setStudentCode(`// Start writing your ${language.name} code here for Question ${currentQuestionIndex + 1}\n\n`);
-     } else {
-       setStudentCode('');
-     }
-  };
+  const handleRunSample = () => executeCodeApiCall('run');
+  const handleSubmitTestCases = () => executeCodeApiCall('submit');
+
 
   const handleNextQuestion = () => {
     if (currentQuestionIndex < questions.length - 1) {
       setCurrentQuestionIndex(prev => prev + 1);
-      // resetOutputsAndCode will be triggered by useEffect on currentQuestionIndex change
     }
   };
 
   const handlePrevQuestion = () => {
     if (currentQuestionIndex > 0) {
       setCurrentQuestionIndex(prev => prev - 1);
-      // resetOutputsAndCode will be triggered by useEffect on currentQuestionIndex change
     }
   };
 
@@ -190,14 +202,18 @@ export default function StudentPracticePage() {
     const tabSpaces = '    '; // 4 spaces for a tab
     const currentValue = studentCode;
 
+    // This basic tab handler helps with manual indentation.
+    // For a full IDE experience (syntax highlighting, language-specific auto-indent),
+    // consider integrating a library like Monaco Editor or CodeMirror.
     if (event.key === 'Tab') {
       event.preventDefault();
 
       const textBeforeSelectionStart = currentValue.substring(0, selectionStart);
-      const selectedText = currentValue.substring(selectionStart, selectionEnd);
+      // const selectedText = currentValue.substring(selectionStart, selectionEnd); // Not directly used in this simplified logic
 
       const startLineIndex = textBeforeSelectionStart.split('\n').length - 1;
       let effectiveSelectionEnd = selectionEnd;
+      // If selection ends with a newline, consider the line before it for multi-line operations
       if (selectionStart !== selectionEnd && currentValue[selectionEnd - 1] === '\n') {
         effectiveSelectionEnd = selectionEnd - 1;
       }
@@ -218,7 +234,7 @@ export default function StudentPracticePage() {
                 if (index === startLineIndex) newSelectionStart = Math.max(textBeforeSelectionStart.lastIndexOf('\n') + 1, selectionStart + change);
                 accumulatedChange += change;
                 return line.substring(tabSpaces.length);
-              } else if (line.startsWith('\t')) {
+              } else if (line.startsWith('\t')) { // Also handle actual tab characters if present
                 const change = -1;
                 if (index === startLineIndex) newSelectionStart = Math.max(textBeforeSelectionStart.lastIndexOf('\n') + 1, selectionStart + change);
                 accumulatedChange += change;
@@ -235,13 +251,14 @@ export default function StudentPracticePage() {
         });
         newStudentCode = modifiedLines.join('\n');
         newSelectionEnd = selectionEnd + accumulatedChange;
+        // Ensure selection start doesn't go before the line start on un-indent
         if (event.shiftKey && startLineIndex === endLineIndex) {
              const currentLineStartAbs = textBeforeSelectionStart.lastIndexOf('\n') +1;
              if(newSelectionStart < currentLineStartAbs) newSelectionStart = currentLineStartAbs;
         }
-      } else { // Single line
+      } else { // Single line or selection within a single line
         const currentLineStartAbs = textBeforeSelectionStart.lastIndexOf('\n') + 1;
-        if (event.shiftKey) {
+        if (event.shiftKey) { // Un-indent current line
           if (lines[startLineIndex].startsWith(tabSpaces)) {
             lines[startLineIndex] = lines[startLineIndex].substring(tabSpaces.length);
             newStudentCode = lines.join('\n');
@@ -255,7 +272,7 @@ export default function StudentPracticePage() {
             newSelectionStart = Math.max(currentLineStartAbs, selectionStart + change);
             newSelectionEnd = Math.max(currentLineStartAbs, selectionEnd + change);
           }
-        } else {
+        } else { // Indent at cursor or selected text
           const textToInsert = tabSpaces;
           newStudentCode = currentValue.substring(0, selectionStart) + textToInsert + currentValue.substring(selectionEnd);
           newSelectionStart = selectionStart + textToInsert.length;
@@ -264,6 +281,7 @@ export default function StudentPracticePage() {
       }
 
       setStudentCode(newStudentCode);
+      // Use setTimeout to ensure the state update has propagated before setting selection
       setTimeout(() => {
         textarea.focus();
         textarea.setSelectionRange(newSelectionStart, Math.max(newSelectionStart, newSelectionEnd));
@@ -346,10 +364,10 @@ export default function StudentPracticePage() {
                     </div>
                 </div>
                 <div className="flex space-x-2 shrink-0">
-                  <Button onClick={handlePrevQuestion} disabled={currentQuestionIndex === 0 || isRunningCode} variant="outline" size="sm">
+                  <Button onClick={handlePrevQuestion} disabled={currentQuestionIndex === 0 || isExecutingCode} variant="outline" size="sm">
                     <ChevronLeft className="h-4 w-4 mr-1" /> Prev
                   </Button>
-                  <Button onClick={handleNextQuestion} disabled={currentQuestionIndex === questions.length - 1 || isRunningCode} variant="outline" size="sm">
+                  <Button onClick={handleNextQuestion} disabled={currentQuestionIndex === questions.length - 1 || isExecutingCode} variant="outline" size="sm">
                     Next <ChevronRight className="h-4 w-4 ml-1" />
                   </Button>
                 </div>
@@ -386,7 +404,7 @@ export default function StudentPracticePage() {
                   placeholder={`Write your ${language.name} code here...`}
                   rows={15}
                   className="font-mono text-sm bg-background"
-                  disabled={isRunningCode}
+                  disabled={isExecutingCode}
                   spellCheck="false"
                   autoCapitalize="none"
                   autoCorrect="off"
@@ -422,7 +440,7 @@ export default function StudentPracticePage() {
                   <div className="mt-4 space-y-3">
                     <h4 className="text-md font-semibold">Test Case Results:</h4>
                     {testResults.map((result) => (
-                      <Card key={result.testCaseNumber} className={`p-3 ${result.passed ? 'bg-green-500/10 border-green-500' : 'bg-red-500/10 border-red-500'}`}>
+                      <Card key={result.testCaseNumber.toString()} className={`p-3 ${result.passed ? 'bg-green-500/10 border-green-500' : 'bg-red-500/10 border-red-500'}`}>
                         <div className="flex justify-between items-center mb-1">
                           <span className="font-medium">Test Case {result.testCaseNumber}</span>
                           {result.passed ? (
@@ -442,9 +460,15 @@ export default function StudentPracticePage() {
                   </div>
                 )}
                  <div className="mt-4 flex flex-col sm:flex-row gap-2">
-                    <Button onClick={handleRunCode} disabled={isRunningCode || !studentCode.trim()} className="flex-1">
-                    {isRunningCode ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Terminal className="mr-2 h-4 w-4" />}
-                    Run Code
+                    <Button onClick={handleRunSample} disabled={isExecutingCode || !studentCode.trim()} className="flex-1" variant="outline">
+                    {isExecutingCode && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                    <Play className="mr-2 h-4 w-4" />
+                    Run with Sample
+                    </Button>
+                    <Button onClick={handleSubmitTestCases} disabled={isExecutingCode || !studentCode.trim()} className="flex-1">
+                    {isExecutingCode && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                    <CheckSquare className="mr-2 h-4 w-4" />
+                    Submit & Test All
                     </Button>
                 </div>
               </CardContent>
