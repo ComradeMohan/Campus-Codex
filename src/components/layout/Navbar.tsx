@@ -2,7 +2,7 @@
 'use client';
 
 import Link from 'next/link';
-import { CodeXml, Menu, X } from 'lucide-react';
+import { CodeXml, Menu, X, Sun, Moon } from 'lucide-react';
 import { siteConfig } from '@/config/site';
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/contexts/AuthContext';
@@ -18,10 +18,35 @@ export function Navbar() {
   const router = useRouter();
   const [isSheetOpen, setIsSheetOpen] = useState(false);
   const [isMounted, setIsMounted] = useState(false);
+  const [theme, setTheme] = useState('light');
 
   useEffect(() => {
     setIsMounted(true);
+    const storedTheme = localStorage.getItem('theme');
+    const initialTheme = storedTheme ? storedTheme : 'light';
+    setTheme(initialTheme);
+    if (initialTheme === 'dark') {
+      document.documentElement.classList.add('dark');
+    } else {
+      document.documentElement.classList.remove('dark');
+    }
   }, []);
+
+  useEffect(() => {
+    if (isMounted) {
+      if (theme === 'dark') {
+        document.documentElement.classList.add('dark');
+        localStorage.setItem('theme', 'dark');
+      } else {
+        document.documentElement.classList.remove('dark');
+        localStorage.setItem('theme', 'light');
+      }
+    }
+  }, [theme, isMounted]);
+
+  const toggleTheme = () => {
+    setTheme(prevTheme => (prevTheme === 'light' ? 'dark' : 'light'));
+  };
 
   const handleSignOut = async () => {
     try {
@@ -140,12 +165,18 @@ export function Navbar() {
         </Link>
 
         {/* Desktop Navigation */}
-        <nav className="hidden md:flex items-center space-x-2">
+        <nav className="hidden md:flex items-center space-x-1">
           {createNavLinks(false)}
+          <Button variant="ghost" size="icon" onClick={toggleTheme} aria-label="Toggle theme" className="text-foreground hover:bg-primary/10">
+            {theme === 'light' ? <Moon className="h-5 w-5" /> : <Sun className="h-5 w-5" />}
+          </Button>
         </nav>
 
         {/* Mobile Navigation */}
-        <div className="md:hidden">
+        <div className="md:hidden flex items-center">
+          <Button variant="ghost" size="icon" onClick={toggleTheme} aria-label="Toggle theme" className="mr-2 text-foreground hover:bg-primary/10">
+            {theme === 'light' ? <Moon className="h-5 w-5" /> : <Sun className="h-5 w-5" />}
+          </Button>
           <Sheet open={isSheetOpen} onOpenChange={setIsSheetOpen}>
             <SheetTrigger asChild>
               <Button variant="ghost" size="icon">
