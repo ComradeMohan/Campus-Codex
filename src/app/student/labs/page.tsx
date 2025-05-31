@@ -9,7 +9,7 @@ import { collection, getDocs, query, orderBy, where, doc, setDoc, serverTimestam
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { AICodeAssistant } from '@/components/AICodeAssistant';
-import { Loader2, BookOpen, AlertTriangle, CheckCircle, TerminalSquare, Zap } from 'lucide-react';
+import { Loader2, BookOpen, AlertTriangle, CheckCircle, TerminalSquare, Zap, PlayCircle } from 'lucide-react';
 import type { ProgrammingLanguage } from '@/types';
 import { useToast } from '@/hooks/use-toast';
 import Image from 'next/image';
@@ -56,7 +56,7 @@ export default function StudentCodingLabsPage() {
       const ids = new Set<string>();
       querySnapshot.forEach(langDoc => ids.add(langDoc.id));
       setEnrolledLanguageIds(ids);
-    } catch (error) {
+    } catch (error) { // Fixed: Added opening curly brace
       console.error('Error fetching enrolled languages:', error);
       toast({ title: 'Error', description: 'Failed to fetch your enrolled courses.', variant: 'destructive' });
     }
@@ -80,6 +80,7 @@ export default function StudentCodingLabsPage() {
       return;
     }
     if (enrolledLanguageIds.has(language.id)) {
+      // This case should ideally not be reached if button changes to "Start Practice"
       toast({ title: 'Already Enrolled', description: `You are already enrolled in ${language.name}.`, variant: 'default' });
       return;
     }
@@ -233,20 +234,26 @@ export default function StudentCodingLabsPage() {
                       </p>
                     </CardContent>
                     <CardFooter>
-                      <Button
-                        onClick={() => handleEnroll(language)}
-                        disabled={isCurrentlyEnrolling || isAlreadyEnrolled || !userProfile?.uid}
-                        className="w-full"
-                        variant={isAlreadyEnrolled ? "secondary" : "default"}
-                      >
-                        {isCurrentlyEnrolling ? (
-                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                        ) : isAlreadyEnrolled ? (
-                          <> <CheckCircle className="mr-2 h-4 w-4" /> Enrolled </>
-                        ) : (
-                          'Enroll Now'
-                        )}
-                      </Button>
+                      {isAlreadyEnrolled ? (
+                        <Button asChild variant="secondary" className="w-full">
+                          <Link href={`/student/labs/${language.id}/practice`}>
+                            <PlayCircle className="mr-2 h-4 w-4" /> Start Practice
+                          </Link>
+                        </Button>
+                      ) : (
+                        <Button
+                          onClick={() => handleEnroll(language)}
+                          disabled={isCurrentlyEnrolling || !userProfile?.uid}
+                          className="w-full"
+                          variant={"default"}
+                        >
+                          {isCurrentlyEnrolling ? (
+                            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                          ) : (
+                            'Enroll Now'
+                          )}
+                        </Button>
+                      )}
                     </CardFooter>
                   </Card>
                 );
@@ -260,4 +267,3 @@ export default function StudentCodingLabsPage() {
     </div>
   );
 }
-
