@@ -14,7 +14,7 @@ import * as z from 'zod';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
@@ -128,7 +128,7 @@ export default function CreateTestPage() {
     try {
       const questionsSnapshot = availableQuestions
         .filter(q => selectedQuestionIds.has(q.id))
-        .map(q => ({ id: q.id, questionText: q.questionText, difficulty: q.difficulty, maxScore: q.maxScore }));
+        .map(q => ({ id: q.id, questionText: q.questionText, difficulty: q.difficulty || 'easy', maxScore: q.maxScore || 100 }));
 
       const testData: Omit<OnlineTest, 'id' | 'createdAt' | 'updatedAt'> = {
         languageId: languageId,
@@ -141,8 +141,9 @@ export default function CreateTestPage() {
         totalScore: totalScore,
         status: 'draft',
         createdBy: userProfile.uid,
-        createdAt: serverTimestamp(),
-        updatedAt: serverTimestamp(),
+        // These will be set by Firestore serverTimestamp
+        createdAt: serverTimestamp() as any, 
+        updatedAt: serverTimestamp() as any,
       };
 
       const testsCollectionRef = collection(db, 'colleges', userProfile.collegeId, 'languages', languageId, 'tests');
@@ -152,7 +153,6 @@ export default function CreateTestPage() {
       form.reset();
       setSelectedQuestionIds(new Set());
       setTotalScore(0);
-      // Consider redirecting to a "Manage Tests" page or back to language questions page
       router.push(`/admin/courses/${languageId}/questions`); 
 
     } catch (error) {
@@ -298,7 +298,7 @@ export default function CreateTestPage() {
                     </Table>
                    </div>
                   <p className="text-sm text-destructive text-center" data-testid="selected-questions-error-message">
-                    {form.formState.errors.root?.message} {/* Placeholder for global form error if needed for selected questions */}
+                    {/* Placeholder for global form error if needed for selected questions */}
                   </p>
                 </div>
               )}
@@ -319,3 +319,4 @@ export default function CreateTestPage() {
     </div>
   );
 }
+
