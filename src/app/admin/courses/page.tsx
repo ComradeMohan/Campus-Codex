@@ -146,8 +146,8 @@ export default function CourseManagementPage() {
     }
   };
 
-  const isLanguageAdded = (langName: string) => {
-    return collegeLanguages.some(l => l.name === langName);
+  const getAddedLanguageDetails = (langName: string): ProgrammingLanguage | undefined => {
+    return collegeLanguages.find(l => l.name === langName);
   };
 
   if (!userProfile && !isLoadingLanguages) {
@@ -193,35 +193,46 @@ export default function CourseManagementPage() {
           </CardTitle>
           <CardDescription>
             Select from common programming languages to add them to your college's curriculum.
+            If a language is already added, you can manage its questions directly.
           </CardDescription>
         </CardHeader>
         <CardContent>
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
             {PREDEFINED_LANGUAGES.map((lang) => {
               const PredefinedIcon = getIconComponent(lang.defaultIcon || 'BookOpen');
-              const added = isLanguageAdded(lang.name);
+              const addedLanguageDetails = getAddedLanguageDetails(lang.name);
+              const isAdded = !!addedLanguageDetails;
+
               return (
-                <Card key={lang.name} className={`shadow-md ${added ? 'bg-muted/50' : 'hover:shadow-lg transition-shadow'}`}>
+                <Card key={lang.name} className={`shadow-md ${isAdded ? 'bg-muted/50' : 'hover:shadow-lg transition-shadow'}`}>
                   <CardHeader className="flex flex-row items-center space-x-3 pb-2">
                     <PredefinedIcon className="w-7 h-7 text-muted-foreground" />
                     <CardTitle className="text-lg font-semibold">{lang.name}</CardTitle>
                   </CardHeader>
                   <CardContent className="text-sm text-muted-foreground min-h-[40px] line-clamp-2 pb-3">
-                    {lang.descriptionHint || 'A popular programming language.'}
+                    {isAdded 
+                      ? `Added to ${userProfile?.collegeName || 'your college'}.` 
+                      : (lang.descriptionHint || 'A popular programming language.')
+                    }
                   </CardContent>
                   <CardFooter>
-                    <Button
-                      onClick={() => handleOpenDialog(lang)}
-                      disabled={added || !userProfile?.collegeId}
-                      className="w-full"
-                      variant={added ? "secondary" : "default"}
-                    >
-                      {added ? (
-                        <> <Check className="mr-2 h-4 w-4" /> Added </>
-                      ) : (
-                        <> <PlusCircle className="mr-2 h-4 w-4" /> Add to College </>
-                      )}
-                    </Button>
+                    {isAdded && addedLanguageDetails ? (
+                       <Button asChild variant="secondary" className="w-full">
+                         <Link href={`/admin/courses/${addedLanguageDetails.id}/questions`}>
+                           <MessageSquarePlus className="mr-2 h-4 w-4" />
+                           Manage Questions
+                         </Link>
+                       </Button>
+                    ) : (
+                      <Button
+                        onClick={() => handleOpenDialog(lang)}
+                        disabled={!userProfile?.collegeId}
+                        className="w-full"
+                        variant={"default"}
+                      >
+                        <PlusCircle className="mr-2 h-4 w-4" /> Add to College
+                      </Button>
+                    )}
                   </CardFooter>
                 </Card>
               );
@@ -363,5 +374,4 @@ export default function CourseManagementPage() {
     </div>
   );
 }
-
     
