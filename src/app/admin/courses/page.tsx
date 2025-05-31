@@ -16,7 +16,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter }
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger, DialogClose } from '@/components/ui/dialog';
 import { useToast } from '@/hooks/use-toast';
-import { Loader2, PlusCircle, BookOpen, AlertTriangle, ArrowLeft, Check, Edit3, Trash2, Palette } from 'lucide-react';
+import { Loader2, PlusCircle, BookOpen, AlertTriangle, ArrowLeft, Check, Edit3, Trash2, Palette, MessageSquarePlus } from 'lucide-react';
 import type { ProgrammingLanguage } from '@/types';
 import * as LucideIcons from 'lucide-react';
 
@@ -131,8 +131,7 @@ export default function CourseManagementPage() {
         iconName: data.iconName || selectedPredefinedLang.defaultIcon || 'BookOpen',
         createdAt: serverTimestamp(),
       };
-      // Use language name as document ID for easier querying if desired, or let Firestore generate ID
-      // For this example, let Firestore generate ID
+      
       const docRef = await addDoc(languagesRef, newLanguageData);
       
       setCollegeLanguages(prev => [...prev, { ...newLanguageData, id: docRef.id, createdAt: Timestamp.now() } as ProgrammingLanguage].sort((a, b) => a.name.localeCompare(b.name)));
@@ -186,7 +185,6 @@ export default function CourseManagementPage() {
         </Button>
       </div>
 
-      {/* Section to add predefined languages */}
       <Card className="shadow-lg">
         <CardHeader>
           <CardTitle className="text-xl font-headline flex items-center">
@@ -232,7 +230,6 @@ export default function CourseManagementPage() {
         </CardContent>
       </Card>
 
-      {/* Dialog for confirming and customizing language addition */}
       <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
         <DialogContent className="sm:max-w-[425px]">
           <Form {...dialogForm}>
@@ -300,8 +297,6 @@ export default function CourseManagementPage() {
         </DialogContent>
       </Dialog>
 
-
-      {/* Section for languages already added to the college */}
       <Card className="shadow-lg">
         <CardHeader>
           <CardTitle className="text-xl font-headline flex items-center">
@@ -309,7 +304,7 @@ export default function CourseManagementPage() {
             Languages in {userProfile?.collegeName || 'Your College'}
           </CardTitle>
           <CardDescription>
-            List of programming languages currently configured for your students.
+            List of programming languages currently configured for your students. Manage questions for each language.
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -332,7 +327,7 @@ export default function CourseManagementPage() {
               {collegeLanguages.map((lang) => {
                 const IconComponent = getIconComponent(lang.iconName);
                 return (
-                  <Card key={lang.id} className="shadow-md hover:shadow-lg transition-shadow">
+                  <Card key={lang.id} className="shadow-md hover:shadow-lg transition-shadow flex flex-col">
                     <CardHeader className="flex flex-row items-center justify-between space-x-3 pb-2">
                         <div className="flex items-center space-x-3">
                             <IconComponent className="w-7 h-7 text-primary" />
@@ -345,11 +340,19 @@ export default function CourseManagementPage() {
                         </div>
                         */}
                     </CardHeader>
-                    <CardContent>
+                    <CardContent className="flex-grow">
                       <p className="text-sm text-muted-foreground min-h-[40px] line-clamp-2">
                         {lang.description || 'No description available.'}
                       </p>
                     </CardContent>
+                    <CardFooter>
+                      <Button asChild variant="outline" className="w-full">
+                        <Link href={`/admin/courses/${lang.id}/questions`}>
+                          <MessageSquarePlus className="mr-2 h-4 w-4" />
+                          Manage Questions
+                        </Link>
+                      </Button>
+                    </CardFooter>
                   </Card>
                 );
               })}
