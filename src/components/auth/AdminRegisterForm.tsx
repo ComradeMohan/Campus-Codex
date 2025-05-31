@@ -84,9 +84,15 @@ export function AdminRegisterForm() {
       form.reset();
     } catch (error: any) {
       console.error('Admin registration error:', error);
+      let description = error.message || 'An unexpected error occurred. Please try again.';
+      if (error.code === 'auth/operation-not-allowed') {
+        description = 'Email link sign-in (passwordless) is not enabled for this Firebase project. Please enable it in your Firebase console (Authentication > Sign-in method > Email/Password provider).';
+      } else if (error.code === 'auth/api-key-not-valid') {
+        description = 'The Firebase API key is not valid. Please check your Firebase project configuration in your .env file.';
+      }
       toast({
         title: 'Registration Error',
-        description: error.message || 'An unexpected error occurred. Please try again.',
+        description: description,
         variant: 'destructive',
       });
     } finally {
