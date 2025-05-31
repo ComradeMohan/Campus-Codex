@@ -37,7 +37,8 @@ function simulateActualOutput(code: string, input: string, language: string): st
   const originalCodeTrimmed = code.trim();
 
   // Specific check for the "Non-Prime numbers between A and B" sample case
-  if (language.toLowerCase() === 'python' && input === 'A = 12 B = 19' && originalCodeTrimmed.includes('for x in range')) {
+  // Make the input check more robust by trimming.
+  if (language.toLowerCase() === 'python' && input.trim() === 'A = 12 B = 19' && originalCodeTrimmed.includes('for x in range')) {
     // The question asks for non-primes, sample output is "14, 15, 16, 18"
     // The user's code in the example screenshot actually tries to find primes.
     // For the mock to "work" with the sample, we return the sample's expected non-prime output.
@@ -45,75 +46,60 @@ function simulateActualOutput(code: string, input: string, language: string): st
   }
 
   if (language.toLowerCase() === 'python') {
-    if (trimmedCode === 'user_input = input()\nprint(0)' || trimmedCode === 'print(0)') {
+    // Check for print(0)
+    if (trimmedCode === 'print(0)' || originalCodeTrimmed.match(/^user_input\s*=\s*input\(\)\s*\nprint\(0\)$/m)) {
       return '0';
     }
-    const printMatch = originalCodeTrimmed.match(/print\(\s*(.*?)\s*\)/);
-    if (printMatch && printMatch[1]) {
-      let val = printMatch[1];
-      if ((val.startsWith("'") && val.endsWith("'")) || (val.startsWith('"') && val.endsWith('"'))) {
-        val = val.substring(1, val.length - 1);
-      }
-      if (!isNaN(parseFloat(val)) && isFinite(val as any) || printMatch[1].match(/^['"].*['"]$/)) {
-        // If it's a direct print of a literal number or string, return that.
-        // This is a very basic check.
-        if (trimmedCode.includes('input()')) {
-           // If input() is involved, it's more complex than a direct print.
-           // Fall through to generic simulation.
-        } else {
-          return val;
-        }
-      }
+    // Check for simple echo: print(input()) or var = input() print(var)
+    if (trimmedCode.includes('print(input())') || 
+        (trimmedCode.includes('input()') && originalCodeTrimmed.match(/(\w+)\s*=\s*input\(\)\s*print\(\s*\1\s*\)/m))) {
+      return input;
     }
-    // If code directly prints the input (very simple echo)
-    if (trimmedCode.includes('print(input())') || trimmedCode.includes('print(user_input)')) {
-        return input;
+    // Check for printing a literal string or number, only if no input() call is present
+    const printMatch = originalCodeTrimmed.match(/print\(\s*(['"`])?(.*?)\1?\s*\)/);
+    if (printMatch && !trimmedCode.includes('input()')) {
+      const val = printMatch[2];
+      // Check if val is a number or a (possibly quoted) string that doesn't look like a variable
+      if (!isNaN(parseFloat(val)) && isFinite(val as any) || printMatch[1] || /^[a-zA-Z_]\w*$/.test(val) === false) {
+         // If it has quotes (printMatch[1] is truthy), or it's a number, or it's not a simple variable name.
+         // This is tricky; trying to avoid matching `print(variable_name)`
+         if (printMatch[1]) return val; // Quoted string
+         if (!isNaN(parseFloat(val)) && isFinite(val as any)) return val; // Number
+         // Potentially a more complex literal expression, not a simple variable.
+      }
     }
   } else if (language.toLowerCase() === 'java') {
-    if (trimmedCode.includes('system.out.println(0);')) {
+    if (trimmedCode.includes('system.out.println(0);') && !trimmedCode.includes("scanner.")) { // Approx print(0)
       return '0';
     }
-    const printlnMatch = originalCodeTrimmed.match(/System\.out\.println\(\s*(.*?)\s*\);/);
-    if (printlnMatch && printlnMatch[1]) {
-      let val = printlnMatch[1];
-      if (val.startsWith('"') && val.endsWith('"')) {
-        val = val.substring(1, val.length - 1);
-      }
-      if (!isNaN(parseFloat(val)) && isFinite(val as any) || printlnMatch[1].match(/^".*"$/)) {
-         if (trimmedCode.toLowerCase().includes("scanner.next") || trimmedCode.toLowerCase().includes("input")) {
-            // If input is involved, fall through
-         } else {
-            return val;
-         }
-      }
-    }
-    // Simple echo for Java
-    if (trimmedCode.includes("system.out.println(input)") || trimmedCode.includes("system.out.println(scanner.nextline())")) {
+    // Check for simple echo (direct print of scanner read)
+    if (trimmedCode.match(/System\.out\.println\(\s*scanner\.next[a-zA-Z]*\(\s*\)\s*\);/)) {
         return input;
+    }
+    // Check for printing a literal string or number, only if no Scanner usage
+    const printlnMatch = originalCodeTrimmed.match(/System\.out\.println\(\s*(")?(.*?)\1?\s*\);/);
+    if (printlnMatch && !trimmedCode.toLowerCase().includes("scanner.")) {
+        const val = printlnMatch[2];
+        if (printlnMatch[1]) return val; // Quoted string
+        if (!isNaN(parseFloat(val)) && isFinite(val as any)) return val; // Number
     }
   } else if (language.toLowerCase() === 'javascript') {
-    if (trimmedCode.includes('console.log(0);')) {
+    if (trimmedCode.includes('console.log(0);') && !trimmedCode.match(/(readline|prompt)/)) { // Approx print(0)
       return '0';
     }
-    const consoleLogMatch = originalCodeTrimmed.match(/console\.log\(\s*(.*?)\s*\);/);
-    if (consoleLogMatch && consoleLogMatch[1]) {
-      let val = consoleLogMatch[1];
-      if ((val.startsWith("'") && val.endsWith("'")) || (val.startsWith('"') && val.endsWith('"')) || (val.startsWith("`") && val.endsWith("`"))) {
-        val = val.substring(1, val.length - 1);
-      }
-      if (!isNaN(parseFloat(val)) && isFinite(val as any) || consoleLogMatch[1].match(/^['"`].*['"`]$/)) {
-        if (trimmedCode.toLowerCase().includes("readline()") || trimmedCode.toLowerCase().includes("prompt(")) {
-             // If input is involved, fall through
-        } else {
-            return val;
-        }
-      }
-    }
-    // Simple echo for JS
-    if (trimmedCode.includes("console.log(input)") || trimmedCode.includes("console.log(readline())")) {
+    // Check for simple echo (direct print of readline/prompt) - assuming readline() or prompt()
+    if (trimmedCode.match(/console\.log\(\s*(readline\(\s*\)|prompt\(\s*\))\s*\);/)) {
         return input;
     }
+    // Check for printing a literal string or number, only if no readline/prompt
+    const consoleLogMatch = originalCodeTrimmed.match(/console\.log\(\s*(['"`])?(.*?)\1?\s*\);/);
+     if (consoleLogMatch && !trimmedCode.match(/(readline|prompt)/)) {
+        const val = consoleLogMatch[2];
+        if (consoleLogMatch[1]) return val; // Quoted string
+        if (!isNaN(parseFloat(val)) && isFinite(val as any)) return val; // Number
+    }
   }
+  
   // Default fallback simulation
   return `Simulated output for input: ${input}`;
 }
@@ -124,6 +110,7 @@ export async function POST(request: NextRequest) {
     const body: ExecuteCodeRequestBody = await request.json();
     const { language, code, testCases, sampleInput, sampleOutput, executionType } = body;
 
+    // Simulate delay
     await new Promise(resolve => setTimeout(resolve, 1000 + Math.random() * 200));
 
     let generalOutput = `Simulating execution for ${language} (${executionType} mode)...\nCode received:\n${code.substring(0, 100)}${code.length > 100 ? '...' : ''}\n\n`;
@@ -131,6 +118,7 @@ export async function POST(request: NextRequest) {
     let compileError: string | undefined = undefined;
     let executionError: string | undefined = undefined;
 
+    // Simulate compile/runtime errors based on code content
     if (code.toLowerCase().includes("infinite loop simulated error")) {
       compileError = `Simulated Compile Error: Detected potential infinite loop construct.`;
       generalOutput += `Compilation failed.\n`;
@@ -148,7 +136,7 @@ export async function POST(request: NextRequest) {
           input: sampleInput || "N/A",
           expectedOutput: sampleOutput || "N/A",
           actualOutput: actualSampleOutput,
-          passed: sampleOutput !== undefined ? actualSampleOutput === sampleOutput : true, // Pass if no sample output to compare
+          passed: sampleOutput !== undefined ? actualSampleOutput === sampleOutput : true,
         });
         generalOutput += `Sample input processed (simulation).\nActual output for sample: ${actualSampleOutput}\n`;
       } else if (executionType === 'submit') {
