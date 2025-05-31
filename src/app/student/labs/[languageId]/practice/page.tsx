@@ -409,10 +409,10 @@ export default function StudentPracticePage() {
                           )}
                         </div>
                         <div className="text-xs space-y-1">
-                          <p><strong className="text-muted-foreground">Input:</strong> <pre className="inline whitespace-pre-wrap font-mono bg-muted/30 p-1 rounded text-xs">{result.input}</pre></p>
-                          <p><strong className="text-muted-foreground">Expected:</strong> <pre className="inline whitespace-pre-wrap font-mono bg-muted/30 p-1 rounded text-xs">{result.expectedOutput}</pre></p>
-                           {!result.passed && <p><strong className="text-muted-foreground">Actual:</strong> <pre className="inline whitespace-pre-wrap font-mono bg-muted/30 p-1 rounded text-xs">{result.actualOutput}</pre></p>}
-                           {result.error && <p className="text-red-600"><strong className="text-muted-foreground">Error:</strong> {result.error}</p>}
+                          <div><strong className="text-muted-foreground">Input:</strong> <pre className="inline whitespace-pre-wrap font-mono bg-muted/30 p-1 rounded text-xs">{result.input}</pre></div>
+                          <div><strong className="text-muted-foreground">Expected:</strong> <pre className="inline whitespace-pre-wrap font-mono bg-muted/30 p-1 rounded text-xs">{result.expectedOutput}</pre></div>
+                           {!result.passed && <div><strong className="text-muted-foreground">Actual:</strong> <pre className="inline whitespace-pre-wrap font-mono bg-muted/30 p-1 rounded text-xs">{result.actualOutput}</pre></div>}
+                           {result.error && <div className="text-red-600"><strong className="text-muted-foreground">Error:</strong> {result.error}</div>}
                         </div>
                       </Card>
                     ))}
@@ -438,3 +438,5 @@ export default function StudentPracticePage() {
   );
 }
 
+
+    
