@@ -1,5 +1,6 @@
 
 import type { LucideIcon } from 'lucide-react';
+import type { Timestamp, FieldValue } from 'firebase/firestore';
 
 export type NavItem = {
   label: string;
@@ -44,5 +45,23 @@ export interface ProgrammingLanguage {
   name: string;
   description?: string;
   iconName?: string; // To store the name of a Lucide icon
-  createdAt: firebase.firestore.Timestamp | firebase.firestore.FieldValue; // For Firestore timestamp
+  createdAt: Timestamp | FieldValue; 
+}
+
+export interface TestCase {
+  input: string;
+  expectedOutput: string;
+  // score?: number; // Future consideration
+}
+
+export interface Question {
+  id: string;
+  languageId: string; // The ID of the ProgrammingLanguage
+  questionText: string;
+  sampleInput?: string;
+  sampleOutput?: string;
+  solution?: string;
+  testCases: TestCase[];
+  createdAt: Timestamp | FieldValue;
+  updatedAt: Timestamp | FieldValue;
 }
