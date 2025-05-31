@@ -26,12 +26,13 @@ export function HeroSection() {
           </div>
           <div className="relative aspect-video rounded-xl overflow-hidden shadow-2xl group">
             <Image
-              src="https://placehold.co/600x400.png"
-              alt="Coding lab illustration"
+              src="https://storage.googleapis.com/project-pixel-prod-public/drive%2F1kYVDFQoBxr7xV8l7xZ8Z%2Fprocessed%2F1Hn8-L5rF2Qx21oT-k013_A_32d55e6f-488e-4533-86d8-5a950c9191e4.png"
+              alt="Screenshot of a coding interface with multiple panels"
               fill
               style={{ objectFit: 'cover' }}
               className="transform transition-transform duration-500 group-hover:scale-105"
-              data-ai-hint="abstract digital"
+              data-ai-hint="coding interface"
+              priority
             />
             <div className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent"></div>
              <div className="absolute bottom-4 left-4 text-white p-2 rounded bg-black/30 backdrop-blur-sm">
@@ -44,4 +45,3 @@ export function HeroSection() {
     </section>
   );
 }
-
