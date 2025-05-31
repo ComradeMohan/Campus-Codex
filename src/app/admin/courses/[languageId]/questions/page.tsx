@@ -6,7 +6,7 @@ import Link from 'next/link';
 import { useParams, useRouter } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContext';
 import { db } from '@/lib/firebase';
-import { doc, getDoc, collection, addDoc, serverTimestamp, query, orderBy, getDocs } from 'firebase/firestore';
+import { doc, getDoc, collection, addDoc, updateDoc, serverTimestamp, query, orderBy, getDocs, deleteDoc } from 'firebase/firestore';
 import { useForm, useFieldArray, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
@@ -17,8 +17,9 @@ import { Textarea } from '@/components/ui/textarea';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { useToast } from '@/hooks/use-toast';
-import { Loader2, PlusCircle, Trash2, ArrowLeft, HelpCircle, ListChecks, FileText, CheckSquare } from 'lucide-react';
+import { Loader2, PlusCircle, Trash2, ArrowLeft, HelpCircle, ListChecks, Edit3, XCircle, FileText } from 'lucide-react';
 import type { ProgrammingLanguage, Question as QuestionType, TestCase } from '@/types';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 
 const testCaseSchema = z.object({
   input: z.string().min(1, { message: "Test case input cannot be empty." }),
@@ -48,6 +49,9 @@ export default function ManageQuestionsPage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [questions, setQuestions] = useState<QuestionType[]>([]);
   const [isLoadingQuestions, setIsLoadingQuestions] = useState(true);
+  const [editingQuestion, setEditingQuestion] = useState<QuestionType | null>(null);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [questionToDelete, setQuestionToDelete] = useState<QuestionType | null>(null);
 
 
   const form = useForm<QuestionFormData>({
@@ -61,7 +65,7 @@ export default function ManageQuestionsPage() {
     },
   });
 
-  const { fields, append, remove } = useFieldArray({
+  const { fields, append, remove, replace } = useFieldArray({
     control: form.control,
     name: "testCases",
   });
@@ -111,6 +115,28 @@ export default function ManageQuestionsPage() {
     fetchQuestions();
   }, [fetchLanguageDetails, fetchQuestions]);
 
+  const handleStartEdit = (question: QuestionType) => {
+    setEditingQuestion(question);
+    form.reset({
+      questionText: question.questionText,
+      sampleInput: question.sampleInput || '',
+      sampleOutput: question.sampleOutput || '',
+      solution: question.solution || '',
+      testCases: question.testCases.map(tc => ({ input: tc.input, expectedOutput: tc.expectedOutput })), // Ensure test cases structure matches form
+    });
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
+  const handleCancelEdit = () => {
+    setEditingQuestion(null);
+    form.reset({
+      questionText: '',
+      sampleInput: '',
+      sampleOutput: '',
+      solution: '',
+      testCases: [{ input: '', expectedOutput: '' }],
+    });
+  };
 
   const onSubmit = async (data: QuestionFormData) => {
     if (!userProfile?.collegeId || !languageId || !language) {
@@ -119,30 +145,64 @@ export default function ManageQuestionsPage() {
     }
     setIsSubmitting(true);
     try {
-      const questionCollectionRef = collection(db, 'colleges', userProfile.collegeId, 'languages', languageId, 'questions');
-      const newQuestionData = {
-        ...data,
-        languageId: languageId,
-        languageName: language.name, // Denormalize language name for easier display
-        createdAt: serverTimestamp(),
-        updatedAt: serverTimestamp(),
-      };
-      await addDoc(questionCollectionRef, newQuestionData);
-      toast({ title: "Question Added!", description: `New question for ${language.name} has been saved.` });
-      form.reset({
-        questionText: '',
-        sampleInput: '',
-        sampleOutput: '',
-        solution: '',
-        testCases: [{ input: '', expectedOutput: '' }],
-      });
+      if (editingQuestion) {
+        // Update existing question
+        const questionDocRef = doc(db, 'colleges', userProfile.collegeId, 'languages', languageId, 'questions', editingQuestion.id);
+        const updatedQuestionData = {
+          ...data,
+          languageId: languageId,
+          languageName: language.name,
+          updatedAt: serverTimestamp(),
+        };
+        await updateDoc(questionDocRef, updatedQuestionData);
+        toast({ title: "Question Updated!", description: `Question for ${language.name} has been updated.` });
+      } else {
+        // Add new question
+        const questionCollectionRef = collection(db, 'colleges', userProfile.collegeId, 'languages', languageId, 'questions');
+        const newQuestionData = {
+          ...data,
+          languageId: languageId,
+          languageName: language.name,
+          createdAt: serverTimestamp(),
+          updatedAt: serverTimestamp(),
+        };
+        await addDoc(questionCollectionRef, newQuestionData);
+        toast({ title: "Question Added!", description: `New question for ${language.name} has been saved.` });
+      }
+      handleCancelEdit(); // Reset form and editing state
       fetchQuestions(); // Refresh the list of questions
     } catch (error) {
-      console.error("Error adding question:", error);
-      toast({ title: "Error", description: "Failed to add question. Please try again.", variant: "destructive" });
+      console.error("Error submitting question:", error);
+      toast({ title: "Error", description: `Failed to ${editingQuestion ? 'update' : 'add'} question. Please try again.`, variant: "destructive" });
     } finally {
       setIsSubmitting(false);
     }
+  };
+
+  const handleDeleteQuestion = async () => {
+    if (!questionToDelete || !userProfile?.collegeId || !languageId) {
+      toast({ title: "Error", description: "Cannot delete question. Missing information.", variant: "destructive" });
+      return;
+    }
+    setIsSubmitting(true); // Reuse for delete operation
+    try {
+      const questionDocRef = doc(db, 'colleges', userProfile.collegeId, 'languages', languageId, 'questions', questionToDelete.id);
+      await deleteDoc(questionDocRef);
+      toast({ title: "Question Deleted", description: "The question has been successfully deleted." });
+      fetchQuestions();
+    } catch (error) {
+      console.error("Error deleting question:", error);
+      toast({ title: "Error", description: "Failed to delete question.", variant: "destructive" });
+    } finally {
+      setIsSubmitting(false);
+      setQuestionToDelete(null);
+      setShowDeleteConfirm(false);
+    }
+  };
+
+  const openDeleteConfirmDialog = (question: QuestionType) => {
+    setQuestionToDelete(question);
+    setShowDeleteConfirm(true);
   };
   
   if (isLoadingLanguage) {
@@ -169,9 +229,11 @@ export default function ManageQuestionsPage() {
 
       <Card className="shadow-lg">
         <CardHeader>
-          <CardTitle className="text-xl font-headline">Add New Question</CardTitle>
+          <CardTitle className="text-xl font-headline">
+            {editingQuestion ? `Edit Question for ${language.name}` : `Add New Question for ${language.name}`}
+          </CardTitle>
           <CardDescription>
-            Create a new programming question with test cases for {language.name}.
+            {editingQuestion ? 'Modify the details of this question.' : `Create a new programming question with test cases for ${language.name}.`}
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -290,15 +352,22 @@ export default function ManageQuestionsPage() {
                 >
                   <PlusCircle className="h-4 w-4 mr-2" /> Add Test Case
                 </Button>
-                 {form.formState.errors.testCases && !form.formState.errors.testCases.root && typeof form.formState.errors.testCases !== 'string' && (
+                 {form.formState.errors.testCases && typeof form.formState.errors.testCases.message === 'string' && (
                     <p className="text-sm font-medium text-destructive mt-2">{form.formState.errors.testCases.message}</p>
                  )}
               </div>
 
-              <Button type="submit" disabled={isSubmitting} className="w-full sm:w-auto">
-                {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                Add Question
-              </Button>
+              <div className="flex space-x-3">
+                <Button type="submit" disabled={isSubmitting} className="w-full sm:w-auto">
+                  {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                  {editingQuestion ? 'Update Question' : 'Add Question'}
+                </Button>
+                {editingQuestion && (
+                  <Button type="button" variant="outline" onClick={handleCancelEdit} className="w-full sm:w-auto">
+                    <XCircle className="mr-2 h-4 w-4" /> Cancel Edit
+                  </Button>
+                )}
+              </div>
             </form>
           </Form>
         </CardContent>
@@ -311,7 +380,7 @@ export default function ManageQuestionsPage() {
             Existing Questions for {language.name}
           </CardTitle>
            <CardDescription>
-            Currently added questions for this language.
+            Currently added questions for this language. You can edit or delete them.
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -328,28 +397,48 @@ export default function ManageQuestionsPage() {
                   <CardHeader className="pb-3">
                     <CardTitle className="text-lg flex items-center justify-between">
                       <span>Question {questions.length - index}</span>
-                       {/* TODO: Edit/Delete buttons for questions */}
-                        {/* <div className="flex space-x-2">
-                          <Button variant="ghost" size="icon" className="h-7 w-7"><FileText className="h-4 w-4" /></Button>
-                          <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive hover:text-destructive"><Trash2 className="h-4 w-4" /></Button>
-                        </div> */}
+                        <div className="flex space-x-2">
+                          <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => handleStartEdit(q)}>
+                            <Edit3 className="h-4 w-4" />
+                            <span className="sr-only">Edit Question</span>
+                          </Button>
+                          <AlertDialog open={showDeleteConfirm && questionToDelete?.id === q.id} onOpenChange={(isOpen) => { if(!isOpen) { setQuestionToDelete(null); setShowDeleteConfirm(false);}}}>
+                            <AlertDialogTrigger asChild>
+                              <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive hover:text-destructive hover:bg-destructive/10" onClick={() => openDeleteConfirmDialog(q)}>
+                                <Trash2 className="h-4 w-4" />
+                                <span className="sr-only">Delete Question</span>
+                              </Button>
+                            </AlertDialogTrigger>
+                            <AlertDialogContent>
+                              <AlertDialogHeader>
+                                <AlertDialogTitle>Are you sure you want to delete this question?</AlertDialogTitle>
+                                <AlertDialogDescription>
+                                  This action cannot be undone. This will permanently delete the question and all its associated data.
+                                </AlertDialogDescription>
+                              </AlertDialogHeader>
+                              <AlertDialogFooter>
+                                <AlertDialogCancel onClick={() => {setQuestionToDelete(null); setShowDeleteConfirm(false);}}>Cancel</AlertDialogCancel>
+                                <AlertDialogAction onClick={handleDeleteQuestion} disabled={isSubmitting} className="bg-destructive hover:bg-destructive/90">
+                                  {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                                  Delete
+                                </AlertDialogAction>
+                              </AlertDialogFooter>
+                            </AlertDialogContent>
+                          </AlertDialog>
+                        </div>
                     </CardTitle>
                   </CardHeader>
                   <CardContent>
                     <p className="text-muted-foreground whitespace-pre-wrap line-clamp-3">{q.questionText}</p>
                     <p className="text-xs text-muted-foreground mt-2">Test Cases: {q.testCases.length}</p>
                   </CardContent>
-                  {/* <CardFooter>
-                     <Button variant="outline" size="sm" disabled>View Details</Button> 
-                  </CardFooter> */}
                 </Card>
               ))}
             </div>
           )}
         </CardContent>
       </Card>
-
     </div>
   );
 }
-
+      
