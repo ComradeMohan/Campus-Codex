@@ -13,6 +13,7 @@ import { MonacoCodeEditor } from '@/components/editor/MonacoCodeEditor';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
+import { Progress } from '@/components/ui/progress';
 import { Loader2, ArrowLeft, Lightbulb, Terminal, ChevronLeft, ChevronRight, BookOpen, CheckCircle, XCircle, AlertTriangle, Tag, Star, Play, CheckSquare } from 'lucide-react';
 import type { ProgrammingLanguage, Question as QuestionType, QuestionDifficulty, EnrolledLanguageProgress } from '@/types';
 
@@ -40,6 +41,7 @@ export default function StudentPracticePage() {
   const [output, setOutput] = useState('');
   const [testResults, setTestResults] = useState<TestCaseResult[]>([]);
   const [enrollmentProgress, setEnrollmentProgress] = useState<EnrolledLanguageProgress | null>(null);
+  const [totalPossibleLanguageScore, setTotalPossibleLanguageScore] = useState(0);
 
   const [isLoadingPageData, setIsLoadingPageData] = useState(true);
   const [isExecutingCode, setIsExecutingCode] = useState(false);
@@ -81,17 +83,22 @@ export default function StudentPracticePage() {
 
       if (fetchedQuestions.length === 0) {
         toast({ title: "No Questions", description: `This ${langData.name} course doesn't have any questions yet. Check back later!`, variant: "default" });
+        setTotalPossibleLanguageScore(0);
+      } else {
+        let totalScoreCalc = 0;
+        for (const q of fetchedQuestions) {
+          totalScoreCalc += q.maxScore || 100;
+        }
+        setTotalPossibleLanguageScore(totalScoreCalc);
       }
       setQuestions(fetchedQuestions);
       setCurrentQuestionIndex(0);
 
-      // Fetch enrollment progress
       const enrollmentRef = doc(db, 'users', userProfile.uid, 'enrolledLanguages', languageId);
       const enrollmentSnap = await getDoc(enrollmentRef);
       if (enrollmentSnap.exists()) {
         setEnrollmentProgress(enrollmentSnap.data() as EnrolledLanguageProgress);
       } else {
-        // This case should ideally not happen if student navigates from enrolled labs
         console.warn("Enrollment progress not found for this language.");
         setEnrollmentProgress(null);
       }
@@ -208,11 +215,11 @@ export default function StudentPracticePage() {
                 const enrollmentSnap = await getDoc(enrollmentRef);
 
                 if (enrollmentSnap.exists()) {
-                    const currentProgress = enrollmentSnap.data() as EnrolledLanguageProgress;
+                    const currentProgressData = enrollmentSnap.data() as EnrolledLanguageProgress;
                     let scoreEarned = currentQuestion.maxScore || 100;
                     let isNewCompletion = true;
 
-                    if (currentProgress.completedQuestions && currentProgress.completedQuestions[currentQuestion.id]) {
+                    if (currentProgressData.completedQuestions && currentProgressData.completedQuestions[currentQuestion.id]) {
                         scoreEarned = 0; 
                         isNewCompletion = false;
                     }
@@ -226,27 +233,26 @@ export default function StudentPracticePage() {
                             updates.currentScore = increment(scoreEarned);
                             updates[`completedQuestions.${currentQuestion.id}.scoreAchieved`] = scoreEarned;
                         } else {
-                            // Keep existing score if re-submitting
-                            updates[`completedQuestions.${currentQuestion.id}.scoreAchieved`] = currentProgress.completedQuestions[currentQuestion.id]?.scoreAchieved || 0;
+                            updates[`completedQuestions.${currentQuestion.id}.scoreAchieved`] = currentProgressData.completedQuestions[currentQuestion.id]?.scoreAchieved || 0;
                         }
 
                         await updateDoc(enrollmentRef, updates);
                         
-                        // Optimistically update local enrollmentProgress state
                         setEnrollmentProgress(prev => {
                             const newCompletedQuestions = {
                                 ...(prev?.completedQuestions || {}),
                                 [currentQuestion.id]: {
                                     scoreAchieved: updates[`completedQuestions.${currentQuestion.id}.scoreAchieved`],
-                                    completedAt: serverTimestamp() as FieldValue, // Approximate for local state
+                                    completedAt: serverTimestamp() as FieldValue,
                                     submittedCode: studentCode,
                                 },
                             };
-                            return {
-                                ...(prev || { languageId, languageName: language.name, enrolledAt: serverTimestamp(), currentScore:0, completedQuestions: {} } as EnrolledLanguageProgress), // Provide defaults if prev is null
+                            const newProgress = {
+                                ...(prev || { languageId, languageName: language.name, enrolledAt: serverTimestamp(), currentScore:0, completedQuestions: {} } as EnrolledLanguageProgress),
                                 currentScore: isNewCompletion ? (prev?.currentScore || 0) + scoreEarned : (prev?.currentScore || 0),
                                 completedQuestions: newCompletedQuestions,
                             };
+                            return newProgress;
                         });
 
 
@@ -342,6 +348,10 @@ export default function StudentPracticePage() {
     );
   }
 
+  const currentProgressPercent = enrollmentProgress && totalPossibleLanguageScore > 0
+    ? Math.round((enrollmentProgress.currentScore / totalPossibleLanguageScore) * 100)
+    : 0;
+
   return (
     <div className="container mx-auto py-8 space-y-6">
       <div className="flex justify-between items-center">
@@ -355,6 +365,21 @@ export default function StudentPracticePage() {
           </Link>
         </Button>
       </div>
+
+      {language && enrollmentProgress && totalPossibleLanguageScore > 0 && (
+        <Card className="shadow-md">
+          <CardHeader>
+            <CardTitle className="text-lg font-semibold">Overall {language.name} Progress</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <Progress value={currentProgressPercent} className="w-full h-3 mb-1" />
+            <p className="text-sm text-muted-foreground text-right">
+              {enrollmentProgress.currentScore} / {totalPossibleLanguageScore} points ({currentProgressPercent}%)
+            </p>
+          </CardContent>
+        </Card>
+      )}
+
 
       {questions.length === 0 && !isLoadingPageData ? (
         <Card className="shadow-lg">
@@ -377,13 +402,20 @@ export default function StudentPracticePage() {
               <div className="flex justify-between items-start flex-wrap gap-2">
                 <div>
                     <CardTitle className="text-xl font-semibold mb-1">Question {currentQuestionIndex + 1} of {questions.length}</CardTitle>
-                    <div className="flex items-center gap-2 flex-wrap">
+                    <div className="flex items-center gap-2 flex-wrap mt-1">
                         <Badge variant={getDifficultyBadgeVariant(currentQuestion.difficulty)} className="capitalize text-xs px-2 py-0.5">
                            <Tag className="w-3 h-3 mr-1" /> {currentQuestion.difficulty || 'easy'}
                         </Badge>
-                        <Badge variant="outline" className="text-xs px-2 py-0.5">
-                            <Star className="w-3 h-3 mr-1" /> Max Score: {currentQuestion.maxScore || 100}
-                        </Badge>
+                        {enrollmentProgress?.completedQuestions?.[currentQuestion.id] ? (
+                            <Badge variant="default" className="bg-green-600 hover:bg-green-700 text-white capitalize text-xs px-2 py-0.5">
+                                <CheckCircle className="w-3 h-3 mr-1" />
+                                Score Achieved: {enrollmentProgress.completedQuestions[currentQuestion.id].scoreAchieved}
+                            </Badge>
+                        ) : (
+                            <Badge variant="outline" className="text-xs px-2 py-0.5">
+                                <Star className="w-3 h-3 mr-1" /> Max Score: {currentQuestion.maxScore || 100}
+                            </Badge>
+                        )}
                     </div>
                 </div>
                 <div className="flex space-x-2 shrink-0">
@@ -502,3 +534,4 @@ export default function StudentPracticePage() {
     </div>
   );
 }
+
