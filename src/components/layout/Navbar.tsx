@@ -18,12 +18,12 @@ export function Navbar() {
   const router = useRouter();
   const [isSheetOpen, setIsSheetOpen] = useState(false);
   const [isMounted, setIsMounted] = useState(false);
-  const [theme, setTheme] = useState('light');
+  const [theme, setTheme] = useState('dark'); // Default to dark
 
   useEffect(() => {
     setIsMounted(true);
     const storedTheme = localStorage.getItem('theme');
-    const initialTheme = storedTheme ? storedTheme : 'light';
+    const initialTheme = storedTheme ? storedTheme : 'dark'; // Default to dark if nothing in localStorage
     setTheme(initialTheme);
     if (initialTheme === 'dark') {
       document.documentElement.classList.add('dark');
@@ -223,4 +223,3 @@ export function Navbar() {
     </header>
   );
 }
-
