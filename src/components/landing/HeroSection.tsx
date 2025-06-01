@@ -26,12 +26,12 @@ export function HeroSection() {
           </div>
           <div className="relative aspect-video rounded-xl overflow-hidden shadow-2xl group">
             <Image
-              src="https://i.ibb.co/tTCZxq7r/b48e06090403848402ed0c3f7ce984a9.jpg"
-              alt="Screenshot of a coding interface with multiple panels"
+              src="https://i.ibb.co/pjQXjTHW/ab261348324ec2f390f6662641e238d9.jpg"
+              alt="Abstract background with code-like elements"
               fill
               style={{ objectFit: 'cover' }}
               className="transform transition-transform duration-500 group-hover:scale-105"
-              data-ai-hint="coding interface"
+              data-ai-hint="abstract background"
               priority
             />
             <div className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent"></div>
