@@ -99,16 +99,15 @@ export default function StudentPracticePage() {
     if (language && questions.length > 0 && questions[currentQuestionIndex]) {
       const currentQ = questions[currentQuestionIndex];
       let initialCode = `// Start writing your ${language.name} code here for Question ${currentQuestionIndex + 1}\n// ${currentQ.questionText.substring(0,50)}...\n\n`;
-      if (currentQ.sampleInput || currentQ.sampleOutput) {
-        initialCode += `/*\nSample Input:\n${currentQ.sampleInput || 'N/A'}\n\nSample Output:\n${currentQ.sampleOutput || 'N/A'}\n*/\n\n`;
-      }
-      // Add language-specific boilerplate if helpful
+      
+      initialCode += `/*\nSample Input:\n${currentQ.sampleInput || 'N/A'}\n\nSample Output:\n${currentQ.sampleOutput || 'N/A'}\n*/\n\n`;
+      
       if (language.name.toLowerCase() === 'python') {
-        initialCode += `# Your Python code here\n`;
+        initialCode += `# Your Python code here\ndef main():\n    # Read input if necessary, for example:\n    # line = input()\n    # print(f"Processing: {line}")\n    pass\n\nif __name__ == "__main__":\n    main()\n`;
       } else if (language.name.toLowerCase() === 'javascript') {
-        initialCode += `// Your JavaScript code here\n`;
+        initialCode += `// Your JavaScript code here\nfunction main() {\n    // In a Node.js environment for competitive programming, you might read from process.stdin\n    // For example, using 'readline' module if available in the execution sandbox.\n    // console.log("Hello from JavaScript!");\n}\n\nmain();\n`;
       } else if (language.name.toLowerCase() === 'java') {
-        initialCode += `public class Main {\n    public static void main(String[] args) {\n        // Your Java code here\n    }\n}\n`;
+        initialCode += `import java.util.Scanner;\n\npublic class Main {\n    public static void main(String[] args) {\n        // Scanner scanner = new Scanner(System.in);\n        // String input = scanner.nextLine();\n        // System.out.println("Processing: " + input);\n        // scanner.close();\n    }\n}\n`;
       }
       setStudentCode(initialCode);
       setOutput('');
@@ -160,15 +159,26 @@ export default function StudentPracticePage() {
 
         if (!response.ok) {
             const errorData = await response.json().catch(() => ({ message: "Failed to process the request. Server returned an error." }));
-            throw new Error(errorData.message || `Server error: ${response.status}`);
+            const serverErrorMessage = errorData.executionError || errorData.message || `Server error: ${response.status}`;
+            throw new Error(serverErrorMessage);
         }
 
         const result = await response.json();
         
         setOutput(result.generalOutput || '');
         setTestResults(result.testCaseResults || []);
-        if (result.compileError) setCompileError(result.compileError);
-        if (result.executionError) setExecutionError(result.executionError);
+        if (result.compileError) {
+          setCompileError(result.compileError);
+          if (executionType === 'run') {
+            toast({ title: "Compilation Error", description: "Please fix the errors in your code.", variant: "destructive"});
+          }
+        }
+        if (result.executionError) {
+          setExecutionError(result.executionError);
+           if (executionType === 'run' && !result.compileError) { // Only show runtime toast if no compile error
+            toast({ title: "Runtime Error", description: "Your code encountered an error during sample execution.", variant: "destructive"});
+          }
+        }
 
 
         if (executionType === 'submit' && !result.compileError && !result.executionError) {
@@ -217,17 +227,13 @@ export default function StudentPracticePage() {
                         variant: "destructive",
                     });
                 }
-            } else if (!result.compileError && !result.executionError) { // No test results but no errors either
+            } else if (!result.compileError && !result.executionError) { 
                  toast({
                     title: "Submission Processed",
                     description: "Your code was submitted, but no test results were returned or no test cases defined for this scenario.",
                     variant: "default",
                 });
             }
-        } else if (executionType === 'run' && result.compileError) {
-            toast({ title: "Compilation Error", description: "Please fix the errors in your code.", variant: "destructive"});
-        } else if (executionType === 'run' && result.executionError) {
-            toast({ title: "Runtime Error", description: "Your code encountered an error during sample execution.", variant: "destructive"});
         }
 
 
@@ -235,7 +241,7 @@ export default function StudentPracticePage() {
         console.error(`Error ${executionType}ing code:`, error);
         const errorMessage = error.message || `Failed to ${executionType} code.`;
         setOutput(prev => prev + `\nClient-side error during execution: ${errorMessage}`);
-        setExecutionError(`Client-side error: ${errorMessage}`); // Prefer setting specific error states
+        setExecutionError(`Client-side error: ${errorMessage}`); 
         toast({ title: `${executionType === 'run' ? 'Run' : 'Submission'} Error`, description: errorMessage, variant: "destructive" });
     } finally {
         setIsExecutingCode(false);
@@ -253,7 +259,7 @@ export default function StudentPracticePage() {
 
   const handlePrevQuestion = () => {
     if (currentQuestionIndex > 0) {
-      setCurrentQuestionIndex(prev => prev - 1); // Corrected to decrement
+      setCurrentQuestionIndex(prev => prev - 1);
     }
   };
 
@@ -386,7 +392,7 @@ export default function StudentPracticePage() {
                         <pre className="whitespace-pre-wrap font-mono text-xs">{compileError}</pre>
                     </div>
                 )}
-                {executionError && !compileError && ( // Only show execution error if no compile error
+                {executionError && !compileError && ( 
                      <div className="mb-4 p-3 bg-destructive/10 border border-destructive text-destructive rounded-md text-sm">
                         <div className="flex items-center font-semibold mb-1"><AlertTriangle className="w-4 h-4 mr-2" />Execution Error:</div>
                         <pre className="whitespace-pre-wrap font-mono text-xs">{executionError}</pre>
@@ -399,7 +405,7 @@ export default function StudentPracticePage() {
                   {output || "Code output and test results will appear here..."}
                 </pre>
                 
-                {testResults.length > 0 && !compileError && ( // Don't show test results if there was a compile error
+                {testResults.length > 0 && !compileError && ( 
                   <div className="mt-4 space-y-3 max-h-[250px] overflow-y-auto">
                     <h4 className="text-md font-semibold">Test Case Results:</h4>
                     {testResults.map((result) => (
@@ -447,3 +453,5 @@ export default function StudentPracticePage() {
     </div>
   );
 }
+
+    
