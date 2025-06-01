@@ -5,7 +5,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import Link from 'next/link';
 import { useAuth } from '@/contexts/AuthContext';
 import { db } from '@/lib/firebase';
-import { collection, getDocs, query, orderBy, where, doc, setDoc, serverTimestamp, Timestamp } from 'firebase/firestore';
+import { collection, getDocs, query, orderBy, where, doc, setDoc, serverTimestamp, Timestamp, limit } from 'firebase/firestore';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { AICodeAssistant } from '@/components/AICodeAssistant';
@@ -29,6 +29,8 @@ export default function StudentCodingLabsPage() {
   const [isLoadingLanguages, setIsLoadingLanguages] = useState(true);
   const [enrolledLanguageIds, setEnrolledLanguageIds] = useState<Set<string>>(new Set());
   const [isEnrolling, setIsEnrolling] = useState<Record<string, boolean>>({}); // Tracks enrollment loading state per language
+  const [languageHasPublishedTests, setLanguageHasPublishedTests] = useState<Map<string, boolean>>(new Map());
+
 
   const fetchCollegeLanguages = useCallback(async (collegeId: string) => {
     setIsLoadingLanguages(true);
@@ -73,6 +75,40 @@ export default function StudentCodingLabsPage() {
        setIsLoadingLanguages(false); // Stop loading if user is not logged in
     }
   }, [userProfile, authLoading, fetchCollegeLanguages, fetchEnrolledLanguages]);
+
+  useEffect(() => {
+    if (userProfile?.collegeId && collegeLanguages.length > 0) {
+      const currentAvailabilityMap = new Map(languageHasPublishedTests);
+      
+      collegeLanguages.forEach(async (lang) => {
+        // Avoid re-checking if already determined, unless some refresh logic is added later
+        if (currentAvailabilityMap.has(lang.id) && currentAvailabilityMap.get(lang.id) !== undefined) {
+          return;
+        }
+
+        try {
+          const testsRef = collection(db, 'colleges', userProfile.collegeId!, 'languages', lang.id, 'tests');
+          const q = query(testsRef, where('status', '==', 'published'), limit(1));
+          const testsSnap = await getDocs(q);
+          
+          setLanguageHasPublishedTests(prevMap => {
+            const updatedMap = new Map(prevMap);
+            updatedMap.set(lang.id, !testsSnap.empty);
+            return updatedMap;
+          });
+
+        } catch (error) {
+          console.error(`Error checking tests for ${lang.name}:`, error);
+          setLanguageHasPublishedTests(prevMap => {
+            const updatedMap = new Map(prevMap);
+            updatedMap.set(lang.id, false); // Assume no tests on error
+            return updatedMap;
+          });
+        }
+      });
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [collegeLanguages, userProfile?.collegeId, db]); // db added as it's used in collection
 
   const handleEnroll = async (language: ProgrammingLanguage) => {
     if (!userProfile?.uid) {
@@ -218,6 +254,7 @@ export default function StudentCodingLabsPage() {
                 const LanguageIcon = getIconComponent(language.iconName);
                 const isCurrentlyEnrolling = isEnrolling[language.id];
                 const isAlreadyEnrolled = enrolledLanguageIds.has(language.id);
+                const hasPublishedTests = languageHasPublishedTests.get(language.id) === true;
 
                 return (
                   <Card key={language.id} className="shadow-md hover:shadow-lg transition-shadow flex flex-col">
@@ -243,11 +280,13 @@ export default function StudentCodingLabsPage() {
                               <PlayCircle className="mr-2 h-4 w-4" /> Start Practice
                             </Link>
                           </Button>
-                          <Button asChild variant="outline" className="w-full">
-                            <Link href={`/student/labs/${language.id}/tests`}>
-                              <ListChecks className="mr-2 h-4 w-4" /> View Tests
-                            </Link>
-                          </Button>
+                          {hasPublishedTests && (
+                            <Button asChild variant="outline" className="w-full">
+                              <Link href={`/student/labs/${language.id}/tests`}>
+                                <ListChecks className="mr-2 h-4 w-4" /> View Tests
+                              </Link>
+                            </Button>
+                          )}
                         </>
                       ) : (
                         <Button
@@ -276,3 +315,4 @@ export default function StudentCodingLabsPage() {
     </div>
   );
 }
+
