@@ -41,6 +41,7 @@ export default function StudentProfilePage() {
   const fetchStudentProgress = useCallback(async () => {
     if (!userProfile?.uid || !userProfile?.collegeId) {
       if (!authLoading) toast({ title: "Error", description: "User or college information not found.", variant: "destructive" });
+      setIsLoadingProgress(false); // Ensure loading stops if prerequisites aren't met
       return;
     }
     setIsLoadingProgress(true);
@@ -49,8 +50,8 @@ export default function StudentProfilePage() {
       const enrolledLangSnap = await getDocs(enrolledLangRef);
       const enrolledProgressItems = enrolledLangSnap.docs.map(elDoc => elDoc.data() as EnrolledLanguageProgress);
 
-      let overallScore = 0;
-      let possibleOverallScore = 0;
+      let overallScoreAcc = 0;
+      let possibleOverallScoreAcc = 0;
 
       const detailedProgressPromises = enrolledProgressItems.map(async (enrolledLang) => {
         let totalPossibleScoreForLang = 0;
@@ -59,18 +60,21 @@ export default function StudentProfilePage() {
           const questionsSnap = await getDocs(questionsRef);
           questionsSnap.forEach(qDoc => {
             const question = qDoc.data() as Question;
-            totalPossibleScoreForLang += question.maxScore || 100;
+            totalPossibleScoreForLang += (question.maxScore || 100); // Default to 100 if maxScore is missing
           });
         } catch (qError) {
           console.error(`Error fetching questions for ${enrolledLang.languageName}:`, qError);
-          // Keep totalPossibleScoreForLang as 0 or handle as appropriate
         }
         
-        overallScore += enrolledLang.currentScore;
-        possibleOverallScore += totalPossibleScoreForLang;
+        const currentScoreNum = Number(enrolledLang.currentScore);
+        if (!isNaN(currentScoreNum)) {
+          overallScoreAcc += currentScoreNum;
+        }
+        possibleOverallScoreAcc += totalPossibleScoreForLang;
         
         return {
           ...enrolledLang,
+          currentScore: !isNaN(currentScoreNum) ? currentScoreNum : 0, // Ensure currentScore is a number
           totalPossibleScore: totalPossibleScoreForLang,
           languageIcon: getIconComponent(enrolledLang.iconName),
         };
@@ -78,8 +82,8 @@ export default function StudentProfilePage() {
 
       const resolvedDetailedProgress = await Promise.all(detailedProgressPromises);
       setEnrolledCoursesDetails(resolvedDetailedProgress.sort((a,b) => a.languageName.localeCompare(b.languageName)));
-      setTotalOverallScore(overallScore);
-      setTotalPossibleOverallScore(possibleOverallScore);
+      setTotalOverallScore(overallScoreAcc);
+      setTotalPossibleOverallScore(possibleOverallScoreAcc);
 
     } catch (error) {
       console.error("Error fetching student progress:", error);
@@ -92,6 +96,8 @@ export default function StudentProfilePage() {
   useEffect(() => {
     if (!authLoading && userProfile) {
       fetchStudentProgress();
+    } else if (!authLoading && !userProfile) {
+      setIsLoadingProgress(false); // Stop loading if no user
     }
   }, [authLoading, userProfile, fetchStudentProgress]);
   
@@ -103,7 +109,7 @@ export default function StudentProfilePage() {
       .toUpperCase();
   };
 
-  if (authLoading || (!userProfile && !authLoading)) {
+  if (authLoading || (!userProfile && !authLoading && isLoadingProgress)) { // Adjusted loading condition
     return (
       <div className="container mx-auto py-8 flex justify-center items-center min-h-[calc(100vh-10rem)]">
         <Loader2 className="h-12 w-12 animate-spin text-primary" />
@@ -185,12 +191,16 @@ export default function StudentProfilePage() {
             <>
               <Progress value={(totalOverallScore / totalPossibleOverallScore) * 100} className="w-full h-3 mb-1" />
               <p className="text-sm text-muted-foreground text-right">
-                Total Score: <span className="font-semibold text-primary">{totalOverallScore}</span> / {totalPossibleOverallScore}
-                ({Math.round((totalOverallScore / totalPossibleOverallScore) * 100 || 0)}%)
+                Total Score: <span className="font-semibold text-primary">{totalOverallScore}</span>
+                {' / '}{totalPossibleOverallScore}
+                &nbsp;({Math.round((totalOverallScore / totalPossibleOverallScore) * 100)}%)
               </p>
             </>
           ) : (
-             <p className="text-muted-foreground">No scores recorded yet or courses may not have questions.</p>
+             <p className="text-muted-foreground">
+                Total Score: <span className="font-semibold text-primary">{totalOverallScore}</span>.
+                No scorable items in enrolled courses yet to calculate a percentage.
+             </p>
           )}
         </CardContent>
       </Card>
@@ -237,7 +247,7 @@ export default function StudentProfilePage() {
                             </p>
                         </>
                       ) : (
-                        <p className="text-xs text-muted-foreground">No scorable questions yet for this course.</p>
+                        <p className="text-xs text-muted-foreground">No scorable questions yet for this course. Current score: {course.currentScore}</p>
                       )}
                        <p className="text-xs text-muted-foreground pt-1">Enrolled: {new Date(course.enrolledAt.seconds * 1000).toLocaleDateString()}</p>
                     </CardContent>

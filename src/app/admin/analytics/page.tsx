@@ -36,6 +36,7 @@ export default function AdminAnalyticsPage() {
   const fetchAnalyticsData = useCallback(async () => {
     if (!userProfile?.collegeId) {
       if (!authLoading) toast({ title: "Error", description: "Admin college information not found.", variant: "destructive" });
+      setIsLoading(false); // Stop loading if prerequisites aren't met
       return;
     }
     setIsLoading(true);
@@ -62,8 +63,15 @@ export default function AdminAnalyticsPage() {
         const scoresByLanguage: { [languageId: string]: number } = {};
 
         enrolledLanguagesDetails.forEach(el => {
-          totalOverallScore += el.currentScore;
-          scoresByLanguage[el.languageId] = el.currentScore;
+          const currentScoreNum = Number(el.currentScore);
+          if (!isNaN(currentScoreNum)) {
+            totalOverallScore += currentScoreNum;
+            scoresByLanguage[el.languageId] = currentScoreNum;
+          } else {
+            // Default to 0 if currentScore is not a valid number
+            scoresByLanguage[el.languageId] = 0;
+             console.warn(`Student ${student.uid} has invalid score for language ${el.languageId}: ${el.currentScore}`);
+          }
         });
         return { ...student, totalOverallScore, scoresByLanguage, enrolledLanguagesDetails };
       });
@@ -82,6 +90,8 @@ export default function AdminAnalyticsPage() {
   useEffect(() => {
     if (!authLoading && userProfile) {
       fetchAnalyticsData();
+    } else if (!authLoading && !userProfile) {
+        setIsLoading(false); // Stop loading if no user
     }
   }, [authLoading, userProfile, fetchAnalyticsData]);
 
@@ -89,7 +99,7 @@ export default function AdminAnalyticsPage() {
     if (selectedLanguageId === 'all') {
       return studentsData.map(s => ({
         ...s,
-        displayScore: s.totalOverallScore,
+        displayScore: s.totalOverallScore || 0, // Default to 0
         relevantEnrolments: s.enrolledLanguagesDetails.length
       }));
     }
@@ -97,22 +107,22 @@ export default function AdminAnalyticsPage() {
       .filter(s => s.scoresByLanguage[selectedLanguageId] !== undefined)
       .map(s => ({
         ...s,
-        displayScore: s.scoresByLanguage[selectedLanguageId],
+        displayScore: s.scoresByLanguage[selectedLanguageId] || 0, // Default to 0
         relevantEnrolments: 1
       }));
   }, [studentsData, selectedLanguageId]);
 
   const chartData = useMemo(() => {
     if (selectedLanguageId === 'all') {
-      return filteredStudentsData.map(s => ({ name: s.fullName.split(' ')[0], score: s.totalOverallScore }));
+      return filteredStudentsData.map(s => ({ name: s.fullName.split(' ')[0], score: s.displayScore }));
     }
     const lang = collegeLanguages.find(l => l.id === selectedLanguageId);
-    return filteredStudentsData.map(s => ({ name: s.fullName.split(' ')[0], score: s.scoresByLanguage[selectedLanguageId], language: lang?.name }));
+    return filteredStudentsData.map(s => ({ name: s.fullName.split(' ')[0], score: s.displayScore, language: lang?.name }));
   }, [filteredStudentsData, selectedLanguageId, collegeLanguages]);
   
   const averageScore = useMemo(() => {
-    if (filteredStudentsData.length === 0) return 0;
-    const totalScoreSum = filteredStudentsData.reduce((sum, student) => sum + student.displayScore, 0);
+    if (filteredStudentsData.length === 0) return "0.00"; // Return string "0.00" for consistency
+    const totalScoreSum = filteredStudentsData.reduce((sum, student) => sum + (student.displayScore || 0), 0); // Ensure displayScore is treated as number
     return (totalScoreSum / filteredStudentsData.length).toFixed(2);
   }, [filteredStudentsData]);
 
@@ -218,11 +228,11 @@ export default function AdminAnalyticsPage() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {filteredStudentsData.sort((a,b) => b.displayScore - a.displayScore).map(student => (
+                  {filteredStudentsData.sort((a,b) => (b.displayScore || 0) - (a.displayScore || 0)).map(student => (
                     <TableRow key={student.uid}>
                       <TableCell className="font-medium">{student.fullName}</TableCell>
                       <TableCell>{student.registrationNumber || 'N/A'}</TableCell>
-                      <TableCell className="text-right">{student.displayScore}</TableCell>
+                      <TableCell className="text-right">{student.displayScore || 0}</TableCell>
                     </TableRow>
                   ))}
                 </TableBody>
@@ -243,7 +253,7 @@ export default function AdminAnalyticsPage() {
                 config={{ score: { label: selectedLanguageName, color: "hsl(var(--primary))" } }} 
                 className="h-full w-full"
             >
-              <BarChart data={chartData} margin={{ top: 5, right: 20, left: -20, bottom: 5 }}>
+              <BarChart data={chartData.map(cd => ({...cd, score: cd.score || 0}))} margin={{ top: 5, right: 20, left: -20, bottom: 5 }}>
                 <CartesianGrid strokeDasharray="3 3" vertical={false} />
                 <XAxis dataKey="name" tickLine={false} axisLine={false} tickMargin={8} />
                 <YAxis tickLine={false} axisLine={false} tickMargin={8} />
