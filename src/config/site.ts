@@ -8,9 +8,9 @@ export const siteConfig = {
   url: "https://campuscoding.example.com", // Replace with your actual domain
   ogImage: "https://campuscoding.example.com/og.jpg", // Replace with your actual OG image
   links: {
-    twitter: "https://twitter.com/example",
-    github: "https://github.com/example",
-    linkedin: "https://linkedin.com/company/example",
+    twitter: "https://comrademohan.rf.gd/",
+    github: "https://github.com/ComradeMohan/Campus-Codex",
+    linkedin: "https://www.linkedin.com/in/mmohanreddy/",
   },
   navItems: [
     { label: "Home", href: "/" },
@@ -41,8 +41,8 @@ export const siteConfig = {
     },
   ] as FeatureItem[],
   footer: {
-    contactEmail: "support@campuscoding.example.com",
-    address: "123 University Drive, Innovation City, ST 12345",
+    contactEmail: "mohanreddy3539@gmail.com",
+    address: "Chennai, Tamilnadu",
     socialLinks: [
       { icon: Twitter, href: "https://twitter.com/example", name: "Twitter" },
       { icon: Github, href: "https://github.com/example", name: "GitHub" },

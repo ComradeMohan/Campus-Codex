@@ -39,7 +39,7 @@ export function HeroSection() {
           </div>
           <div className="relative aspect-video rounded-xl overflow-hidden shadow-2xl group">
             <Image
-              src="https://i.ibb.co/pjQXjTHW/ab261348324ec2f390f6662641e238d9.jpg"
+              src="https://i.ibb.co/4w9cBSTL/b48e06090403848402ed0c3f7ce984a9.jpg"
               alt="Abstract background with code-like elements"
               fill
               style={{ objectFit: 'cover' }}
@@ -50,7 +50,7 @@ export function HeroSection() {
             <div className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent"></div>
              <div className="absolute bottom-4 left-4 text-white p-2 rounded bg-black/30 backdrop-blur-sm">
                 <h3 className="text-lg font-semibold">Interactive Labs</h3>
-                <p className="text-sm">Real-time AI assistance.</p>
+                <p className="text-sm"></p>
             </div>
           </div>
         </div>
