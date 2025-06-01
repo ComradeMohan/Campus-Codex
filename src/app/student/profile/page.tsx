@@ -12,7 +12,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter }
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
-import { Loader2, User, Mail, Building, Award, BarChart2, BookOpen, Star, ArrowLeft, Edit } from 'lucide-react';
+import { Loader2, User, Mail, Building, Award, BarChart2, BookOpen, Star, ArrowLeft, Edit, Phone } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import * as LucideIcons from 'lucide-react';
 
@@ -69,6 +69,9 @@ export default function StudentProfilePage() {
         const currentScoreNum = Number(enrolledLang.currentScore);
         if (!isNaN(currentScoreNum)) {
           overallScoreAcc += currentScoreNum;
+        } else {
+           // If currentScore is NaN or invalid, treat as 0 for this language's contribution to overall score
+           console.warn(`Invalid currentScore for ${enrolledLang.languageName}: ${enrolledLang.currentScore}. Treating as 0.`);
         }
         possibleOverallScoreAcc += totalPossibleScoreForLang;
         
@@ -144,7 +147,7 @@ export default function StudentProfilePage() {
             <div>
               <CardTitle className="text-3xl font-headline">{userProfile.fullName}</CardTitle>
               <CardDescription className="text-md">
-                Student at {userProfile.collegeName || 'Your College'}
+                Student at {userProfile.collegeName}
               </CardDescription>
               <p className="text-sm text-muted-foreground">Reg. No: {userProfile.registrationNumber || 'N/A'}</p>
             </div>
@@ -165,7 +168,7 @@ export default function StudentProfilePage() {
           )}
           {userProfile.phoneNumber && (
             <div className="flex items-center space-x-3">
-              <Building className="w-5 h-5 text-primary" /> {/* Consider Phone icon */}
+              <Phone className="w-5 h-5 text-primary" />
               <span className="text-muted-foreground">Phone:</span>
               <span>{userProfile.phoneNumber}</span>
             </div>
@@ -199,7 +202,7 @@ export default function StudentProfilePage() {
           ) : (
              <p className="text-muted-foreground">
                 Total Score: <span className="font-semibold text-primary">{totalOverallScore}</span>.
-                No scorable items in enrolled courses yet to calculate a percentage.
+                (No scorable items in enrolled courses yet to calculate a percentage.)
              </p>
           )}
         </CardContent>
