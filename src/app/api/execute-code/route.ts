@@ -259,8 +259,8 @@ export async function POST(request: NextRequest) {
     const { language, code, testCases, sampleInput, sampleOutput, executionType } = body;
 
     const rapidApiKey = process.env.RAPIDAPI_KEY;
-    const rapidApiHost = 'YOUR_RAPIDAPI_HOST'; // e.g., 'judge0-ce.p.rapidapi.com'
-    const rapidApiUrl = 'YOUR_RAPIDAPI_ENDPOINT_URL'; // e.g., 'https://judge0-ce.p.rapidapi.com/submissions?base64_encoded=false&wait=true'
+    const rapidApiHost = 'rapidapi.com'; // e.g., 'judge0-ce.p.rapidapi.com'
+    const rapidApiUrl = 'a9eacada21msh01c0d12c84e3501p105fedjsn739db62b3f0b'; // e.g., 'https://judge0-ce.p.rapidapi.com/submissions?base64_encoded=false&wait=true'
 
     if (!rapidApiKey || rapidApiHost === 'YOUR_RAPIDAPI_HOST' || rapidApiUrl === 'YOUR_RAPIDAPI_ENDPOINT_URL') {
       console.warn("RapidAPI details not fully configured in /api/execute-code. Falling back to mock API.");
