@@ -8,7 +8,7 @@ import { db } from '@/lib/firebase';
 import { collection, getDocs, doc, getDoc, query, orderBy } from 'firebase/firestore';
 import type { UserProfile, EnrolledLanguageProgress, ProgrammingLanguage, Question } from '@/types';
 
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
