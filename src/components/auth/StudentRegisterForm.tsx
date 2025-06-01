@@ -64,6 +64,8 @@ export function StudentRegisterForm() {
       if (user) {
         await updateProfile(user, { displayName: values.fullName });
 
+        const selectedCollege = colleges.find(c => c.id === values.collegeId);
+
         const userProfileData: UserProfile = {
           uid: user.uid,
           email: user.email,
@@ -71,6 +73,7 @@ export function StudentRegisterForm() {
           role: 'student',
           registrationNumber: values.registrationNumber,
           collegeId: values.collegeId,
+          collegeName: selectedCollege?.name || undefined, // Save college name
           phoneNumber: values.phoneNumber,
           isEmailVerified: user.emailVerified,
         };

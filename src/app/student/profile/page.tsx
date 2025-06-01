@@ -6,7 +6,7 @@ import Link from 'next/link';
 import { useAuth } from '@/contexts/AuthContext';
 import { db } from '@/lib/firebase';
 import { collection, getDocs, doc, getDoc, query, orderBy } from 'firebase/firestore';
-import type { UserProfile, EnrolledLanguageProgress, ProgrammingLanguage, Question } from '@/types';
+import type { UserProfile, EnrolledLanguageProgress, ProgrammingLanguage, Question, College } from '@/types';
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -30,7 +30,7 @@ const getIconComponent = (iconName?: string): React.FC<React.SVGProps<SVGSVGElem
 
 
 export default function StudentProfilePage() {
-  const { userProfile, loading: authLoading, refreshUserProfile } = useAuth();
+  const { userProfile, loading: authLoading, refreshUserProfile, colleges } = useAuth();
   const { toast } = useToast();
 
   const [enrolledCoursesDetails, setEnrolledCoursesDetails] = useState<EnrolledLanguageWithDetails[]>([]);
@@ -112,6 +112,17 @@ export default function StudentProfilePage() {
       .toUpperCase();
   };
 
+  const displayedCollegeName = React.useMemo(() => {
+    if (userProfile?.collegeName) {
+      return userProfile.collegeName;
+    }
+    if (userProfile?.collegeId && colleges.length > 0) {
+      const foundCollege = colleges.find(c => c.id === userProfile.collegeId);
+      return foundCollege?.name;
+    }
+    return undefined;
+  }, [userProfile?.collegeName, userProfile?.collegeId, colleges]);
+
   if (authLoading || (!userProfile && !authLoading && isLoadingProgress)) { // Adjusted loading condition
     return (
       <div className="container mx-auto py-8 flex justify-center items-center min-h-[calc(100vh-10rem)]">
@@ -147,7 +158,7 @@ export default function StudentProfilePage() {
             <div>
               <CardTitle className="text-3xl font-headline">{userProfile.fullName}</CardTitle>
               <CardDescription className="text-md">
-                Student at {userProfile.collegeName}
+                Student at {displayedCollegeName || 'N/A'}
               </CardDescription>
               <p className="text-sm text-muted-foreground">Reg. No: {userProfile.registrationNumber || 'N/A'}</p>
             </div>
@@ -159,11 +170,11 @@ export default function StudentProfilePage() {
             <span className="text-muted-foreground">Email:</span>
             <span>{userProfile.email}</span>
           </div>
-          {userProfile.collegeName && (
+          {displayedCollegeName && (
             <div className="flex items-center space-x-3">
               <Building className="w-5 h-5 text-primary" />
               <span className="text-muted-foreground">College:</span>
-              <span>{userProfile.collegeName}</span>
+              <span>{displayedCollegeName}</span>
             </div>
           )}
           {userProfile.phoneNumber && (
@@ -202,7 +213,7 @@ export default function StudentProfilePage() {
           ) : (
              <p className="text-muted-foreground">
                 Total Score: <span className="font-semibold text-primary">{totalOverallScore}</span>.
-                (No scorable items in enrolled courses yet to calculate a percentage.)
+                {enrolledCoursesDetails.length > 0 ? " (No scorable items in enrolled courses yet to calculate a percentage.)" : " (Not enrolled in any scorable courses yet.)"}
              </p>
           )}
         </CardContent>
@@ -279,4 +290,3 @@ export default function StudentProfilePage() {
     </div>
   );
 }
-
