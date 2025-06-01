@@ -5,7 +5,6 @@ import type { TestCase } from '@/types';
 
 // Ensure environment variables are loaded
 // For Next.js, .env.local is automatically loaded.
-// If using a different environment, you might need a library like dotenv.
 // import dotenv from 'dotenv';
 // dotenv.config();
 
@@ -18,6 +17,22 @@ interface ExecuteCodeRequestBody {
   executionType: 'run' | 'submit';
 }
 
+interface Judge0Status {
+  id: number;
+  description: string;
+}
+interface Judge0Response {
+  stdout: string | null;
+  stderr: string | null;
+  compile_output: string | null;
+  status: Judge0Status;
+  time: string | null; // e.g., "0.002"
+  memory: number | null; // e.g., 1024 (in KB)
+  token?: string; // Submission token
+  message?: string; // For errors from Judge0 itself
+}
+
+
 interface TestCaseResult {
   testCaseNumber: number | string;
   input: string;
@@ -25,6 +40,8 @@ interface TestCaseResult {
   actualOutput: string;
   passed: boolean;
   error?: string;
+  time?: string;
+  memory?: number;
 }
 
 interface ExecuteCodeResponseBody {
@@ -47,7 +64,7 @@ function simulateActualOutput(code: string, input: string, language: string): st
   ) {
     return '14, 15, 16, 18';
   }
-
+  
   if (language.toLowerCase() === 'python') {
     if (trimmedCode === 'print(0)' || originalCodeTrimmed.match(/^user_input\s*=\s*input\(\)\s*\nprint\(0\)$/m)) {
       return '0';
@@ -60,8 +77,8 @@ function simulateActualOutput(code: string, input: string, language: string): st
     if (printMatch && !trimmedCode.includes('input()')) {
       const val = printMatch[2];
       if (!isNaN(parseFloat(val)) && isFinite(val as any) || printMatch[1] || /^[a-zA-Z_]\w*$/.test(val) === false) {
-         if (printMatch[1]) return val;
-         if (!isNaN(parseFloat(val)) && isFinite(val as any)) return val;
+         if (printMatch[1]) return val; // It's a quoted string
+         if (!isNaN(parseFloat(val)) && isFinite(val as any)) return val; // It's a number
       }
     }
   } else if (language.toLowerCase() === 'java') {
@@ -92,6 +109,7 @@ function simulateActualOutput(code: string, input: string, language: string): st
     }
   }
 
+
   return `Simulated output for input: ${input}`;
 }
 
@@ -100,38 +118,38 @@ function simulateErrors(code: string, language: string): { compileError?: string
   const originalCode = code;
 
   if (language.toLowerCase() === 'python') {
-    if (lowerCode.includes("if x print(y)")) {
+    if (lowerCode.includes("if x print(y)")) { // Missing colon
       return { compileError: "Simulated SyntaxError: invalid syntax (expected ':' after 'if' condition)" };
     }
-    if (originalCode.match(/for\s+\w+\s+in\s+\w+\s+print/)) {
+    if (originalCode.match(/for\s+\w+\s+in\s+\w+\s+print/)) { // Missing colon
         return { compileError: "Simulated SyntaxError: invalid syntax (expected ':' after 'for' loop)" };
     }
     if (lowerCode.includes("print(undefined_variable_for_error_sim)")) {
       return { executionError: "Simulated NameError: name 'undefined_variable_for_error_sim' is not defined" };
     }
-    if (lowerCode.includes("int('abc')")) {
+     if (lowerCode.includes("int('abc')")) {
       return { executionError: "Simulated ValueError: invalid literal for int() with base 10: 'abc'" };
     }
   }
   if (language.toLowerCase() === 'javascript') {
-    if (originalCode.match(/function\s+\w+\(\s*\)\s*\{[^{}]*$/)) {
+    if (originalCode.match(/function\s+\w+\(\s*\)\s*\{[^{}]*$/)) { // Missing closing brace
       return { compileError: "Simulated SyntaxError: Unexpected end of input (missing '}')" };
     }
     if (lowerCode.includes("null.property_access_for_error_sim")) {
       return { executionError: "Simulated TypeError: Cannot read properties of null (reading 'property_access_for_error_sim')" };
     }
-    if (lowerCode.includes("console.log(undeclared_var_for_error_sim);")) {
+     if (lowerCode.includes("console.log(undeclared_var_for_error_sim);")) {
         return { executionError: "Simulated ReferenceError: undeclared_var_for_error_sim is not defined" };
     }
   }
   if (language.toLowerCase() === 'java') {
-      if (originalCode.match(/System\.out\.println\("[^"]*"\Z/m) && !originalCode.match(/System\.out\.println\("[^"]*"\s*;/m)) {
+      if (originalCode.match(/System\.out\.println\("[^"]*"\Z/m) && !originalCode.match(/System\.out\.println\("[^"]*"\s*;/m) ) { // Missing semicolon
           return { compileError: "Simulated Compilation Error: ';' expected at end of statement" };
       }
-      if (lowerCode.includes("string s = null; s.length()")) {
+      if (lowerCode.includes("string s = null; s.length()")) { // Null pointer
           return { executionError: "Simulated NullPointerException: Cannot invoke \"String.length()\" because \"s\" is null" };
       }
-       if (lowerCode.includes("int[] arr = new int[1]; arr[5] = 10;")) {
+      if (lowerCode.includes("int[] arr = new int[1]; arr[5] = 10;")) { // Array out of bounds
           return { executionError: "Simulated ArrayIndexOutOfBoundsException: Index 5 out of bounds for length 1" };
       }
   }
@@ -146,6 +164,7 @@ function simulateErrors(code: string, language: string): { compileError?: string
 
 async function executeWithMockAPI(body: ExecuteCodeRequestBody): Promise<ExecuteCodeResponseBody> {
   const { language, code, testCases, sampleInput, sampleOutput, executionType } = body;
+  // Simulate API delay
   await new Promise(resolve => setTimeout(resolve, 700 + Math.random() * 500));
 
   let generalOutput = `Simulating execution for ${language} (${executionType} mode)...\n`;
@@ -164,6 +183,7 @@ async function executeWithMockAPI(body: ExecuteCodeRequestBody): Promise<Execute
   generalOutput += `Code compiled/interpreted successfully (simulation).\n`;
 
   if (simulatedExecutionError && executionType === 'run') {
+      // If a general execution error is simulated, show it for 'run' mode
       generalOutput += `Execution encountered an error during sample run.\n${simulatedExecutionError}\n`;
       currentTestResults.push({
         testCaseNumber: 'Sample',
@@ -180,6 +200,7 @@ async function executeWithMockAPI(body: ExecuteCodeRequestBody): Promise<Execute
       };
   }
 
+
   if (executionType === 'run') {
     generalOutput += `Running with sample input...\n`;
     const actualSampleOutput = simulateActualOutput(code, sampleInput || "", language);
@@ -188,7 +209,7 @@ async function executeWithMockAPI(body: ExecuteCodeRequestBody): Promise<Execute
       input: sampleInput || "N/A",
       expectedOutput: sampleOutput || "N/A",
       actualOutput: actualSampleOutput,
-      passed: sampleOutput !== undefined ? actualSampleOutput === sampleOutput : true,
+      passed: sampleOutput !== undefined ? actualSampleOutput === sampleOutput : true, // Assume pass if no expected output
     });
     generalOutput += `Sample input processed (simulation).\nActual output for sample: ${actualSampleOutput}\n`;
   } else if (executionType === 'submit') {
@@ -198,6 +219,7 @@ async function executeWithMockAPI(body: ExecuteCodeRequestBody): Promise<Execute
 
       for (let i = 0; i < testCases.length; i++) {
         const tc = testCases[i];
+        // Apply general simulated execution error only to the first test case if it exists
         if (i === 0 && simulatedExecutionError && !firstExecutionErrorEncountered) {
           firstExecutionErrorEncountered = simulatedExecutionError;
           currentTestResults.push({
@@ -209,7 +231,7 @@ async function executeWithMockAPI(body: ExecuteCodeRequestBody): Promise<Execute
             error: simulatedExecutionError,
           });
           generalOutput += `Test Case ${i+1} failed due to runtime error.\n`;
-          break;
+          break; // Stop processing further test cases if a general runtime error is hit on the first one
         }
         const simulatedActualOutput = simulateActualOutput(code, tc.input, language);
         const passed = simulatedActualOutput === tc.expectedOutput;
@@ -234,22 +256,31 @@ async function executeWithMockAPI(body: ExecuteCodeRequestBody): Promise<Execute
   return {
     generalOutput,
     testCaseResults: currentTestResults,
-    compileError: undefined,
-    executionError: simulatedExecutionError,
+    compileError: undefined, // Already handled above
+    executionError: simulatedExecutionError && executionType === 'submit' ? simulatedExecutionError : undefined,
   };
 }
 // --- End Mock Implementation ---
 
-// Helper function to map your language names to RapidAPI language IDs/strings
-// YOU WILL NEED TO CUSTOMIZE THIS BASED ON THE RAPIDAPI ENDPOINT
-function getRapidAPILanguageIdentifier(languageName: string): string | number {
+
+function getRapidAPILanguageIdentifier(languageName: string): number {
   const lang = languageName.toLowerCase();
-  if (lang === 'python') return 'python'; // Or a specific ID like 71 for Python 3.8 on Judge0
-  if (lang === 'javascript') return 'javascript'; // Or an ID like 63 for Node.js on Judge0
-  if (lang === 'java') return 'java'; // Or an ID like 62 for Java on Judge0
-  // Add other languages supported by your chosen RapidAPI endpoint
-  console.warn(`RapidAPI language identifier not found for: ${languageName}. Defaulting to raw name.`);
-  return languageName; // Fallback, but likely incorrect for most APIs
+  // Judge0 Language IDs (selected common ones)
+  if (lang === 'python') return 71; // Python 3.8.1
+  if (lang === 'javascript') return 63; // NodeJS 12.14.0
+  if (lang === 'java') return 62; // Java OpenJDK 13.0.1
+  if (lang === 'c++' || lang === 'cpp') return 54; // C++ (GCC 9.2.0)
+  if (lang === 'c#' || lang === 'csharp') return 51; // C# (Mono 6.6.0.161)
+  if (lang === 'typescript') return 74; // TypeScript 3.7.4
+  if (lang === 'php') return 68; // PHP 7.4.1
+  if (lang === 'swift') return 83; // Swift 5.1.3
+  if (lang === 'kotlin') return 78; // Kotlin 1.3.70
+  if (lang === 'ruby') return 72; // Ruby 2.7.0
+  if (lang === 'go') return 60; // Go 1.13.5
+  if (lang === 'rust') return 73; // Rust 1.40.0
+  
+  console.warn(`RapidAPI language identifier not found for: ${languageName}. Defaulting to 0 (will likely fail).`);
+  return 0; // Fallback, Judge0 will likely reject this
 }
 
 
@@ -259,25 +290,31 @@ export async function POST(request: NextRequest) {
     const { language, code, testCases, sampleInput, sampleOutput, executionType } = body;
 
     const rapidApiKey = process.env.RAPIDAPI_KEY;
-    const rapidApiHost = 'rapidapi.com'; // e.g., 'judge0-ce.p.rapidapi.com'
-    const rapidApiUrl = 'a9eacada21msh01c0d12c84e3501p105fedjsn739db62b3f0b'; // e.g., 'https://judge0-ce.p.rapidapi.com/submissions?base64_encoded=false&wait=true'
+    const rapidApiHost = 'judge0-ce.p.rapidapi.com';
+    const rapidApiUrl = 'https://judge0-ce.p.rapidapi.com/submissions?base64_encoded=false&wait=true';
 
-    if (!rapidApiKey || rapidApiHost === 'YOUR_RAPIDAPI_HOST' || rapidApiUrl === 'YOUR_RAPIDAPI_ENDPOINT_URL') {
-      console.warn("RapidAPI details not fully configured in /api/execute-code. Falling back to mock API.");
+    if (!rapidApiKey) {
+      console.warn("RAPIDAPI_KEY not configured in .env. Falling back to mock API.");
       const mockResponse = await executeWithMockAPI(body);
       return NextResponse.json(mockResponse, { status: 200 });
     }
 
-    // --- Real API Call (Placeholder - customize based on your chosen RapidAPI endpoint) ---
     let responseData: ExecuteCodeResponseBody;
+    const languageId = getRapidAPILanguageIdentifier(language);
+    if (languageId === 0 && language.toLowerCase() !== 'plaintext') { // plaintext might be a valid fallback for some non-executable display
+         console.error(`Unsupported language for Judge0: ${language}. Falling back to mock API.`);
+         const mockResponse = await executeWithMockAPI(body);
+         mockResponse.generalOutput = `Unsupported language for live execution. Using simulation.\n${mockResponse.generalOutput}`;
+         return NextResponse.json(mockResponse, { status: 200 });
+    }
+
 
     if (executionType === 'run') {
-        const rapidApiPayload = {
-            // YOU NEED TO MAP 'language' to what RapidAPI expects (e.g., language_id)
-            language_id: getRapidAPILanguageIdentifier(language), // Example for Judge0
+        const payload = {
+            language_id: languageId,
             source_code: code,
             stdin: sampleInput || "",
-            // Add other necessary fields like expected_output if the API supports direct comparison
+            // Judge0 doesn't directly use expected_output for 'run' unless you implement polling and diffing
         };
 
         const apiResponse = await fetch(rapidApiUrl, {
@@ -287,56 +324,64 @@ export async function POST(request: NextRequest) {
                 'X-RapidAPI-Key': rapidApiKey,
                 'X-RapidAPI-Host': rapidApiHost,
             },
-            body: JSON.stringify(rapidApiPayload),
+            body: JSON.stringify(payload),
         });
 
         if (!apiResponse.ok) {
-            const errorDetails = await apiResponse.text();
+            const errorDetails = await apiResponse.json().catch(() => ({ message: `RapidAPI request failed with status ${apiResponse.status}`}));
             console.error('RapidAPI Error:', errorDetails);
-            throw new Error(`RapidAPI request failed with status ${apiResponse.status}: ${errorDetails}`);
+            throw new Error(errorDetails.message || `RapidAPI request failed with status ${apiResponse.status}`);
         }
 
-        const result = await apiResponse.json();
+        const result: Judge0Response = await apiResponse.json();
+        
+        let currentCompileError: string | undefined = undefined;
+        let currentExecutionError: string | undefined = undefined;
 
-        // --- TRANSFORM RapidAPI RESPONSE to ExecuteCodeResponseBody ---
-        // This is highly dependent on the RapidAPI endpoint's response structure.
-        // Example transformation (you MUST adapt this):
-        const actualOutput = result.stdout || result.output || ""; // Adjust based on actual response field
-        const compileError = result.compile_output || result.compileError || null;
-        const executionError = result.stderr || result.error || null; // Adjust field names
-        const passed = sampleOutput !== undefined ? actualOutput === sampleOutput : true;
+        if (result.status.id === 6) { // Compilation Error
+            currentCompileError = result.compile_output || result.status.description;
+        } else if (result.status.id > 6 && result.status.id <= 12) { // Runtime Errors
+            currentExecutionError = result.stderr || result.status.description;
+        } else if (result.status.id === 4) { // Wrong Answer
+             currentExecutionError = "Output did not match expected output (for run mode, this is a generic WA if expected output was provided).";
+        } else if (result.status.id > 3 ) { // Other errors (TLE, Internal, etc.)
+             currentExecutionError = result.status.description;
+        }
+
+
+        const actualOutput = result.stdout || "";
+        const passed = sampleOutput !== undefined ? (actualOutput.trim() === sampleOutput.trim() && !currentCompileError && !currentExecutionError) : (!currentCompileError && !currentExecutionError);
+
 
         responseData = {
-            generalOutput: `Execution via RapidAPI completed.\nStdout: ${actualOutput}\nStderr: ${executionError || 'None'}\nCompile Output: ${compileError || 'None'}`,
+            generalOutput: `Execution via Judge0 completed.\nStatus: ${result.status.description}\nTime: ${result.time || 'N/A'}s\nMemory: ${result.memory || 'N/A'} KB\n\nStdout:\n${actualOutput}\n\nStderr:\n${result.stderr || 'None'}\n\nCompile Output:\n${result.compile_output || 'None'}`,
             testCaseResults: [{
                 testCaseNumber: 'Sample',
                 input: sampleInput || "N/A",
                 expectedOutput: sampleOutput || "N/A",
                 actualOutput: actualOutput,
                 passed: passed,
-                error: executionError || undefined,
+                error: currentExecutionError || (currentCompileError ? "Compilation Failed" : undefined),
+                time: result.time || undefined,
+                memory: result.memory || undefined,
             }],
-            compileError: compileError || undefined,
-            executionError: executionError || undefined,
+            compileError: currentCompileError,
+            executionError: currentExecutionError && !currentCompileError ? currentExecutionError : undefined,
         };
 
     } else { // executionType === 'submit'
-        // For 'submit', you might need to send one request per test case, or a batch if supported.
-        // This example assumes one request per test case for simplicity.
-        // More complex batching/polling might be needed for some APIs (e.g., Judge0 for multiple test cases).
-
-        responseData = { generalOutput: "Batch submission via RapidAPI (placeholder).\n", testCaseResults: [], compileError: undefined, executionError: undefined };
-        let overallCompileError: string | undefined = undefined;
-        let firstExecutionError: string | undefined = undefined;
-
-        if (testCases && testCases.length > 0) {
+        responseData = { generalOutput: "Processing submission with Judge0...\n", testCaseResults: [], compileError: undefined, executionError: undefined };
+        
+        if (!testCases || testCases.length === 0) {
+            responseData.generalOutput += "No test cases provided for submission.\n";
+        } else {
             for (let i = 0; i < testCases.length; i++) {
                 const tc = testCases[i];
-                 const rapidApiPayload = {
-                    language_id: getRapidAPILanguageIdentifier(language),
+                const payload = {
+                    language_id: languageId,
                     source_code: code,
                     stdin: tc.input,
-                    expected_output: tc.expectedOutput, // Some APIs might take this for direct comparison
+                    expected_output: tc.expectedOutput, // Judge0 uses this for status ID 4 (Wrong Answer)
                 };
 
                 const apiResponse = await fetch(rapidApiUrl, {
@@ -346,14 +391,12 @@ export async function POST(request: NextRequest) {
                         'X-RapidAPI-Key': rapidApiKey,
                         'X-RapidAPI-Host': rapidApiHost,
                     },
-                    body: JSON.stringify(rapidApiPayload),
+                    body: JSON.stringify(payload),
                 });
 
                 if (!apiResponse.ok) {
                     const errorText = await apiResponse.text();
                     console.error(`RapidAPI error for test case ${i + 1}: ${errorText}`);
-                    // Store first critical error and stop, or collect all errors
-                    if (!overallCompileError && !firstExecutionError) firstExecutionError = `RapidAPI error for TC ${i+1}: ${apiResponse.status}`;
                     responseData.testCaseResults.push({
                         testCaseNumber: i + 1,
                         input: tc.input,
@@ -362,67 +405,74 @@ export async function POST(request: NextRequest) {
                         passed: false,
                         error: `RapidAPI error: ${apiResponse.status}`,
                     });
-                    if (i === 0) break; // Stop on first error for simplicity in this placeholder
+                     // If critical error on first test case, set global error and break
+                    if (i === 0) {
+                        responseData.executionError = `Critical RapidAPI error on first test case: ${apiResponse.status}`;
+                        break;
+                    }
                     continue;
                 }
-                const result = await apiResponse.json();
+                const result: Judge0Response = await apiResponse.json();
 
-                // --- TRANSFORM RapidAPI RESPONSE to TestCaseResult ---
-                const actualOutput = result.stdout || result.output || "";
-                const currentCompileError = result.compile_output || result.compileError;
-                const currentExecutionError = result.stderr || result.error;
+                let currentCompileErrorThisTc: string | undefined = undefined;
+                let currentExecutionErrorThisTc: string | undefined = undefined;
+                let actualOutputThisTc = result.stdout || "";
 
-                if (currentCompileError && !overallCompileError) {
-                    overallCompileError = currentCompileError;
-                    responseData.compileError = overallCompileError;
-                    // If compilation fails, all test cases essentially fail due to this.
-                    // You might want to break here or mark all as failed due to compile error.
+                if (result.status.id === 6) { // Compilation Error
+                    currentCompileErrorThisTc = result.compile_output || result.status.description;
+                    if (!responseData.compileError) responseData.compileError = currentCompileErrorThisTc; // Set global compile error
+                    actualOutputThisTc = currentCompileErrorThisTc; // Display compile error as output
+                } else if (result.status.id > 6 && result.status.id <= 12) { // Runtime Errors
+                    currentExecutionErrorThisTc = result.stderr || result.status.description;
+                     if (i === 0 && !responseData.executionError && !responseData.compileError) responseData.executionError = currentExecutionErrorThisTc; // Set global runtime error if on first TC
+                     actualOutputThisTc = currentExecutionErrorThisTc;
+                } else if (result.status.id === 4) { // Wrong Answer
+                    // stderr might contain useful info for WA
+                    currentExecutionErrorThisTc = result.stderr ? `Wrong Answer. Details: ${result.stderr}` : "Wrong Answer";
+                } else if (result.status.id > 3 && result.status.id !== 4) { // Other errors (TLE, Internal, etc.)
+                     currentExecutionErrorThisTc = result.status.description;
+                     if (i === 0 && !responseData.executionError && !responseData.compileError) responseData.executionError = currentExecutionErrorThisTc;
+                     actualOutputThisTc = currentExecutionErrorThisTc;
                 }
-                if (currentExecutionError && !firstExecutionError && !overallCompileError) {
-                    firstExecutionError = currentExecutionError;
-                    responseData.executionError = firstExecutionError;
-                }
-
-                const passed = !overallCompileError && !currentExecutionError && (actualOutput === tc.expectedOutput);
+                
+                // Judge0 status ID 3 means "Accepted" which implies output matches expected_output
+                const passedThisTc = result.status.id === 3;
 
                 responseData.testCaseResults.push({
                     testCaseNumber: i + 1,
                     input: tc.input,
                     expectedOutput: tc.expectedOutput,
-                    actualOutput: currentCompileError ? `Compile Error: ${currentCompileError}` : currentExecutionError ? `Runtime Error: ${currentExecutionError}` : actualOutput,
-                    passed: passed,
-                    error: currentExecutionError || undefined,
+                    actualOutput: actualOutputThisTc,
+                    passed: passedThisTc,
+                    error: currentExecutionErrorThisTc || (currentCompileErrorThisTc ? "Compilation Failed" : undefined),
+                    time: result.time || undefined,
+                    memory: result.memory || undefined,
                 });
-                 if (overallCompileError || (firstExecutionError && i===0) ) break; // Stop if critical error on first TC or compile error
-            }
-            if (overallCompileError) responseData.generalOutput += `Compilation failed: ${overallCompileError}\n`;
-            else if (firstExecutionError) responseData.generalOutput += `An execution error occurred: ${firstExecutionError}\n`;
-            else responseData.generalOutput += "All test cases processed via RapidAPI.\n";
 
-        } else {
-             responseData.generalOutput += "No test cases provided for submission.\n";
+                if (responseData.compileError) {
+                    responseData.generalOutput += `Compilation failed on test case ${i + 1}: ${responseData.compileError}. Halting submission.\n`;
+                    break; 
+                }
+                 if (i === 0 && responseData.executionError) {
+                    responseData.generalOutput += `Execution error on first test case: ${responseData.executionError}. Halting submission.\n`;
+                    break;
+                }
+            }
+            if (!responseData.compileError && !responseData.executionError) {
+                 responseData.generalOutput += "All test cases processed via Judge0.\n";
+            }
         }
     }
-    // --- End Real API Call ---
-
     return NextResponse.json(responseData, { status: 200 });
 
   } catch (error: any) {
     console.error('[API /api/execute-code] Error:', error);
-    // Attempt to run mock API as fallback if real API fails and it's a client-side body parsing issue or RapidAPI not configured
-    if (error.name === 'SyntaxError' && error instanceof SyntaxError) { // Likely JSON parsing error of request body
-        return NextResponse.json(
-          { executionError: 'Invalid request format.', generalOutput: 'Server error: Could not parse request.', testCaseResults: [] },
-          { status: 400 }
-        );
-    }
     // Fallback to mock for other errors if desired, or return a generic server error
     try {
         const body = await request.json().catch(() => null); // Try to get body for mock if possible
         if (body) {
             console.warn("An error occurred with real API, falling back to mock API.");
             const mockResponse = await executeWithMockAPI(body as ExecuteCodeRequestBody);
-            // Prepend an error message to generalOutput
             mockResponse.generalOutput = `Error with live API (${error.message}). Falling back to simulation.\n${mockResponse.generalOutput}`;
             return NextResponse.json(mockResponse, { status: 200 });
         }
