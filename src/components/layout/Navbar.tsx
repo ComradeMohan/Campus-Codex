@@ -2,7 +2,7 @@
 'use client';
 
 import Link from 'next/link';
-import { CodeXml, Menu, X, Sun, Moon } from 'lucide-react';
+import { CodeXml, Menu, X, Sun, Moon, User } from 'lucide-react';
 import { siteConfig } from '@/config/site';
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/contexts/AuthContext';
@@ -106,19 +106,33 @@ export function Navbar() {
         }
       }
       if (userProfile?.role === 'student') {
-        const studentLink = (
+        const studentLabsLink = (
           <Button variant="ghost" asChild className={commonLinkClasses}>
             <Link href="/student/labs">Labs</Link>
           </Button>
         );
+        const studentProfileLink = (
+           <Button variant="ghost" asChild className={commonLinkClasses}>
+            <Link href="/student/profile" className="flex items-center gap-1.5"> <User className="h-4 w-4"/> Profile</Link>
+          </Button>
+        );
+
         if (isSheetItem) {
           authConditionalLinks.push(
-            <SheetClose asChild key="student-labs">{studentLink}</SheetClose>
+            <SheetClose asChild key="student-labs">{studentLabsLink}</SheetClose>
+          );
+           authConditionalLinks.push(
+            <SheetClose asChild key="student-profile">{studentProfileLink}</SheetClose>
           );
         } else {
           authConditionalLinks.push(
             <Button variant="ghost" asChild className={commonLinkClasses} key="student-labs">
                 <Link href="/student/labs">Labs</Link>
+            </Button>
+          );
+           authConditionalLinks.push(
+            <Button variant="ghost" asChild className={commonLinkClasses} key="student-profile">
+                 <Link href="/student/profile" className="flex items-center gap-1.5"> <User className="h-4 w-4"/> Profile</Link>
             </Button>
           );
         }
@@ -209,3 +223,4 @@ export function Navbar() {
     </header>
   );
 }
+
