@@ -6,10 +6,9 @@ import Link from 'next/link';
 import { useParams, useRouter } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContext';
 import { db } from '@/lib/firebase';
-import { doc, getDoc, collection, query, getDocs, orderBy, updateDoc, arrayUnion, increment, serverTimestamp, FieldValue } from 'firebase/firestore';
+import { doc, getDoc, collection, query, getDocs, orderBy, updateDoc, increment, serverTimestamp, FieldValue } from 'firebase/firestore';
 
 import { Button } from '@/components/ui/button';
-// import { Textarea } from '@/components/ui/textarea'; // Replaced by Monaco Editor
 import { MonacoCodeEditor } from '@/components/editor/MonacoCodeEditor';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -91,25 +90,39 @@ export default function StudentPracticePage() {
   }, [userProfile?.collegeId, languageId, toast, router, authLoading]);
 
   useEffect(() => {
-    if (!authLoading && userProfile) { // Check userProfile as well
+    if (!authLoading && userProfile) { 
         fetchLanguageAndQuestions();
     }
   }, [authLoading, userProfile, fetchLanguageAndQuestions]);
   
   useEffect(() => {
-    // Reset code and output when the question changes or language loads (and questions are available)
     if (language && questions.length > 0 && questions[currentQuestionIndex]) {
-      setStudentCode(`// Start writing your ${language.name} code here for Question ${currentQuestionIndex + 1}\n// ${questions[currentQuestionIndex].questionText.substring(0,50)}...\n\n/*\nSample Input:\n${questions[currentQuestionIndex].sampleInput || 'N/A'}\n\nSample Output:\n${questions[currentQuestionIndex].sampleOutput || 'N/A'}\n*/\n\n`);
+      const currentQ = questions[currentQuestionIndex];
+      let initialCode = `// Start writing your ${language.name} code here for Question ${currentQuestionIndex + 1}\n// ${currentQ.questionText.substring(0,50)}...\n\n`;
+      if (currentQ.sampleInput || currentQ.sampleOutput) {
+        initialCode += `/*\nSample Input:\n${currentQ.sampleInput || 'N/A'}\n\nSample Output:\n${currentQ.sampleOutput || 'N/A'}\n*/\n\n`;
+      }
+      // Add language-specific boilerplate if helpful
+      if (language.name.toLowerCase() === 'python') {
+        initialCode += `# Your Python code here\n`;
+      } else if (language.name.toLowerCase() === 'javascript') {
+        initialCode += `// Your JavaScript code here\n`;
+      } else if (language.name.toLowerCase() === 'java') {
+        initialCode += `public class Main {\n    public static void main(String[] args) {\n        // Your Java code here\n    }\n}\n`;
+      }
+      setStudentCode(initialCode);
       setOutput('');
       setTestResults([]);
       setExecutionError(null);
       setCompileError(null);
-    } else if (language && questions.length === 0 && !isLoadingPageData) { // Check isLoadingPageData
+    } else if (language && questions.length === 0 && !isLoadingPageData) { 
       setStudentCode(`// No questions available for ${language.name} yet.\n`);
       setOutput('');
       setTestResults([]);
+      setExecutionError(null);
+      setCompileError(null);
     }
-  }, [currentQuestionIndex, questions, language, isLoadingPageData]); // Added isLoadingPageData
+  }, [currentQuestionIndex, questions, language, isLoadingPageData]);
 
 
   const currentQuestion = questions[currentQuestionIndex];
@@ -146,15 +159,17 @@ export default function StudentPracticePage() {
         });
 
         if (!response.ok) {
-            const errorData = await response.json().catch(() => ({ executionError: "Failed to process the request. Server returned an error." }));
-            throw new Error(errorData.executionError || `Server error: ${response.status}`);
+            const errorData = await response.json().catch(() => ({ message: "Failed to process the request. Server returned an error." }));
+            throw new Error(errorData.message || `Server error: ${response.status}`);
         }
 
         const result = await response.json();
+        
         setOutput(result.generalOutput || '');
         setTestResults(result.testCaseResults || []);
         if (result.compileError) setCompileError(result.compileError);
         if (result.executionError) setExecutionError(result.executionError);
+
 
         if (executionType === 'submit' && !result.compileError && !result.executionError) {
             const allPassed = result.testCaseResults?.every((tc: TestCaseResult) => tc.passed);
@@ -172,9 +187,8 @@ export default function StudentPracticePage() {
                                 description: "You have already successfully completed this question. No additional score awarded.",
                                 variant: "default",
                             });
-                            scoreEarned = 0; // No score for re-completion
+                            scoreEarned = 0; 
                         } else {
-                            // Using FieldValue for atomicity
                             const updates: { [key: string]: any } = {
                                 currentScore: increment(scoreEarned),
                                 [`completedQuestions.${currentQuestion.id}`]: {
@@ -186,11 +200,10 @@ export default function StudentPracticePage() {
                             toast({
                                 title: "All Tests Passed!",
                                 description: `Great job! You earned ${scoreEarned} points. Your solution passed all test cases.`,
-                                variant: "default", // "default" for success, but "success" variant is not standard in shadcn
+                                variant: "default", 
                             });
                         }
                     } else {
-                        // This case should ideally not happen if enrollment is done correctly
                          toast({
                             title: "Enrollment Error",
                             description: "Could not find your enrollment for this course to update score.",
@@ -204,20 +217,26 @@ export default function StudentPracticePage() {
                         variant: "destructive",
                     });
                 }
-            } else {
+            } else if (!result.compileError && !result.executionError) { // No test results but no errors either
                  toast({
-                    title: "No Test Results",
-                    description: "Submission processed, but no test results were returned.",
+                    title: "Submission Processed",
+                    description: "Your code was submitted, but no test results were returned or no test cases defined for this scenario.",
                     variant: "default",
                 });
             }
+        } else if (executionType === 'run' && result.compileError) {
+            toast({ title: "Compilation Error", description: "Please fix the errors in your code.", variant: "destructive"});
+        } else if (executionType === 'run' && result.executionError) {
+            toast({ title: "Runtime Error", description: "Your code encountered an error during sample execution.", variant: "destructive"});
         }
+
 
     } catch (error: any) {
         console.error(`Error ${executionType}ing code:`, error);
-        setOutput(prev => prev + `\nClient-side error during execution: ${error.message}`);
-        setExecutionError(`Client-side error: ${error.message}`);
-        toast({ title: `${executionType === 'run' ? 'Run' : 'Submission'} Error`, description: error.message || `Failed to ${executionType} code.`, variant: "destructive" });
+        const errorMessage = error.message || `Failed to ${executionType} code.`;
+        setOutput(prev => prev + `\nClient-side error during execution: ${errorMessage}`);
+        setExecutionError(`Client-side error: ${errorMessage}`); // Prefer setting specific error states
+        toast({ title: `${executionType === 'run' ? 'Run' : 'Submission'} Error`, description: errorMessage, variant: "destructive" });
     } finally {
         setIsExecutingCode(false);
     }
@@ -234,7 +253,7 @@ export default function StudentPracticePage() {
 
   const handlePrevQuestion = () => {
     if (currentQuestionIndex > 0) {
-      setCurrentQuestionIndex(prev => prev + 1);
+      setCurrentQuestionIndex(prev => prev - 1); // Corrected to decrement
     }
   };
 
@@ -257,7 +276,7 @@ export default function StudentPracticePage() {
     );
   }
 
-  if (!language && !isLoadingPageData) { // Added !isLoadingPageData check
+  if (!language && !isLoadingPageData) { 
     return (
       <div className="container mx-auto py-8 text-center">
         <p className="text-lg text-muted-foreground">Could not load course details.</p>
@@ -296,7 +315,7 @@ export default function StudentPracticePage() {
           <CardHeader><CardTitle>Loading Question...</CardTitle></CardHeader>
           <CardContent><Loader2 className="h-8 w-8 animate-spin text-primary"/></CardContent>
         </Card>
-      ) : currentQuestion && language ? ( // Ensure language is also loaded
+      ) : currentQuestion && language ? ( 
         <>
           <Card className="shadow-lg">
             <CardHeader>
@@ -350,7 +369,7 @@ export default function StudentPracticePage() {
                   language={language.name}
                   value={studentCode}
                   onChange={(code) => setStudentCode(code || '')}
-                  height="500px" // Adjust height as needed
+                  height="500px" 
                   options={{ readOnly: isExecutingCode }}
                 />
               </CardContent>
@@ -364,13 +383,13 @@ export default function StudentPracticePage() {
                 {compileError && (
                     <div className="mb-4 p-3 bg-destructive/10 border border-destructive text-destructive rounded-md text-sm">
                         <div className="flex items-center font-semibold mb-1"><AlertTriangle className="w-4 h-4 mr-2" />Compilation Error:</div>
-                        <pre className="whitespace-pre-wrap font-mono">{compileError}</pre>
+                        <pre className="whitespace-pre-wrap font-mono text-xs">{compileError}</pre>
                     </div>
                 )}
-                {executionError && (
+                {executionError && !compileError && ( // Only show execution error if no compile error
                      <div className="mb-4 p-3 bg-destructive/10 border border-destructive text-destructive rounded-md text-sm">
                         <div className="flex items-center font-semibold mb-1"><AlertTriangle className="w-4 h-4 mr-2" />Execution Error:</div>
-                        <pre className="whitespace-pre-wrap font-mono">{executionError}</pre>
+                        <pre className="whitespace-pre-wrap font-mono text-xs">{executionError}</pre>
                     </div>
                 )}
                 <pre 
@@ -380,7 +399,7 @@ export default function StudentPracticePage() {
                   {output || "Code output and test results will appear here..."}
                 </pre>
                 
-                {testResults.length > 0 && (
+                {testResults.length > 0 && !compileError && ( // Don't show test results if there was a compile error
                   <div className="mt-4 space-y-3 max-h-[250px] overflow-y-auto">
                     <h4 className="text-md font-semibold">Test Case Results:</h4>
                     {testResults.map((result) => (
@@ -397,7 +416,7 @@ export default function StudentPracticePage() {
                           <div><strong className="text-muted-foreground">Input:</strong> <pre className="inline whitespace-pre-wrap font-mono bg-muted/30 p-1 rounded text-xs">{result.input}</pre></div>
                           <div><strong className="text-muted-foreground">Expected:</strong> <pre className="inline whitespace-pre-wrap font-mono bg-muted/30 p-1 rounded text-xs">{result.expectedOutput}</pre></div>
                            {!result.passed && <div><strong className="text-muted-foreground">Actual:</strong> <pre className="inline whitespace-pre-wrap font-mono bg-muted/30 p-1 rounded text-xs">{result.actualOutput}</pre></div>}
-                           {result.error && <div className="text-red-600"><strong className="text-muted-foreground">Error:</strong> {result.error}</div>}
+                           {result.error && <div className="text-red-600"><strong className="text-muted-foreground">Error Detail:</strong> <pre className="inline whitespace-pre-wrap font-mono bg-muted/30 p-1 rounded text-xs">{result.error}</pre></div>}
                         </div>
                       </Card>
                     ))}
