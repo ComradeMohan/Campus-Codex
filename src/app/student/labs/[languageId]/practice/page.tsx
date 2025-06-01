@@ -175,7 +175,7 @@ export default function StudentPracticePage() {
         }
         if (result.executionError) {
           setExecutionError(result.executionError);
-           if (executionType === 'run' && !result.compileError) { // Only show runtime toast if no compile error
+           if (executionType === 'run' && !result.compileError) { 
             toast({ title: "Runtime Error", description: "Your code encountered an error during sample execution.", variant: "destructive"});
           }
         }
@@ -184,46 +184,58 @@ export default function StudentPracticePage() {
         if (executionType === 'submit' && !result.compileError && !result.executionError) {
             const allPassed = result.testCaseResults?.every((tc: TestCaseResult) => tc.passed);
             if (result.testCaseResults?.length > 0) {
-                if (allPassed) {
-                    const enrollmentRef = doc(db, 'users', userProfile.uid, 'enrolledLanguages', languageId);
-                    const enrollmentSnap = await getDoc(enrollmentRef);
+                const enrollmentRef = doc(db, 'users', userProfile.uid, 'enrolledLanguages', languageId);
+                const enrollmentSnap = await getDoc(enrollmentRef);
+                
+                if (enrollmentSnap.exists()) {
+                    const progress = enrollmentSnap.data() as EnrolledLanguageProgress;
                     let scoreEarned = currentQuestion.maxScore || 100;
+                    let isNewCompletion = true;
 
-                    if (enrollmentSnap.exists()) {
-                        const progress = enrollmentSnap.data() as EnrolledLanguageProgress;
-                        if (progress.completedQuestions && progress.completedQuestions[currentQuestion.id]) {
-                             toast({
-                                title: "Question Already Completed",
-                                description: "You have already successfully completed this question. No additional score awarded.",
-                                variant: "default",
-                            });
-                            scoreEarned = 0; 
-                        } else {
-                            const updates: { [key: string]: any } = {
-                                currentScore: increment(scoreEarned),
-                                [`completedQuestions.${currentQuestion.id}`]: {
-                                    scoreAchieved: scoreEarned,
-                                    completedAt: serverTimestamp() as FieldValue,
-                                }
-                            };
-                            await updateDoc(enrollmentRef, updates);
+                    if (progress.completedQuestions && progress.completedQuestions[currentQuestion.id]) {
+                        scoreEarned = 0; // No new score if already completed
+                        isNewCompletion = false;
+                    }
+
+                    if (allPassed) {
+                        const updates: { [key: string]: any } = {};
+                        if (isNewCompletion) {
+                            updates.currentScore = increment(scoreEarned);
+                        }
+                        
+                        const existingCompletedQuestionData = progress.completedQuestions?.[currentQuestion.id];
+                        updates[`completedQuestions.${currentQuestion.id}`] = {
+                            scoreAchieved: isNewCompletion ? scoreEarned : (existingCompletedQuestionData?.scoreAchieved || 0),
+                            completedAt: isNewCompletion ? serverTimestamp() : (existingCompletedQuestionData?.completedAt || serverTimestamp()),
+                            submittedCode: studentCode, // Always update submitted code
+                        };
+                        
+                        await updateDoc(enrollmentRef, updates);
+
+                        if (isNewCompletion) {
                             toast({
                                 title: "All Tests Passed!",
-                                description: `Great job! You earned ${scoreEarned} points. Your solution passed all test cases.`,
+                                description: `Great job! You earned ${scoreEarned} points. Your solution passed all test cases and has been saved.`,
                                 variant: "default", 
+                            });
+                        } else {
+                             toast({
+                                title: "Question Re-submitted Successfully!",
+                                description: "Your new solution passed all test cases and has been saved. No additional score awarded as this question was already completed.",
+                                variant: "default",
                             });
                         }
                     } else {
                          toast({
-                            title: "Enrollment Error",
-                            description: "Could not find your enrollment for this course to update score.",
+                            title: "Some Tests Failed",
+                            description: "Review the results below and try again. Your code was not saved.",
                             variant: "destructive",
                         });
                     }
                 } else {
                      toast({
-                        title: "Some Tests Failed",
-                        description: "Review the results below and try again.",
+                        title: "Enrollment Error",
+                        description: "Could not find your enrollment for this course to update score and save code.",
                         variant: "destructive",
                     });
                 }
@@ -235,7 +247,6 @@ export default function StudentPracticePage() {
                 });
             }
         }
-
 
     } catch (error: any) {
         console.error(`Error ${executionType}ing code:`, error);

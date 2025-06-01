@@ -101,6 +101,8 @@ export interface EnrolledLanguageProgress {
     [questionId: string]: {
       scoreAchieved: number;
       completedAt: Timestamp | FieldValue;
+      submittedCode: string; // Store the successfully submitted code
     };
   };
 }
+
