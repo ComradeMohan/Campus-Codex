@@ -5,21 +5,27 @@ import Image from 'next/image';
 
 export function HeroSection() {
   return (
-    <section className="py-20 md:py-32 bg-gradient-to-br from-background to-secondary">
-      <div className="container px-4 md:px-6">
+    <section
+      className="py-20 md:py-32 relative bg-cover bg-center bg-no-repeat"
+      style={{
+        backgroundImage: "url('https://i.ibb.co/pjQXjTHW/ab261348324ec2f390f6662641e238d9.jpg')"
+      }}
+    >
+      <div className="absolute inset-0 bg-black/70 z-0"></div>
+      <div className="container px-4 md:px-6 relative z-10">
         <div className="grid gap-8 md:grid-cols-2 md:items-center">
           <div className="space-y-6">
-            <h1 className="text-4xl font-bold tracking-tight sm:text-5xl md:text-6xl lg:text-7xl font-headline">
+            <h1 className="text-4xl font-bold tracking-tight sm:text-5xl md:text-6xl lg:text-7xl font-headline text-white">
               Master Programming with Interactive Labs
             </h1>
-            <p className="text-lg text-muted-foreground md:text-xl">
+            <p className="text-lg text-gray-200 md:text-xl">
               Empowering students with code labs and online tests. Campus Codex is your partner in coding education excellence.
             </p>
             <div className="flex flex-col gap-3 sm:flex-row">
-              <Button asChild size="lg" className="bg-accent text-accent-foreground hover:bg-accent/90 shadow-md transition-transform hover:scale-105">
+              <Button asChild size="lg" className="bg-accent text-white hover:bg-accent/90 shadow-md transition-transform hover:scale-105">
                 <Link href="/register/student">Join as a Student</Link>
               </Button>
-              <Button asChild variant="outline" size="lg" className="shadow-md transition-transform hover:scale-105 border-primary text-primary hover:bg-primary/10">
+              <Button asChild variant="outline" size="lg" className="shadow-md transition-transform hover:scale-105 border-primary text-primary hover:bg-primary/10 hover:text-primary-foreground">
                 <Link href="/register/admin">Register Your College</Link>
               </Button>
             </div>
