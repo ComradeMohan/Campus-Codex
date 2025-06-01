@@ -17,7 +17,7 @@ import { Loader2, ArrowLeft, Lightbulb, Terminal, ChevronLeft, ChevronRight, Boo
 import type { ProgrammingLanguage, Question as QuestionType, QuestionDifficulty, EnrolledLanguageProgress } from '@/types';
 
 interface TestCaseResult {
-  testCaseNumber: number | string; 
+  testCaseNumber: number | string;
   input: string;
   expectedOutput: string;
   actualOutput: string;
@@ -39,17 +39,21 @@ export default function StudentPracticePage() {
   const [studentCode, setStudentCode] = useState('');
   const [output, setOutput] = useState('');
   const [testResults, setTestResults] = useState<TestCaseResult[]>([]);
+  const [enrollmentProgress, setEnrollmentProgress] = useState<EnrolledLanguageProgress | null>(null);
 
   const [isLoadingPageData, setIsLoadingPageData] = useState(true);
-  const [isExecutingCode, setIsExecutingCode] = useState(false); 
+  const [isExecutingCode, setIsExecutingCode] = useState(false);
   const [executionError, setExecutionError] = useState<string | null>(null);
   const [compileError, setCompileError] = useState<string | null>(null);
 
 
   const fetchLanguageAndQuestions = useCallback(async () => {
-    if (!userProfile?.collegeId || !languageId) {
-      if(!authLoading) {
-         toast({ title: "Error", description: "Missing user or language information.", variant: "destructive" });
+    if (!userProfile?.collegeId || !languageId || !userProfile?.uid) {
+      if(!authLoading && !userProfile) {
+         toast({ title: "Error", description: "User not authenticated. Redirecting to login.", variant: "destructive" });
+         router.push('/login');
+      } else if (!authLoading && userProfile && (!userProfile.collegeId || !languageId)) {
+         toast({ title: "Error", description: "Missing user college or language information.", variant: "destructive" });
          router.push('/student/labs');
       }
       return;
@@ -71,7 +75,7 @@ export default function StudentPracticePage() {
       setLanguage(langData);
 
       const questionsRef = collection(db, 'colleges', userProfile.collegeId, 'languages', languageId, 'questions');
-      const qQuery = query(questionsRef, orderBy('createdAt', 'asc')); 
+      const qQuery = query(questionsRef, orderBy('createdAt', 'asc'));
       const questionsSnap = await getDocs(qQuery);
       const fetchedQuestions = questionsSnap.docs.map(docSnap => ({ id: docSnap.id, ...docSnap.data() } as QuestionType));
 
@@ -81,47 +85,63 @@ export default function StudentPracticePage() {
       setQuestions(fetchedQuestions);
       setCurrentQuestionIndex(0);
 
+      // Fetch enrollment progress
+      const enrollmentRef = doc(db, 'users', userProfile.uid, 'enrolledLanguages', languageId);
+      const enrollmentSnap = await getDoc(enrollmentRef);
+      if (enrollmentSnap.exists()) {
+        setEnrollmentProgress(enrollmentSnap.data() as EnrolledLanguageProgress);
+      } else {
+        // This case should ideally not happen if student navigates from enrolled labs
+        console.warn("Enrollment progress not found for this language.");
+        setEnrollmentProgress(null);
+      }
+
     } catch (error) {
-      console.error("Error fetching course/questions:", error);
-      toast({ title: "Error", description: "Failed to load course or questions.", variant: "destructive" });
+      console.error("Error fetching course/questions/progress:", error);
+      toast({ title: "Error", description: "Failed to load course data or your progress.", variant: "destructive" });
     } finally {
       setIsLoadingPageData(false);
     }
-  }, [userProfile?.collegeId, languageId, toast, router, authLoading]);
+  }, [userProfile?.collegeId, userProfile?.uid, languageId, toast, router, authLoading]);
 
   useEffect(() => {
-    if (!authLoading && userProfile) { 
+    if (!authLoading && userProfile) {
         fetchLanguageAndQuestions();
     }
   }, [authLoading, userProfile, fetchLanguageAndQuestions]);
-  
+
   useEffect(() => {
     if (language && questions.length > 0 && questions[currentQuestionIndex]) {
       const currentQ = questions[currentQuestionIndex];
       let initialCode = `// Start writing your ${language.name} code here for Question ${currentQuestionIndex + 1}\n// ${currentQ.questionText.substring(0,50)}...\n\n`;
-      
       initialCode += `/*\nSample Input:\n${currentQ.sampleInput || 'N/A'}\n\nSample Output:\n${currentQ.sampleOutput || 'N/A'}\n*/\n\n`;
-      
-      if (language.name.toLowerCase() === 'python') {
-        initialCode += `# Your Python code here\ndef main():\n    # Read input if necessary, for example:\n    # line = input()\n    # print(f"Processing: {line}")\n    pass\n\nif __name__ == "__main__":\n    main()\n`;
-      } else if (language.name.toLowerCase() === 'javascript') {
-        initialCode += `// Your JavaScript code here\nfunction main() {\n    // In a Node.js environment for competitive programming, you might read from process.stdin\n    // For example, using 'readline' module if available in the execution sandbox.\n    // console.log("Hello from JavaScript!");\n}\n\nmain();\n`;
-      } else if (language.name.toLowerCase() === 'java') {
-        initialCode += `import java.util.Scanner;\n\npublic class Main {\n    public static void main(String[] args) {\n        // Scanner scanner = new Scanner(System.in);\n        // String input = scanner.nextLine();\n        // System.out.println("Processing: " + input);\n        // scanner.close();\n    }\n}\n`;
+
+      const savedCode = enrollmentProgress?.completedQuestions?.[currentQ.id]?.submittedCode;
+
+      if (savedCode) {
+        initialCode = savedCode;
+      } else {
+        if (language.name.toLowerCase() === 'python') {
+          initialCode += `# Your Python code here\ndef main():\n    # Read input if necessary, for example:\n    # line = input()\n    # print(f"Processing: {line}")\n    pass\n\nif __name__ == "__main__":\n    main()\n`;
+        } else if (language.name.toLowerCase() === 'javascript') {
+          initialCode += `// Your JavaScript code here\nfunction main() {\n    // In a Node.js environment for competitive programming, you might read from process.stdin\n    // For example, using 'readline' module if available in the execution sandbox.\n    // console.log("Hello from JavaScript!");\n}\n\nmain();\n`;
+        } else if (language.name.toLowerCase() === 'java') {
+          initialCode += `import java.util.Scanner;\n\npublic class Main {\n    public static void main(String[] args) {\n        // Scanner scanner = new Scanner(System.in);\n        // String input = scanner.nextLine();\n        // System.out.println("Processing: " + input);\n        // scanner.close();\n    }\n}\n`;
+        }
       }
       setStudentCode(initialCode);
       setOutput('');
       setTestResults([]);
       setExecutionError(null);
       setCompileError(null);
-    } else if (language && questions.length === 0 && !isLoadingPageData) { 
+    } else if (language && questions.length === 0 && !isLoadingPageData) {
       setStudentCode(`// No questions available for ${language.name} yet.\n`);
       setOutput('');
       setTestResults([]);
       setExecutionError(null);
       setCompileError(null);
     }
-  }, [currentQuestionIndex, questions, language, isLoadingPageData]);
+  }, [currentQuestionIndex, questions, language, isLoadingPageData, enrollmentProgress]);
 
 
   const currentQuestion = questions[currentQuestionIndex];
@@ -147,7 +167,7 @@ export default function StudentPracticePage() {
         if (executionType === 'run') {
             payload.sampleInput = currentQuestion.sampleInput || "";
             payload.sampleOutput = currentQuestion.sampleOutput || "";
-        } else { 
+        } else {
             payload.testCases = currentQuestion.testCases;
         }
 
@@ -164,7 +184,7 @@ export default function StudentPracticePage() {
         }
 
         const result = await response.json();
-        
+
         setOutput(result.generalOutput || '');
         setTestResults(result.testCaseResults || []);
         if (result.compileError) {
@@ -175,7 +195,7 @@ export default function StudentPracticePage() {
         }
         if (result.executionError) {
           setExecutionError(result.executionError);
-           if (executionType === 'run' && !result.compileError) { 
+           if (executionType === 'run' && !result.compileError) {
             toast({ title: "Runtime Error", description: "Your code encountered an error during sample execution.", variant: "destructive"});
           }
         }
@@ -186,37 +206,55 @@ export default function StudentPracticePage() {
             if (result.testCaseResults?.length > 0) {
                 const enrollmentRef = doc(db, 'users', userProfile.uid, 'enrolledLanguages', languageId);
                 const enrollmentSnap = await getDoc(enrollmentRef);
-                
+
                 if (enrollmentSnap.exists()) {
-                    const progress = enrollmentSnap.data() as EnrolledLanguageProgress;
+                    const currentProgress = enrollmentSnap.data() as EnrolledLanguageProgress;
                     let scoreEarned = currentQuestion.maxScore || 100;
                     let isNewCompletion = true;
 
-                    if (progress.completedQuestions && progress.completedQuestions[currentQuestion.id]) {
-                        scoreEarned = 0; // No new score if already completed
+                    if (currentProgress.completedQuestions && currentProgress.completedQuestions[currentQuestion.id]) {
+                        scoreEarned = 0; 
                         isNewCompletion = false;
                     }
 
                     if (allPassed) {
-                        const updates: { [key: string]: any } = {};
+                        const updates: { [key: string]: any } = {
+                             [`completedQuestions.${currentQuestion.id}.submittedCode`]: studentCode,
+                             [`completedQuestions.${currentQuestion.id}.completedAt`]: serverTimestamp(),
+                        };
                         if (isNewCompletion) {
                             updates.currentScore = increment(scoreEarned);
+                            updates[`completedQuestions.${currentQuestion.id}.scoreAchieved`] = scoreEarned;
+                        } else {
+                            // Keep existing score if re-submitting
+                            updates[`completedQuestions.${currentQuestion.id}.scoreAchieved`] = currentProgress.completedQuestions[currentQuestion.id]?.scoreAchieved || 0;
                         }
-                        
-                        const existingCompletedQuestionData = progress.completedQuestions?.[currentQuestion.id];
-                        updates[`completedQuestions.${currentQuestion.id}`] = {
-                            scoreAchieved: isNewCompletion ? scoreEarned : (existingCompletedQuestionData?.scoreAchieved || 0),
-                            completedAt: isNewCompletion ? serverTimestamp() : (existingCompletedQuestionData?.completedAt || serverTimestamp()),
-                            submittedCode: studentCode, // Always update submitted code
-                        };
-                        
+
                         await updateDoc(enrollmentRef, updates);
+                        
+                        // Optimistically update local enrollmentProgress state
+                        setEnrollmentProgress(prev => {
+                            const newCompletedQuestions = {
+                                ...(prev?.completedQuestions || {}),
+                                [currentQuestion.id]: {
+                                    scoreAchieved: updates[`completedQuestions.${currentQuestion.id}.scoreAchieved`],
+                                    completedAt: serverTimestamp() as FieldValue, // Approximate for local state
+                                    submittedCode: studentCode,
+                                },
+                            };
+                            return {
+                                ...(prev || { languageId, languageName: language.name, enrolledAt: serverTimestamp(), currentScore:0, completedQuestions: {} } as EnrolledLanguageProgress), // Provide defaults if prev is null
+                                currentScore: isNewCompletion ? (prev?.currentScore || 0) + scoreEarned : (prev?.currentScore || 0),
+                                completedQuestions: newCompletedQuestions,
+                            };
+                        });
+
 
                         if (isNewCompletion) {
                             toast({
                                 title: "All Tests Passed!",
-                                description: `Great job! You earned ${scoreEarned} points. Your solution passed all test cases and has been saved.`,
-                                variant: "default", 
+                                description: `Great job! You earned ${currentQuestion.maxScore || 100} points. Your solution passed all test cases and has been saved.`,
+                                variant: "default",
                             });
                         } else {
                              toast({
@@ -239,7 +277,7 @@ export default function StudentPracticePage() {
                         variant: "destructive",
                     });
                 }
-            } else if (!result.compileError && !result.executionError) { 
+            } else if (!result.compileError && !result.executionError) {
                  toast({
                     title: "Submission Processed",
                     description: "Your code was submitted, but no test results were returned or no test cases defined for this scenario.",
@@ -252,7 +290,7 @@ export default function StudentPracticePage() {
         console.error(`Error ${executionType}ing code:`, error);
         const errorMessage = error.message || `Failed to ${executionType} code.`;
         setOutput(prev => prev + `\nClient-side error during execution: ${errorMessage}`);
-        setExecutionError(`Client-side error: ${errorMessage}`); 
+        setExecutionError(`Client-side error: ${errorMessage}`);
         toast({ title: `${executionType === 'run' ? 'Run' : 'Submission'} Error`, description: errorMessage, variant: "destructive" });
     } finally {
         setIsExecutingCode(false);
@@ -277,7 +315,7 @@ export default function StudentPracticePage() {
   const getDifficultyBadgeVariant = (difficulty?: QuestionDifficulty) => {
     const effDifficulty = difficulty || 'easy';
     switch (effDifficulty) {
-      case 'easy': return 'default'; 
+      case 'easy': return 'default';
       case 'medium': return 'secondary';
       case 'hard': return 'destructive';
       default: return 'outline';
@@ -293,7 +331,7 @@ export default function StudentPracticePage() {
     );
   }
 
-  if (!language && !isLoadingPageData) { 
+  if (!language && !isLoadingPageData) {
     return (
       <div className="container mx-auto py-8 text-center">
         <p className="text-lg text-muted-foreground">Could not load course details.</p>
@@ -332,7 +370,7 @@ export default function StudentPracticePage() {
           <CardHeader><CardTitle>Loading Question...</CardTitle></CardHeader>
           <CardContent><Loader2 className="h-8 w-8 animate-spin text-primary"/></CardContent>
         </Card>
-      ) : currentQuestion && language ? ( 
+      ) : currentQuestion && language ? (
         <>
           <Card className="shadow-lg">
             <CardHeader>
@@ -386,7 +424,7 @@ export default function StudentPracticePage() {
                   language={language.name}
                   value={studentCode}
                   onChange={(code) => setStudentCode(code || '')}
-                  height="500px" 
+                  height="500px"
                   options={{ readOnly: isExecutingCode }}
                 />
               </CardContent>
@@ -403,20 +441,20 @@ export default function StudentPracticePage() {
                         <pre className="whitespace-pre-wrap font-mono text-xs">{compileError}</pre>
                     </div>
                 )}
-                {executionError && !compileError && ( 
+                {executionError && !compileError && (
                      <div className="mb-4 p-3 bg-destructive/10 border border-destructive text-destructive rounded-md text-sm">
                         <div className="flex items-center font-semibold mb-1"><AlertTriangle className="w-4 h-4 mr-2" />Execution Error:</div>
                         <pre className="whitespace-pre-wrap font-mono text-xs">{executionError}</pre>
                     </div>
                 )}
-                <pre 
+                <pre
                   className="font-mono text-sm bg-muted/50 p-4 rounded-md min-h-[150px] max-h-[300px] overflow-y-auto whitespace-pre-wrap"
                   aria-live="polite"
                 >
                   {output || "Code output and test results will appear here..."}
                 </pre>
-                
-                {testResults.length > 0 && !compileError && ( 
+
+                {testResults.length > 0 && !compileError && (
                   <div className="mt-4 space-y-3 max-h-[250px] overflow-y-auto">
                     <h4 className="text-md font-semibold">Test Case Results:</h4>
                     {testResults.map((result) => (
@@ -464,5 +502,3 @@ export default function StudentPracticePage() {
     </div>
   );
 }
-
-    
