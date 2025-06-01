@@ -6,19 +6,19 @@ import Link from 'next/link';
 import { useParams, useRouter } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContext';
 import { db } from '@/lib/firebase';
-import { doc, getDoc, collection, query, getDocs, orderBy } from 'firebase/firestore';
+import { doc, getDoc, collection, query, getDocs, orderBy, updateDoc, arrayUnion, increment, serverTimestamp, FieldValue } from 'firebase/firestore';
 
 import { Button } from '@/components/ui/button';
-import { Textarea } from '@/components/ui/textarea';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
+// import { Textarea } from '@/components/ui/textarea'; // Replaced by Monaco Editor
+import { MonacoCodeEditor } from '@/components/editor/MonacoCodeEditor';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
 import { Loader2, ArrowLeft, Lightbulb, Terminal, ChevronLeft, ChevronRight, BookOpen, CheckCircle, XCircle, AlertTriangle, Tag, Star, Play, CheckSquare } from 'lucide-react';
-import type { ProgrammingLanguage, Question as QuestionType, TestCase, QuestionDifficulty } from '@/types';
-import { Separator } from '@/components/ui/separator';
+import type { ProgrammingLanguage, Question as QuestionType, QuestionDifficulty, EnrolledLanguageProgress } from '@/types';
 
 interface TestCaseResult {
-  testCaseNumber: number | string; // Can be 'Sample'
+  testCaseNumber: number | string; 
   input: string;
   expectedOutput: string;
   actualOutput: string;
@@ -42,7 +42,7 @@ export default function StudentPracticePage() {
   const [testResults, setTestResults] = useState<TestCaseResult[]>([]);
 
   const [isLoadingPageData, setIsLoadingPageData] = useState(true);
-  const [isExecutingCode, setIsExecutingCode] = useState(false); // Generic for any execution
+  const [isExecutingCode, setIsExecutingCode] = useState(false); 
   const [executionError, setExecutionError] = useState<string | null>(null);
   const [compileError, setCompileError] = useState<string | null>(null);
 
@@ -70,11 +70,8 @@ export default function StudentPracticePage() {
       }
       const langData = { id: langSnap.id, ...langSnap.data() } as ProgrammingLanguage;
       setLanguage(langData);
-      // Initial code snippet will be set in the useEffect for question change
-
 
       const questionsRef = collection(db, 'colleges', userProfile.collegeId, 'languages', languageId, 'questions');
-      // Consider difficulty or other sort order later. For now, using createdAt to maintain some consistency.
       const qQuery = query(questionsRef, orderBy('createdAt', 'asc')); 
       const questionsSnap = await getDocs(qQuery);
       const fetchedQuestions = questionsSnap.docs.map(docSnap => ({ id: docSnap.id, ...docSnap.data() } as QuestionType));
@@ -94,32 +91,32 @@ export default function StudentPracticePage() {
   }, [userProfile?.collegeId, languageId, toast, router, authLoading]);
 
   useEffect(() => {
-    if (!authLoading) {
+    if (!authLoading && userProfile) { // Check userProfile as well
         fetchLanguageAndQuestions();
     }
-  }, [authLoading, fetchLanguageAndQuestions]);
+  }, [authLoading, userProfile, fetchLanguageAndQuestions]);
   
   useEffect(() => {
+    // Reset code and output when the question changes or language loads (and questions are available)
     if (language && questions.length > 0 && questions[currentQuestionIndex]) {
-      setStudentCode(`// Start writing your ${language.name} code here for Question ${currentQuestionIndex + 1}\n// ${questions[currentQuestionIndex].questionText.substring(0,50)}...\n\n`);
+      setStudentCode(`// Start writing your ${language.name} code here for Question ${currentQuestionIndex + 1}\n// ${questions[currentQuestionIndex].questionText.substring(0,50)}...\n\n/*\nSample Input:\n${questions[currentQuestionIndex].sampleInput || 'N/A'}\n\nSample Output:\n${questions[currentQuestionIndex].sampleOutput || 'N/A'}\n*/\n\n`);
       setOutput('');
       setTestResults([]);
       setExecutionError(null);
       setCompileError(null);
-    } else if (language && questions.length === 0) {
-      // Handle case where language is loaded but no questions
+    } else if (language && questions.length === 0 && !isLoadingPageData) { // Check isLoadingPageData
       setStudentCode(`// No questions available for ${language.name} yet.\n`);
       setOutput('');
       setTestResults([]);
     }
-  }, [currentQuestionIndex, questions, language]);
+  }, [currentQuestionIndex, questions, language, isLoadingPageData]); // Added isLoadingPageData
 
 
   const currentQuestion = questions[currentQuestionIndex];
 
   const executeCodeApiCall = async (executionType: 'run' | 'submit') => {
-    if (!currentQuestion || !language) {
-        toast({title: "Cannot run code", description: "Question or language not loaded.", variant: "destructive"});
+    if (!currentQuestion || !language || !userProfile) {
+        toast({title: "Cannot run code", description: "Question, language, or user profile not loaded.", variant: "destructive"});
         return;
     }
     setIsExecutingCode(true);
@@ -138,7 +135,7 @@ export default function StudentPracticePage() {
         if (executionType === 'run') {
             payload.sampleInput = currentQuestion.sampleInput || "";
             payload.sampleOutput = currentQuestion.sampleOutput || "";
-        } else { // submit
+        } else { 
             payload.testCases = currentQuestion.testCases;
         }
 
@@ -159,13 +156,59 @@ export default function StudentPracticePage() {
         if (result.compileError) setCompileError(result.compileError);
         if (result.executionError) setExecutionError(result.executionError);
 
-        if (executionType === 'submit') {
+        if (executionType === 'submit' && !result.compileError && !result.executionError) {
             const allPassed = result.testCaseResults?.every((tc: TestCaseResult) => tc.passed);
             if (result.testCaseResults?.length > 0) {
-                toast({
-                    title: allPassed ? "All Tests Passed!" : "Some Tests Failed",
-                    description: allPassed ? "Great job! Your solution passed all test cases." : "Review the results below and try again.",
-                    variant: allPassed ? "default" : "destructive",
+                if (allPassed) {
+                    const enrollmentRef = doc(db, 'users', userProfile.uid, 'enrolledLanguages', languageId);
+                    const enrollmentSnap = await getDoc(enrollmentRef);
+                    let scoreEarned = currentQuestion.maxScore || 100;
+
+                    if (enrollmentSnap.exists()) {
+                        const progress = enrollmentSnap.data() as EnrolledLanguageProgress;
+                        if (progress.completedQuestions && progress.completedQuestions[currentQuestion.id]) {
+                             toast({
+                                title: "Question Already Completed",
+                                description: "You have already successfully completed this question. No additional score awarded.",
+                                variant: "default",
+                            });
+                            scoreEarned = 0; // No score for re-completion
+                        } else {
+                            // Using FieldValue for atomicity
+                            const updates: { [key: string]: any } = {
+                                currentScore: increment(scoreEarned),
+                                [`completedQuestions.${currentQuestion.id}`]: {
+                                    scoreAchieved: scoreEarned,
+                                    completedAt: serverTimestamp() as FieldValue,
+                                }
+                            };
+                            await updateDoc(enrollmentRef, updates);
+                            toast({
+                                title: "All Tests Passed!",
+                                description: `Great job! You earned ${scoreEarned} points. Your solution passed all test cases.`,
+                                variant: "default", // "default" for success, but "success" variant is not standard in shadcn
+                            });
+                        }
+                    } else {
+                        // This case should ideally not happen if enrollment is done correctly
+                         toast({
+                            title: "Enrollment Error",
+                            description: "Could not find your enrollment for this course to update score.",
+                            variant: "destructive",
+                        });
+                    }
+                } else {
+                     toast({
+                        title: "Some Tests Failed",
+                        description: "Review the results below and try again.",
+                        variant: "destructive",
+                    });
+                }
+            } else {
+                 toast({
+                    title: "No Test Results",
+                    description: "Submission processed, but no test results were returned.",
+                    variant: "default",
                 });
             }
         }
@@ -183,7 +226,6 @@ export default function StudentPracticePage() {
   const handleRunSample = () => executeCodeApiCall('run');
   const handleSubmitTestCases = () => executeCodeApiCall('submit');
 
-
   const handleNextQuestion = () => {
     if (currentQuestionIndex < questions.length - 1) {
       setCurrentQuestionIndex(prev => prev + 1);
@@ -192,100 +234,7 @@ export default function StudentPracticePage() {
 
   const handlePrevQuestion = () => {
     if (currentQuestionIndex > 0) {
-      setCurrentQuestionIndex(prev => prev - 1);
-    }
-  };
-
-  const handleCodeEditorKeyDown = (event: React.KeyboardEvent<HTMLTextAreaElement>) => {
-    const textarea = event.currentTarget;
-    const { selectionStart, selectionEnd } = textarea;
-    const tabSpaces = '    '; // 4 spaces for a tab
-    const currentValue = studentCode;
-
-    // This basic tab handler helps with manual indentation.
-    // For a full IDE experience (syntax highlighting, language-specific auto-indent),
-    // consider integrating a library like Monaco Editor or CodeMirror.
-    if (event.key === 'Tab') {
-      event.preventDefault();
-
-      const textBeforeSelectionStart = currentValue.substring(0, selectionStart);
-      // const selectedText = currentValue.substring(selectionStart, selectionEnd); // Not directly used in this simplified logic
-
-      const startLineIndex = textBeforeSelectionStart.split('\n').length - 1;
-      let effectiveSelectionEnd = selectionEnd;
-      // If selection ends with a newline, consider the line before it for multi-line operations
-      if (selectionStart !== selectionEnd && currentValue[selectionEnd - 1] === '\n') {
-        effectiveSelectionEnd = selectionEnd - 1;
-      }
-      const endLineIndex = currentValue.substring(0, effectiveSelectionEnd).split('\n').length - 1;
-
-      const lines = currentValue.split('\n');
-      let newStudentCode = currentValue;
-      let newSelectionStart = selectionStart;
-      let newSelectionEnd = selectionEnd;
-
-      if (selectionStart !== selectionEnd && startLineIndex !== endLineIndex) { // Multi-line selection
-        let accumulatedChange = 0;
-        const modifiedLines = lines.map((line, index) => {
-          if (index >= startLineIndex && index <= endLineIndex) {
-            if (event.shiftKey) { // Un-indent
-              if (line.startsWith(tabSpaces)) {
-                const change = -tabSpaces.length;
-                if (index === startLineIndex) newSelectionStart = Math.max(textBeforeSelectionStart.lastIndexOf('\n') + 1, selectionStart + change);
-                accumulatedChange += change;
-                return line.substring(tabSpaces.length);
-              } else if (line.startsWith('\t')) { // Also handle actual tab characters if present
-                const change = -1;
-                if (index === startLineIndex) newSelectionStart = Math.max(textBeforeSelectionStart.lastIndexOf('\n') + 1, selectionStart + change);
-                accumulatedChange += change;
-                return line.substring(1);
-              }
-            } else { // Indent
-              const change = tabSpaces.length;
-              if (index === startLineIndex) newSelectionStart = selectionStart + change;
-              accumulatedChange += change;
-              return tabSpaces + line;
-            }
-          }
-          return line;
-        });
-        newStudentCode = modifiedLines.join('\n');
-        newSelectionEnd = selectionEnd + accumulatedChange;
-        // Ensure selection start doesn't go before the line start on un-indent
-        if (event.shiftKey && startLineIndex === endLineIndex) {
-             const currentLineStartAbs = textBeforeSelectionStart.lastIndexOf('\n') +1;
-             if(newSelectionStart < currentLineStartAbs) newSelectionStart = currentLineStartAbs;
-        }
-      } else { // Single line or selection within a single line
-        const currentLineStartAbs = textBeforeSelectionStart.lastIndexOf('\n') + 1;
-        if (event.shiftKey) { // Un-indent current line
-          if (lines[startLineIndex].startsWith(tabSpaces)) {
-            lines[startLineIndex] = lines[startLineIndex].substring(tabSpaces.length);
-            newStudentCode = lines.join('\n');
-            const change = -tabSpaces.length;
-            newSelectionStart = Math.max(currentLineStartAbs, selectionStart + change);
-            newSelectionEnd = Math.max(currentLineStartAbs, selectionEnd + change);
-          } else if (lines[startLineIndex].startsWith('\t')) {
-            lines[startLineIndex] = lines[startLineIndex].substring(1);
-            newStudentCode = lines.join('\n');
-            const change = -1;
-            newSelectionStart = Math.max(currentLineStartAbs, selectionStart + change);
-            newSelectionEnd = Math.max(currentLineStartAbs, selectionEnd + change);
-          }
-        } else { // Indent at cursor or selected text
-          const textToInsert = tabSpaces;
-          newStudentCode = currentValue.substring(0, selectionStart) + textToInsert + currentValue.substring(selectionEnd);
-          newSelectionStart = selectionStart + textToInsert.length;
-          newSelectionEnd = newSelectionStart;
-        }
-      }
-
-      setStudentCode(newStudentCode);
-      // Use setTimeout to ensure the state update has propagated before setting selection
-      setTimeout(() => {
-        textarea.focus();
-        textarea.setSelectionRange(newSelectionStart, Math.max(newSelectionStart, newSelectionEnd));
-      }, 0);
+      setCurrentQuestionIndex(prev => prev + 1);
     }
   };
 
@@ -299,7 +248,7 @@ export default function StudentPracticePage() {
     }
   };
 
-  if (authLoading || isLoadingPageData && !language) {
+  if (authLoading || (isLoadingPageData && !language)) {
     return (
       <div className="container mx-auto py-8 flex flex-col items-center justify-center min-h-[calc(100vh-10rem)]">
         <Loader2 className="h-16 w-16 animate-spin text-primary mb-4" />
@@ -308,7 +257,7 @@ export default function StudentPracticePage() {
     );
   }
 
-  if (!language) {
+  if (!language && !isLoadingPageData) { // Added !isLoadingPageData check
     return (
       <div className="container mx-auto py-8 text-center">
         <p className="text-lg text-muted-foreground">Could not load course details.</p>
@@ -324,7 +273,7 @@ export default function StudentPracticePage() {
       <div className="flex justify-between items-center">
         <h1 className="text-3xl font-headline flex items-center">
           <BookOpen className="w-8 h-8 mr-3 text-primary" />
-          Practice: {language.name}
+          Practice: {language?.name || 'Course'}
         </h1>
         <Button asChild variant="outline">
           <Link href="/student/labs" className="flex items-center gap-2">
@@ -339,7 +288,7 @@ export default function StudentPracticePage() {
             <CardTitle>No Questions Yet</CardTitle>
           </CardHeader>
           <CardContent>
-            <p className="text-muted-foreground">There are currently no questions available for this {language.name} course. Please check back later, or inform your instructor.</p>
+            <p className="text-muted-foreground">There are currently no questions available for this {language?.name} course. Please check back later, or inform your instructor.</p>
           </CardContent>
         </Card>
       ) : !currentQuestion && !isLoadingPageData ? (
@@ -347,7 +296,7 @@ export default function StudentPracticePage() {
           <CardHeader><CardTitle>Loading Question...</CardTitle></CardHeader>
           <CardContent><Loader2 className="h-8 w-8 animate-spin text-primary"/></CardContent>
         </Card>
-      ) : currentQuestion ? (
+      ) : currentQuestion && language ? ( // Ensure language is also loaded
         <>
           <Card className="shadow-lg">
             <CardHeader>
@@ -397,17 +346,12 @@ export default function StudentPracticePage() {
                 <CardTitle className="text-lg flex items-center"><Terminal className="w-5 h-5 mr-2" /> Your Code</CardTitle>
               </CardHeader>
               <CardContent>
-                <Textarea
+                <MonacoCodeEditor
+                  language={language.name}
                   value={studentCode}
-                  onChange={(e) => setStudentCode(e.target.value)}
-                  onKeyDown={handleCodeEditorKeyDown}
-                  placeholder={`Write your ${language.name} code here...`}
-                  rows={15}
-                  className="font-mono text-sm bg-background"
-                  disabled={isExecutingCode}
-                  spellCheck="false"
-                  autoCapitalize="none"
-                  autoCorrect="off"
+                  onChange={(code) => setStudentCode(code || '')}
+                  height="500px" // Adjust height as needed
+                  options={{ readOnly: isExecutingCode }}
                 />
               </CardContent>
             </Card>
@@ -429,15 +373,15 @@ export default function StudentPracticePage() {
                         <pre className="whitespace-pre-wrap font-mono">{executionError}</pre>
                     </div>
                 )}
-                <Textarea
-                  value={output}
-                  readOnly
-                  placeholder="Code output and test results will appear here..."
-                  rows={10}
-                  className="font-mono text-sm bg-muted/50"
-                />
+                <pre 
+                  className="font-mono text-sm bg-muted/50 p-4 rounded-md min-h-[150px] max-h-[300px] overflow-y-auto whitespace-pre-wrap"
+                  aria-live="polite"
+                >
+                  {output || "Code output and test results will appear here..."}
+                </pre>
+                
                 {testResults.length > 0 && (
-                  <div className="mt-4 space-y-3">
+                  <div className="mt-4 space-y-3 max-h-[250px] overflow-y-auto">
                     <h4 className="text-md font-semibold">Test Case Results:</h4>
                     {testResults.map((result) => (
                       <Card key={result.testCaseNumber.toString()} className={`p-3 ${result.passed ? 'bg-green-500/10 border-green-500' : 'bg-red-500/10 border-red-500'}`}>

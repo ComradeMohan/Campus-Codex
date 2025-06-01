@@ -1,3 +1,4 @@
+
 import type { NextConfig } from 'next';
 
 const nextConfig: NextConfig = {
@@ -23,12 +24,13 @@ const nextConfig: NextConfig = {
       },
       {
         protocol: 'https',
-        hostname: 'i.ibb.co', // ✅ Add this
+        hostname: 'i.ibb.co', 
         port: '',
         pathname: '/**',
       },
     ],
   },
+  transpilePackages: ['monaco-editor'], // Required for Monaco Editor
 };
 
 export default nextConfig;
