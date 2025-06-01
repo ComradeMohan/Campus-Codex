@@ -1,6 +1,6 @@
 
 import type { NavItem, FeatureItem } from '@/types';
-import { Code, FileText, BarChart3, Settings, Linkedin, Twitter, Github, BookOpen, ShieldCheck } from 'lucide-react';
+import { Code, FileText, BarChart3, Settings, Linkedin, Github, BookOpen, ShieldCheck, Briefcase, ExternalLink } from 'lucide-react';
 
 export const siteConfig = {
   name: "Campus Codex",
@@ -8,7 +8,7 @@ export const siteConfig = {
   url: "https://campuscoding.example.com", // Replace with your actual domain
   ogImage: "https://campuscoding.example.com/og.jpg", // Replace with your actual OG image
   links: {
-    twitter: "https://comrademohan.rf.gd/",
+    portfolio: "https://comrademohan.rf.gd/",
     github: "https://github.com/ComradeMohan/Campus-Codex",
     linkedin: "https://www.linkedin.com/in/mmohanreddy/",
   },
@@ -44,9 +44,9 @@ export const siteConfig = {
     contactEmail: "mohanreddy3539@gmail.com",
     address: "Chennai, Tamilnadu",
     socialLinks: [
-      { icon: Twitter, href: "https://twitter.com/example", name: "Twitter" },
-      { icon: Github, href: "https://github.com/example", name: "GitHub" },
-      { icon: Linkedin, href: "https://linkedin.com/company/example", name: "LinkedIn" },
+      { icon: Briefcase, href: "https://comrademohan.rf.gd/", name: "Portfolio" },
+      { icon: Github, href: "https://github.com/ComradeMohan/Campus-Codex", name: "GitHub" },
+      { icon: Linkedin, href: "https://www.linkedin.com/in/mmohanreddy/", name: "LinkedIn" },
     ],
   },
   // Firebase configuration (placeholders - replace with your actual config)
@@ -65,3 +65,4 @@ export const isFirebasePlaceholdersUsed =
   !fbConfig.apiKey || fbConfig.apiKey === "YOUR_API_KEY" ||
   !fbConfig.authDomain || fbConfig.authDomain === "YOUR_AUTH_DOMAIN" ||
   !fbConfig.projectId || fbConfig.projectId === "YOUR_PROJECT_ID";
+
