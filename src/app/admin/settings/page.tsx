@@ -8,7 +8,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
-import { ArrowLeft, Settings, Palette, KeyRound, Tool } from 'lucide-react';
+import { ArrowLeft, Settings, Palette, KeyRound, SlidersHorizontal } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 
 export default function AdminSettingsPage() {
@@ -43,7 +43,7 @@ export default function AdminSettingsPage() {
       <Card className="shadow-lg">
         <CardHeader>
           <CardTitle className="text-xl font-headline flex items-center">
-            <Tool className="w-5 h-5 mr-2 text-primary" />
+            <SlidersHorizontal className="w-5 h-5 mr-2 text-primary" />
             General Settings
           </CardTitle>
           <CardDescription>Basic configuration for the platform.</CardDescription>

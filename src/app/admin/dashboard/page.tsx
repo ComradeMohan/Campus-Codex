@@ -2,7 +2,7 @@
 'use client';
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { BarChart3, Users, Settings, BookOpen, UserCog, Loader2 } from "lucide-react";
+import { BarChart3, Users, Settings, BookOpen, UserCog, Loader2, SlidersHorizontal } from "lucide-react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/contexts/AuthContext";
@@ -15,6 +15,7 @@ export default function AdminDashboardPage() {
   const { userProfile } = useAuth();
   const { toast } = useToast();
   const [studentCount, setStudentCount] = useState<number | null>(null);
+  const [activeCoursesCount, setActiveCoursesCount] = useState<number | null>(null);
   const [isLoadingStats, setIsLoadingStats] = useState(true);
 
   const dashboardItems = [
@@ -22,7 +23,7 @@ export default function AdminDashboardPage() {
     { title: "Course Management", description: "Create, edit, and organize courses and labs.", icon: BookOpen, href: "/admin/courses" },
     { title: "Platform Analytics", description: "Track usage statistics and platform performance.", icon: BarChart3, href: "/admin/analytics" },
     { title: "Admin Profile", description: "View and manage your profile details.", icon: UserCog, href: "/admin/profile" },
-    { title: "System Settings", description: "Configure platform settings and integrations.", icon: Settings, href: "/admin/settings" },
+    { title: "System Settings", description: "Configure platform settings and integrations.", icon: SlidersHorizontal, href: "/admin/settings" },
   ];
 
   useEffect(() => {
@@ -36,10 +37,10 @@ export default function AdminDashboardPage() {
           const studentSnapshot = await getDocs(studentQuery);
           setStudentCount(studentSnapshot.size);
 
-          // Fetch active labs count (placeholder for now)
-          // const languagesRef = collection(db, 'colleges', userProfile.collegeId, 'languages');
-          // const languagesSnapshot = await getDocs(languagesRef);
-          // setActiveLabsCount(languagesSnapshot.size); // Example: count of languages as active labs
+          // Fetch active courses count
+          const languagesRef = collection(db, 'colleges', userProfile.collegeId, 'languages');
+          const languagesSnapshot = await getDocs(languagesRef);
+          setActiveCoursesCount(languagesSnapshot.size);
 
         } catch (error) {
           console.error("Error fetching dashboard stats:", error);
@@ -51,12 +52,14 @@ export default function AdminDashboardPage() {
         } finally {
           setIsLoadingStats(false);
         }
-      } else if (userProfile === null) {
+      } else if (userProfile === null) { // If user is explicitly null (logged out)
         setIsLoadingStats(false);
       }
     };
 
-    fetchStats();
+    if (userProfile !== undefined) { // Only fetch if userProfile is determined (not undefined initial state)
+        fetchStats();
+    }
   }, [userProfile, toast]);
 
   return (
@@ -111,7 +114,7 @@ export default function AdminDashboardPage() {
             ) : (
               <>
                 <div className="flex justify-between"><span>Total Students:</span> <span className="font-semibold">{studentCount ?? 'N/A'}</span></div>
-                <div className="flex justify-between"><span>Active Courses/Languages:</span> <span className="font-semibold">0</span></div> {/* Placeholder */}
+                <div className="flex justify-between"><span>Active Courses/Languages:</span> <span className="font-semibold">{activeCoursesCount ?? 'N/A'}</span></div>
               </>
             )}
           </CardContent>
