@@ -12,9 +12,10 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter }
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
-import { Loader2, User, Mail, Building, Award, BarChart2, BookOpen, Star, ArrowLeft, Edit, Phone } from 'lucide-react';
+import { Loader2, User, Mail, Building, Award, BarChart2, BookOpen, Star, ArrowLeft, Edit, Phone, KeyRound } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import * as LucideIcons from 'lucide-react';
+import { ChangePasswordDialog } from '@/components/auth/ChangePasswordDialog';
 
 interface EnrolledLanguageWithDetails extends EnrolledLanguageProgress {
   totalPossibleScore: number;
@@ -37,6 +38,7 @@ export default function StudentProfilePage() {
   const [isLoadingProgress, setIsLoadingProgress] = useState(true);
   const [totalOverallScore, setTotalOverallScore] = useState(0);
   const [totalPossibleOverallScore, setTotalPossibleOverallScore] = useState(0);
+  const [isChangePasswordDialogOpen, setIsChangePasswordDialogOpen] = useState(false);
 
   const fetchStudentProgress = useCallback(async () => {
     if (!userProfile?.uid || !userProfile?.collegeId) {
@@ -185,6 +187,11 @@ export default function StudentProfilePage() {
             </div>
           )}
         </CardContent>
+        <CardFooter className="border-t pt-4">
+            <Button variant="outline" onClick={() => setIsChangePasswordDialogOpen(true)}>
+                <KeyRound className="mr-2 h-4 w-4" /> Change Password
+            </Button>
+        </CardFooter>
       </Card>
 
       <Card className="shadow-lg">
@@ -287,6 +294,11 @@ export default function StudentProfilePage() {
             <Link href="/student/labs"><ArrowLeft className="mr-2"/> Back to Labs</Link>
         </Button>
       </div>
+      <ChangePasswordDialog 
+        email={userProfile.email}
+        isOpen={isChangePasswordDialogOpen}
+        onOpenChange={setIsChangePasswordDialogOpen}
+      />
     </div>
   );
 }

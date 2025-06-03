@@ -1,16 +1,19 @@
 
 'use client';
 
+import { useState } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { UserCog, Mail, Building, Phone } from 'lucide-react';
+import { UserCog, Mail, Building, Phone, KeyRound } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
+import { ChangePasswordDialog } from '@/components/auth/ChangePasswordDialog';
 
 export default function AdminProfilePage() {
   const { userProfile, loading } = useAuth();
+  const [isChangePasswordDialogOpen, setIsChangePasswordDialogOpen] = useState(false);
 
   if (loading) {
     return (
@@ -109,7 +112,17 @@ export default function AdminProfilePage() {
             <span className="capitalize">{userProfile.role}</span>
           </div>
         </CardContent>
+        <CardFooter className="border-t pt-4">
+            <Button variant="outline" onClick={() => setIsChangePasswordDialogOpen(true)}>
+                <KeyRound className="mr-2 h-4 w-4" /> Change Password
+            </Button>
+        </CardFooter>
       </Card>
+      <ChangePasswordDialog 
+        email={userProfile.email}
+        isOpen={isChangePasswordDialogOpen}
+        onOpenChange={setIsChangePasswordDialogOpen}
+      />
     </div>
   );
 }
