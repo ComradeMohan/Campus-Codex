@@ -20,18 +20,19 @@ export type SocialLink = {
   name: string;
 };
 
-export type UserRole = 'student' | 'admin';
+export type UserRole = 'student' | 'admin' | 'faculty';
 
 export interface UserProfile {
   uid: string;
   email: string | null;
   fullName: string;
   role: UserRole;
-  collegeName?: string; // For admins
+  collegeName?: string; // For admins, students (derived), faculty (derived)
   registrationNumber?: string; // For students
-  collegeId?: string; // For students and admins, linking to a college
+  collegeId?: string; // For students, admins, and faculty, linking to a college
   phoneNumber?: string;
   isEmailVerified: boolean;
+  managedLanguageIds?: string[]; // For faculty: Array of language IDs they manage
 }
 
 export interface College {

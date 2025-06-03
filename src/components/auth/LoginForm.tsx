@@ -100,6 +100,7 @@ export function LoginForm() {
              await refreshUserProfile();
              if (userProfile.role === 'admin') router.push('/admin/dashboard');
              else if (userProfile.role === 'student') router.push('/student/labs');
+             else if (userProfile.role === 'faculty') router.push('/faculty/dashboard');
              else router.push('/'); 
           }
           toast({ title: 'Login Successful', description: 'Welcome back!' });
@@ -149,7 +150,10 @@ export function LoginForm() {
           router.push('/admin/dashboard');
         } else if (userProfile.role === 'student') {
           router.push('/student/labs');
-        } else {
+        } else if (userProfile.role === 'faculty') {
+          router.push('/faculty/dashboard');
+        }
+         else {
           router.push('/'); 
         }
         toast({ title: 'Login Successful', description: 'Welcome back!' });
@@ -324,3 +328,4 @@ export function LoginForm() {
     </Card>
   );
 }
+

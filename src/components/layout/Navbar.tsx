@@ -2,7 +2,7 @@
 'use client';
 
 import Link from 'next/link';
-import { CodeXml, Menu, X, Sun, Moon, User } from 'lucide-react';
+import { CodeXml, Menu, X, Sun, Moon, User, BookUser } from 'lucide-react';
 import { siteConfig } from '@/config/site';
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/contexts/AuthContext';
@@ -137,6 +137,25 @@ export function Navbar() {
           );
         }
       }
+      if (userProfile?.role === 'faculty') {
+        const facultyDashboardLink = (
+          <Button variant="ghost" asChild className={commonLinkClasses}>
+            <Link href="/faculty/dashboard" className="flex items-center gap-1.5"><BookUser className="h-4 w-4"/> Dashboard</Link>
+          </Button>
+        );
+        if (isSheetItem) {
+          authConditionalLinks.push(
+            <SheetClose asChild key="faculty-dashboard">{facultyDashboardLink}</SheetClose>
+          );
+        } else {
+          authConditionalLinks.push(
+            <Button variant="ghost" asChild className={commonLinkClasses} key="faculty-dashboard">
+               <Link href="/faculty/dashboard" className="flex items-center gap-1.5"><BookUser className="h-4 w-4"/> Dashboard</Link>
+            </Button>
+          );
+        }
+      }
+
       authConditionalLinks.push(
         <Button 
           variant="ghost" 
@@ -223,3 +242,4 @@ export function Navbar() {
     </header>
   );
 }
+

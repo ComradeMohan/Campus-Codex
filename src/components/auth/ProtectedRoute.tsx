@@ -31,6 +31,7 @@ export function ProtectedRoute({ children, allowedRoles }: ProtectedRouteProps) 
         // If role mismatch, redirect to a default page or an unauthorized page
         if (userProfile.role === 'admin') router.push('/admin/dashboard');
         else if (userProfile.role === 'student') router.push('/student/labs');
+        else if (userProfile.role === 'faculty') router.push('/faculty/dashboard');
         else router.push('/');
       } else if (userProfile && userProfile.role !== 'admin' && !userProfile.isEmailVerified) {
         // For non-admin users, if email is not verified, component renders verification prompt.
@@ -143,3 +144,4 @@ export function ProtectedRoute({ children, allowedRoles }: ProtectedRouteProps) 
 
   return <>{children}</>;
 }
+
