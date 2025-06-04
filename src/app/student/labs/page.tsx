@@ -145,17 +145,6 @@ export default function StudentCodingLabsPage() {
   if (authLoading || (isLoadingLanguages && userProfile)) {
     return (
       <div className="space-y-8">
-        <Card className="shadow-lg overflow-hidden">
-            {/* Skeleton for hero section */}
-             <div className="md:flex">
-                <div className="md:w-1/2 bg-muted h-64 md:h-auto animate-pulse"></div>
-                <div className="md:w-1/2 p-6 md:p-8 flex flex-col justify-center space-y-4">
-                    <div className="h-8 bg-muted rounded w-3/4 animate-pulse"></div>
-                    <div className="h-6 bg-muted rounded w-full animate-pulse"></div>
-                    <div className="h-5 bg-muted rounded w-5/6 animate-pulse"></div>
-                </div>
-            </div>
-        </Card>
         <Card>
             <CardHeader><CardTitle className="h-7 bg-muted rounded w-1/2 animate-pulse"></CardTitle></CardHeader>
             <CardContent className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -188,52 +177,15 @@ export default function StudentCodingLabsPage() {
 
   return (
     <div className="space-y-8">
-      <Card className="shadow-lg overflow-hidden">
-        <div className="md:flex">
-          <div className="md:w-1/2">
-             <Image 
-              src="https://i.ibb.co/xKbbYqLX/5062a6903f9abd4afdcd2f0a8609617d.jpg" 
-              alt="Student coding in a lab" 
-              width={800} 
-              height={600} 
-              className="object-cover h-64 w-full md:h-full"
-              data-ai-hint="coding learning student"
-            />
-          </div>
-          <div className="md:w-1/2 p-6 md:p-8 flex flex-col justify-center">
-            <CardHeader className="p-0 mb-4">
-              <CardTitle className="text-3xl font-headline text-primary flex items-center">
-                <TerminalSquare className="w-8 h-8 mr-3" />
-                Your Coding Labs
-              </CardTitle>
-              <CardDescription className="text-lg mt-1">
-                Welcome {userProfile?.fullName}! Explore courses and start your coding journey.
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="p-0">
-              <p className="text-muted-foreground mb-6">
-                Below are the programming languages and courses offered by {userProfile?.collegeName || 'your college'}.
-                Enroll to get started!
-              </p>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div className="flex items-center space-x-3 p-3 bg-secondary rounded-lg">
-                  <BookOpen className="w-6 h-6 text-primary" />
-                  <span className="font-medium">Interactive Learning</span>
-                </div>
-                <div className="flex items-center space-x-3 p-3 bg-secondary rounded-lg">
-                  <Zap className="w-6 h-6 text-accent" />
-                  <span className="font-medium">AI-Powered Assistance</span>
-                </div>
-              </div>
-            </CardContent>
-          </div>
-        </div>
-      </Card>
-
       <Card>
         <CardHeader>
-          <CardTitle className="font-headline">Available Courses at {userProfile?.collegeName}</CardTitle>
-          <CardDescription>Enroll in a course to start learning and practicing, or view available tests.</CardDescription>
+          <CardTitle className="font-headline text-2xl flex items-center">
+            <TerminalSquare className="w-7 h-7 mr-3 text-primary" />
+            Available Courses at {userProfile?.collegeName}
+          </CardTitle>
+          <CardDescription>
+            Welcome {userProfile?.fullName}! Enroll in a course to start learning and practicing, or view available tests.
+          </CardDescription>
         </CardHeader>
         <CardContent>
           {collegeLanguages.length === 0 && !isLoadingLanguages ? (
