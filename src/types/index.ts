@@ -47,6 +47,7 @@ export interface ProgrammingLanguage {
   description?: string;
   iconName?: string; // To store the name of a Lucide icon
   createdAt: Timestamp | FieldValue;
+  // isPlacementCourse?: boolean; // Future: more robust way to identify placement courses
 }
 
 export interface TestCase {
@@ -103,7 +104,10 @@ export interface EnrolledLanguageProgress {
       scoreAchieved: number;
       completedAt: Timestamp | FieldValue;
       submittedCode: string; // Store the successfully submitted code
+      solvedWithLanguage?: string; // For placement questions, store the language used
     };
   };
 }
 
+
+    

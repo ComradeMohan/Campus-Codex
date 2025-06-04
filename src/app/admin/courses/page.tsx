@@ -16,11 +16,11 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter }
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger, DialogClose } from '@/components/ui/dialog';
 import { useToast } from '@/hooks/use-toast';
-import { Loader2, PlusCircle, BookOpen, AlertTriangle, ArrowLeft, Check, Edit3, Trash2, Palette, MessageSquarePlus } from 'lucide-react';
+import { Loader2, PlusCircle, BookOpen, AlertTriangle, ArrowLeft, Check, Edit3, Trash2, Palette, MessageSquarePlus, Briefcase } from 'lucide-react';
 import type { ProgrammingLanguage } from '@/types';
 import * as LucideIcons from 'lucide-react';
 
-const PREDEFINED_LANGUAGES: Array<{ name: string; defaultIcon: keyof typeof LucideIcons | ''; descriptionHint?: string }> = [
+const PREDEFINED_LANGUAGES: Array<{ name: string; defaultIcon: keyof typeof LucideIcons | ''; descriptionHint?: string; isPlacement?: boolean }> = [
   { name: 'Python', defaultIcon: 'CodeSquare', descriptionHint: 'General-purpose, high-level programming.' },
   { name: 'JavaScript', defaultIcon: 'Codepen', descriptionHint: 'Web development, scripting, Node.js.' },
   { name: 'Java', defaultIcon: 'Coffee', descriptionHint: 'Enterprise applications, Android development.' },
@@ -37,6 +37,7 @@ const PREDEFINED_LANGUAGES: Array<{ name: string; defaultIcon: keyof typeof Luci
   { name: 'Go', defaultIcon: 'Box', descriptionHint: 'Network services, command-line interfaces.' },
   { name: 'R', defaultIcon: 'Sigma', descriptionHint: 'Statistical computing and graphics.' },
   { name: 'Rust', defaultIcon: 'Shield', descriptionHint: 'Systems programming, performance-critical applications.' },
+  { name: 'Placements', defaultIcon: 'Briefcase', descriptionHint: 'Practice for placement tests with questions solvable in multiple languages.', isPlacement: true },
 ];
 
 
@@ -64,7 +65,7 @@ export default function CourseManagementPage() {
   const [collegeLanguages, setCollegeLanguages] = useState<ProgrammingLanguage[]>([]);
   const [isLoadingLanguages, setIsLoadingLanguages] = useState(true);
   const [isSubmittingDialog, setIsSubmittingDialog] = useState(false);
-  const [selectedPredefinedLang, setSelectedPredefinedLang] = useState<{ name: string; defaultIcon: keyof typeof LucideIcons | ''; descriptionHint?: string } | null>(null);
+  const [selectedPredefinedLang, setSelectedPredefinedLang] = useState<{ name: string; defaultIcon: keyof typeof LucideIcons | ''; descriptionHint?: string, isPlacement?: boolean } | null>(null);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
 
   const dialogForm = useForm<AddLanguageDialogFormData>({
@@ -98,12 +99,12 @@ export default function CourseManagementPage() {
     }
   }, [userProfile, fetchCollegeLanguages]);
 
-  const handleOpenDialog = (lang: { name: string; defaultIcon: keyof typeof LucideIcons | ''; descriptionHint?: string }) => {
+  const handleOpenDialog = (lang: { name: string; defaultIcon: keyof typeof LucideIcons | ''; descriptionHint?: string; isPlacement?: boolean }) => {
     setSelectedPredefinedLang(lang);
     dialogForm.reset({
       name: lang.name,
       description: lang.descriptionHint || '',
-      iconName: lang.defaultIcon || 'BookOpen',
+      iconName: lang.defaultIcon || (lang.isPlacement ? 'Briefcase' : 'BookOpen'),
     });
     setIsDialogOpen(true);
   };
@@ -125,11 +126,14 @@ export default function CourseManagementPage() {
         return;
       }
 
-      const newLanguageData: Omit<ProgrammingLanguage, 'id' | 'createdAt'> & { createdAt: any } = {
+      const newLanguageData: Omit<ProgrammingLanguage, 'id' | 'createdAt'> & { createdAt: any; isPlacementCourse?: boolean } = {
         name: selectedPredefinedLang.name,
         description: data.description || selectedPredefinedLang.descriptionHint || '',
-        iconName: data.iconName || selectedPredefinedLang.defaultIcon || 'BookOpen',
+        iconName: data.iconName || selectedPredefinedLang.defaultIcon || (selectedPredefinedLang.isPlacement ? 'Briefcase' : 'BookOpen'),
         createdAt: serverTimestamp(),
+        // NOTE: Adding an 'isPlacementCourse' flag could be a more robust way to identify these in the future.
+        // For now, identification will rely on the name "Placements".
+        // isPlacementCourse: selectedPredefinedLang.isPlacement || false, 
       };
       
       const docRef = await addDoc(languagesRef, newLanguageData);
@@ -192,14 +196,14 @@ export default function CourseManagementPage() {
             Add Languages to {userProfile?.collegeName || 'Your College'}
           </CardTitle>
           <CardDescription>
-            Select from common programming languages to add them to your college's curriculum.
-            If a language is already added, you can manage its questions directly.
+            Select from common programming languages or "Placements" module to add them to your college's curriculum.
+            If a language/module is already added, you can manage its questions directly.
           </CardDescription>
         </CardHeader>
         <CardContent>
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
             {PREDEFINED_LANGUAGES.map((lang) => {
-              const PredefinedIcon = getIconComponent(lang.defaultIcon || 'BookOpen');
+              const PredefinedIcon = getIconComponent(lang.defaultIcon || (lang.isPlacement ? 'Briefcase' : 'BookOpen'));
               const addedLanguageDetails = getAddedLanguageDetails(lang.name);
               const isAdded = !!addedLanguageDetails;
 
@@ -257,7 +261,7 @@ export default function CourseManagementPage() {
                   name="name"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Language Name</FormLabel>
+                      <FormLabel>Name</FormLabel>
                       <FormControl>
                         <Input {...field} readOnly className="bg-muted/30 cursor-not-allowed" />
                       </FormControl>
@@ -288,7 +292,7 @@ export default function CourseManagementPage() {
                       </FormControl>
                       <FormMessage />
                        <p className="text-xs text-muted-foreground pt-1">
-                        From <a href="https://lucide.dev/icons/" target="_blank" rel="noopener noreferrer" className="underline hover:text-primary">lucide.dev/icons</a>. Default: <BookOpen className="inline h-3 w-3" />
+                        From <a href="https://lucide.dev/icons/" target="_blank" rel="noopener noreferrer" className="underline hover:text-primary">lucide.dev/icons</a>. Default: {selectedPredefinedLang?.isPlacement ? <Briefcase className="inline h-3 w-3" /> : <BookOpen className="inline h-3 w-3" />}
                        </p>
                     </FormItem>
                   )}
@@ -300,7 +304,7 @@ export default function CourseManagementPage() {
                 </DialogClose>
                 <Button type="submit" disabled={isSubmittingDialog}>
                   {isSubmittingDialog && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                  Confirm & Add Language
+                  Confirm & Add {selectedPredefinedLang?.isPlacement ? "Module" : "Language"}
                 </Button>
               </DialogFooter>
             </form>
@@ -312,10 +316,10 @@ export default function CourseManagementPage() {
         <CardHeader>
           <CardTitle className="text-xl font-headline flex items-center">
             <BookOpen className="w-6 h-6 mr-2 text-primary" />
-            Languages in {userProfile?.collegeName || 'Your College'}
+            Modules in {userProfile?.collegeName || 'Your College'}
           </CardTitle>
           <CardDescription>
-            List of programming languages currently configured for your students. Manage questions for each language.
+            List of programming languages and modules currently configured for your students. Manage questions for each.
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -332,11 +336,13 @@ export default function CourseManagementPage() {
               ))}
             </div>
           ) : collegeLanguages.length === 0 ? (
-            <p className="text-muted-foreground text-center py-4">No programming languages have been added to your college curriculum yet.</p>
+            <p className="text-muted-foreground text-center py-4">No programming languages or modules have been added to your college curriculum yet.</p>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
               {collegeLanguages.map((lang) => {
-                const IconComponent = getIconComponent(lang.iconName);
+                // Check if it's the special "Placements" course by name for icon handling
+                const isPlacementCourse = lang.name === "Placements";
+                const IconComponent = getIconComponent(lang.iconName || (isPlacementCourse ? 'Briefcase' : 'BookOpen'));
                 return (
                   <Card key={lang.id} className="shadow-md hover:shadow-lg transition-shadow flex flex-col">
                     <CardHeader className="flex flex-row items-center justify-between space-x-3 pb-2">
@@ -344,12 +350,6 @@ export default function CourseManagementPage() {
                             <IconComponent className="w-7 h-7 text-primary" />
                             <CardTitle className="text-lg font-semibold">{lang.name}</CardTitle>
                         </div>
-                        {/* Future: Edit/Delete buttons
-                        <div className="flex space-x-1">
-                            <Button variant="ghost" size="icon" className="h-7 w-7"><Edit3 className="h-4 w-4" /></Button>
-                            <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive hover:text-destructive"><Trash2 className="h-4 w-4" /></Button>
-                        </div>
-                        */}
                     </CardHeader>
                     <CardContent className="flex-grow">
                       <p className="text-sm text-muted-foreground min-h-[40px] line-clamp-2">
@@ -374,4 +374,6 @@ export default function CourseManagementPage() {
     </div>
   );
 }
+    
+
     

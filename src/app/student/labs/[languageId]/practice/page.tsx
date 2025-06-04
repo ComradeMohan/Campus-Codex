@@ -14,7 +14,9 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
 import { Progress } from '@/components/ui/progress';
-import { Loader2, ArrowLeft, Lightbulb, Terminal, ChevronLeft, ChevronRight, BookOpen, CheckCircle, XCircle, AlertTriangle, Tag, Star, Play, CheckSquare } from 'lucide-react';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Label } from '@/components/ui/label';
+import { Loader2, ArrowLeft, Lightbulb, Terminal, ChevronLeft, ChevronRight, BookOpen, CheckCircle, XCircle, AlertTriangle, Tag, Star, Play, CheckSquare, Briefcase, PackageSearch } from 'lucide-react';
 import type { ProgrammingLanguage, Question as QuestionType, QuestionDifficulty, EnrolledLanguageProgress } from '@/types';
 
 interface TestCaseResult {
@@ -26,6 +28,8 @@ interface TestCaseResult {
   error?: string;
 }
 
+const PLACEMENTS_COURSE_NAME = "Placements"; // Define a constant for "Placements"
+
 export default function StudentPracticePage() {
   const { userProfile, loading: authLoading } = useAuth();
   const params = useParams();
@@ -34,7 +38,7 @@ export default function StudentPracticePage() {
 
   const languageId = params.languageId as string;
 
-  const [language, setLanguage] = useState<ProgrammingLanguage | null>(null);
+  const [language, setLanguage] = useState<ProgrammingLanguage | null>(null); // The current lab/course (could be "Placements")
   const [questions, setQuestions] = useState<QuestionType[]>([]);
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
   const [studentCode, setStudentCode] = useState('');
@@ -42,6 +46,9 @@ export default function StudentPracticePage() {
   const [testResults, setTestResults] = useState<TestCaseResult[]>([]);
   const [enrollmentProgress, setEnrollmentProgress] = useState<EnrolledLanguageProgress | null>(null);
   const [totalPossibleLanguageScore, setTotalPossibleLanguageScore] = useState(0);
+
+  const [allStudentEnrolledLanguages, setAllStudentEnrolledLanguages] = useState<ProgrammingLanguage[]>([]); // All languages student is enrolled in
+  const [selectedSolveLanguage, setSelectedSolveLanguage] = useState<ProgrammingLanguage | null>(null); // Language selected by student for solving placement Qs
 
   const [isLoadingPageData, setIsLoadingPageData] = useState(true);
   const [isExecutingCode, setIsExecutingCode] = useState(false);
@@ -103,6 +110,30 @@ export default function StudentPracticePage() {
         setEnrollmentProgress(null);
       }
 
+      // If this is the Placements course, fetch all other enrolled languages for the dropdown
+      if (langData.name === PLACEMENTS_COURSE_NAME) {
+        const enrolledLangsRef = collection(db, 'users', userProfile.uid, 'enrolledLanguages');
+        const enrolledLangsSnap = await getDocs(enrolledLangsRef);
+        const studentLangs: ProgrammingLanguage[] = [];
+        
+        for (const elDoc of enrolledLangsSnap.docs) {
+          if (elDoc.id === languageId) continue; // Skip "Placements" itself
+
+          const actualLangDocRef = doc(db, 'colleges', userProfile.collegeId, 'languages', elDoc.id);
+          const actualLangSnap = await getDoc(actualLangDocRef);
+          if (actualLangSnap.exists()) {
+            studentLangs.push({ id: actualLangSnap.id, ...actualLangSnap.data() } as ProgrammingLanguage);
+          }
+        }
+        setAllStudentEnrolledLanguages(studentLangs.sort((a,b) => a.name.localeCompare(b.name)));
+        if (studentLangs.length > 0) {
+          setSelectedSolveLanguage(studentLangs[0]); // Default to first enrolled language
+        } else {
+          setSelectedSolveLanguage(null);
+        }
+      }
+
+
     } catch (error) {
       console.error("Error fetching course/questions/progress:", error);
       toast({ title: "Error", description: "Failed to load course data or your progress.", variant: "destructive" });
@@ -117,23 +148,39 @@ export default function StudentPracticePage() {
     }
   }, [authLoading, userProfile, fetchLanguageAndQuestions]);
 
+  // Determine the language to use for the editor and execution
+  const languageForEditorAndExecution = language?.name === PLACEMENTS_COURSE_NAME 
+                                        ? selectedSolveLanguage 
+                                        : language;
+
   useEffect(() => {
-    if (language && questions.length > 0 && questions[currentQuestionIndex]) {
+    if (languageForEditorAndExecution && questions.length > 0 && questions[currentQuestionIndex]) {
       const currentQ = questions[currentQuestionIndex];
-      let initialCode = `// Start writing your ${language.name} code here for Question ${currentQuestionIndex + 1}\n// ${currentQ.questionText.substring(0,50)}...\n\n`;
+      let initialCode = `// Start writing your ${languageForEditorAndExecution.name} code here for Question ${currentQuestionIndex + 1}\n// ${currentQ.questionText.substring(0,50)}...\n\n`;
       initialCode += `/*\nSample Input:\n${currentQ.sampleInput || 'N/A'}\n\nSample Output:\n${currentQ.sampleOutput || 'N/A'}\n*/\n\n`;
 
-      const savedCode = enrollmentProgress?.completedQuestions?.[currentQ.id]?.submittedCode;
+      const isPlacementCourse = language?.name === PLACEMENTS_COURSE_NAME;
+      const completedQuestionData = enrollmentProgress?.completedQuestions?.[currentQ.id];
+      
+      let savedCode = completedQuestionData?.submittedCode;
+      // For placements, if the saved code was for a different language, don't use it.
+      // This logic could be enhanced if `solvedWithLanguage` was stored previously.
+      if (isPlacementCourse && completedQuestionData && completedQuestionData.solvedWithLanguage !== selectedSolveLanguage?.name) {
+          savedCode = undefined; // Reset if different language selected now
+      }
+
 
       if (savedCode) {
         initialCode = savedCode;
       } else {
-        if (language.name.toLowerCase() === 'python') {
+        if (languageForEditorAndExecution.name.toLowerCase() === 'python') {
           initialCode += `# Your Python code here\ndef main():\n    # Read input if necessary, for example:\n    # line = input()\n    # print(f"Processing: {line}")\n    pass\n\nif __name__ == "__main__":\n    main()\n`;
-        } else if (language.name.toLowerCase() === 'javascript') {
+        } else if (languageForEditorAndExecution.name.toLowerCase() === 'javascript') {
           initialCode += `// Your JavaScript code here\nfunction main() {\n    // In a Node.js environment for competitive programming, you might read from process.stdin\n    // For example, using 'readline' module if available in the execution sandbox.\n    // console.log("Hello from JavaScript!");\n}\n\nmain();\n`;
-        } else if (language.name.toLowerCase() === 'java') {
+        } else if (languageForEditorAndExecution.name.toLowerCase() === 'java') {
           initialCode += `import java.util.Scanner;\n\npublic class Main {\n    public static void main(String[] args) {\n        // Scanner scanner = new Scanner(System.in);\n        // String input = scanner.nextLine();\n        // System.out.println("Processing: " + input);\n        // scanner.close();\n    }\n}\n`;
+        } else {
+             initialCode += `// Code for ${languageForEditorAndExecution.name}\n`;
         }
       }
       setStudentCode(initialCode);
@@ -148,25 +195,25 @@ export default function StudentPracticePage() {
       setExecutionError(null);
       setCompileError(null);
     }
-  }, [currentQuestionIndex, questions, language, isLoadingPageData, enrollmentProgress]);
+  }, [currentQuestionIndex, questions, language, languageForEditorAndExecution, isLoadingPageData, enrollmentProgress, selectedSolveLanguage]);
 
 
   const currentQuestion = questions[currentQuestionIndex];
 
   const executeCodeApiCall = async (executionType: 'run' | 'submit') => {
-    if (!currentQuestion || !language || !userProfile) {
+    if (!currentQuestion || !languageForEditorAndExecution || !userProfile) {
         toast({title: "Cannot run code", description: "Question, language, or user profile not loaded.", variant: "destructive"});
         return;
     }
     setIsExecutingCode(true);
-    setOutput(`Executing your code (${executionType} mode)...\n`);
+    setOutput(`Executing your code (${executionType} mode) using ${languageForEditorAndExecution.name}...\n`);
     setTestResults([]);
     setExecutionError(null);
     setCompileError(null);
 
     try {
         const payload: any = {
-            language: language.name,
+            language: languageForEditorAndExecution.name, // Use the selected/current language
             code: studentCode,
             executionType: executionType,
         };
@@ -211,7 +258,7 @@ export default function StudentPracticePage() {
         if (executionType === 'submit' && !result.compileError && !result.executionError) {
             const allPassed = result.testCaseResults?.every((tc: TestCaseResult) => tc.passed);
             if (result.testCaseResults?.length > 0) {
-                const enrollmentRef = doc(db, 'users', userProfile.uid, 'enrolledLanguages', languageId);
+                const enrollmentRef = doc(db, 'users', userProfile.uid, 'enrolledLanguages', languageId); // Score is for the "Placements" course itself
                 const enrollmentSnap = await getDoc(enrollmentRef);
 
                 if (enrollmentSnap.exists()) {
@@ -220,6 +267,8 @@ export default function StudentPracticePage() {
                     let isNewCompletion = true;
 
                     if (currentProgressData.completedQuestions && currentProgressData.completedQuestions[currentQuestion.id]) {
+                        // Question already completed. No new score, but update code if re-submitting.
+                        // For Placements, if they re-solve with a different language, it's still considered a re-submission.
                         scoreEarned = 0; 
                         isNewCompletion = false;
                     }
@@ -229,26 +278,37 @@ export default function StudentPracticePage() {
                              [`completedQuestions.${currentQuestion.id}.submittedCode`]: studentCode,
                              [`completedQuestions.${currentQuestion.id}.completedAt`]: serverTimestamp(),
                         };
+                        if (language?.name === PLACEMENTS_COURSE_NAME && selectedSolveLanguage) {
+                            updates[`completedQuestions.${currentQuestion.id}.solvedWithLanguage`] = selectedSolveLanguage.name;
+                        }
+
                         if (isNewCompletion) {
                             updates.currentScore = increment(scoreEarned);
                             updates[`completedQuestions.${currentQuestion.id}.scoreAchieved`] = scoreEarned;
                         } else {
+                             // Preserve existing score if re-submitting successfully
                             updates[`completedQuestions.${currentQuestion.id}.scoreAchieved`] = currentProgressData.completedQuestions[currentQuestion.id]?.scoreAchieved || 0;
                         }
 
                         await updateDoc(enrollmentRef, updates);
                         
                         setEnrollmentProgress(prev => {
+                            const newCompletedQuestionsData: any = {
+                                scoreAchieved: updates[`completedQuestions.${currentQuestion.id}.scoreAchieved`],
+                                completedAt: serverTimestamp() as FieldValue, // Simulate timestamp for UI update
+                                submittedCode: studentCode,
+                            };
+                            if (language?.name === PLACEMENTS_COURSE_NAME && selectedSolveLanguage) {
+                                newCompletedQuestionsData.solvedWithLanguage = selectedSolveLanguage.name;
+                            }
+
                             const newCompletedQuestions = {
                                 ...(prev?.completedQuestions || {}),
-                                [currentQuestion.id]: {
-                                    scoreAchieved: updates[`completedQuestions.${currentQuestion.id}.scoreAchieved`],
-                                    completedAt: serverTimestamp() as FieldValue,
-                                    submittedCode: studentCode,
-                                },
+                                [currentQuestion.id]: newCompletedQuestionsData,
                             };
+
                             const newProgress = {
-                                ...(prev || { languageId, languageName: language.name, enrolledAt: serverTimestamp(), currentScore:0, completedQuestions: {} } as EnrolledLanguageProgress),
+                                ...(prev || { languageId, languageName: language!.name, enrolledAt: serverTimestamp(), currentScore:0, completedQuestions: {} } as EnrolledLanguageProgress),
                                 currentScore: isNewCompletion ? (prev?.currentScore || 0) + scoreEarned : (prev?.currentScore || 0),
                                 completedQuestions: newCompletedQuestions,
                             };
@@ -327,6 +387,13 @@ export default function StudentPracticePage() {
       default: return 'outline';
     }
   };
+  
+  const handlePlacementLanguageChange = (langId: string) => {
+    const lang = allStudentEnrolledLanguages.find(l => l.id === langId);
+    if (lang) {
+        setSelectedSolveLanguage(lang);
+    }
+  };
 
   if (authLoading || (isLoadingPageData && !language)) {
     return (
@@ -351,12 +418,14 @@ export default function StudentPracticePage() {
   const currentProgressPercent = enrollmentProgress && totalPossibleLanguageScore > 0
     ? Math.round((enrollmentProgress.currentScore / totalPossibleLanguageScore) * 100)
     : 0;
+  
+  const isPlacementCourse = language?.name === PLACEMENTS_COURSE_NAME;
 
   return (
     <div className="container mx-auto py-8 space-y-6">
       <div className="flex justify-between items-center">
         <h1 className="text-3xl font-headline flex items-center">
-          <BookOpen className="w-8 h-8 mr-3 text-primary" />
+          {isPlacementCourse ? <Briefcase className="w-8 h-8 mr-3 text-primary" /> : <BookOpen className="w-8 h-8 mr-3 text-primary" />}
           Practice: {language?.name || 'Course'}
         </h1>
         <Button asChild variant="outline">
@@ -380,11 +449,49 @@ export default function StudentPracticePage() {
         </Card>
       )}
 
+      {isPlacementCourse && !isLoadingPageData && (
+        <Card className="shadow-md">
+            <CardHeader>
+                <CardTitle className="text-lg">Select Language to Solve</CardTitle>
+                <CardDescription>Choose one of your enrolled languages to attempt placement questions.</CardDescription>
+            </CardHeader>
+            <CardContent>
+                {allStudentEnrolledLanguages.length > 0 ? (
+                    <div className="max-w-xs">
+                        <Label htmlFor="placement-language-select">Solving Language</Label>
+                        <Select 
+                            value={selectedSolveLanguage?.id || ''} 
+                            onValueChange={handlePlacementLanguageChange}
+                            disabled={isExecutingCode}
+                        >
+                            <SelectTrigger id="placement-language-select">
+                                <SelectValue placeholder="Select a language" />
+                            </SelectTrigger>
+                            <SelectContent>
+                                {allStudentEnrolledLanguages.map(lang => (
+                                    <SelectItem key={lang.id} value={lang.id}>{lang.name}</SelectItem>
+                                ))}
+                            </SelectContent>
+                        </Select>
+                    </div>
+                ) : (
+                    <div className="p-4 bg-amber-50 border border-amber-200 rounded-md text-amber-700 flex items-center gap-2">
+                        <AlertTriangle className="h-5 w-5"/>
+                        <p>You are not enrolled in any programming languages yet. Please enroll in a language course to solve placement questions.</p>
+                    </div>
+                )}
+            </CardContent>
+        </Card>
+      )}
+
 
       {questions.length === 0 && !isLoadingPageData ? (
         <Card className="shadow-lg">
           <CardHeader>
-            <CardTitle>No Questions Yet</CardTitle>
+            <CardTitle className="flex items-center gap-2">
+                <PackageSearch className="h-6 w-6"/>
+                No Questions Yet
+            </CardTitle>
           </CardHeader>
           <CardContent>
             <p className="text-muted-foreground">There are currently no questions available for this {language?.name} course. Please check back later, or inform your instructor.</p>
@@ -395,7 +502,7 @@ export default function StudentPracticePage() {
           <CardHeader><CardTitle>Loading Question...</CardTitle></CardHeader>
           <CardContent><Loader2 className="h-8 w-8 animate-spin text-primary"/></CardContent>
         </Card>
-      ) : currentQuestion && language ? (
+      ) : currentQuestion && languageForEditorAndExecution ? (
         <>
           <Card className="shadow-lg">
             <CardHeader>
@@ -410,6 +517,9 @@ export default function StudentPracticePage() {
                             <Badge variant="default" className="bg-green-600 hover:bg-green-700 text-white capitalize text-xs px-2 py-0.5">
                                 <CheckCircle className="w-3 h-3 mr-1" />
                                 Score Achieved: {enrollmentProgress.completedQuestions[currentQuestion.id].scoreAchieved}
+                                {isPlacementCourse && enrollmentProgress.completedQuestions[currentQuestion.id].solvedWithLanguage && (
+                                    ` (using ${enrollmentProgress.completedQuestions[currentQuestion.id].solvedWithLanguage})`
+                                )}
                             </Badge>
                         ) : (
                             <Badge variant="outline" className="text-xs px-2 py-0.5">
@@ -449,15 +559,15 @@ export default function StudentPracticePage() {
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             <Card className="shadow-md">
               <CardHeader>
-                <CardTitle className="text-lg flex items-center"><Terminal className="w-5 h-5 mr-2" /> Your Code</CardTitle>
+                <CardTitle className="text-lg flex items-center"><Terminal className="w-5 h-5 mr-2" /> Your Code ({languageForEditorAndExecution.name})</CardTitle>
               </CardHeader>
               <CardContent>
                 <MonacoCodeEditor
-                  language={language.name}
+                  language={languageForEditorAndExecution.name}
                   value={studentCode}
                   onChange={(code) => setStudentCode(code || '')}
                   height="500px"
-                  options={{ readOnly: isExecutingCode }}
+                  options={{ readOnly: isExecutingCode || (isPlacementCourse && allStudentEnrolledLanguages.length === 0) }}
                 />
               </CardContent>
             </Card>
@@ -510,12 +620,12 @@ export default function StudentPracticePage() {
                   </div>
                 )}
                  <div className="mt-4 flex flex-col sm:flex-row gap-2">
-                    <Button onClick={handleRunSample} disabled={isExecutingCode || !studentCode.trim()} className="flex-1" variant="outline">
+                    <Button onClick={handleRunSample} disabled={isExecutingCode || !studentCode.trim() || (isPlacementCourse && allStudentEnrolledLanguages.length === 0)} className="flex-1" variant="outline">
                     {isExecutingCode && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                     <Play className="mr-2 h-4 w-4" />
                     Run with Sample
                     </Button>
-                    <Button onClick={handleSubmitTestCases} disabled={isExecutingCode || !studentCode.trim()} className="flex-1">
+                    <Button onClick={handleSubmitTestCases} disabled={isExecutingCode || !studentCode.trim() || (isPlacementCourse && allStudentEnrolledLanguages.length === 0)} className="flex-1">
                     {isExecutingCode && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                     <CheckSquare className="mr-2 h-4 w-4" />
                     Submit & Test All
@@ -535,3 +645,4 @@ export default function StudentPracticePage() {
   );
 }
 
+    
