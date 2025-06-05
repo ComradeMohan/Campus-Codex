@@ -2,7 +2,7 @@
 'use client';
 
 import Link from 'next/link';
-import { CodeXml, Menu, X, Sun, Moon, User, BookUser } from 'lucide-react';
+import { CodeXml, Menu, X, Sun, Moon, User, BookUser, Code2 } from 'lucide-react';
 import { siteConfig } from '@/config/site';
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/contexts/AuthContext';
@@ -10,7 +10,7 @@ import { signOut } from 'firebase/auth';
 import { auth } from '@/lib/firebase';
 import { useRouter } from 'next/navigation';
 import { useState, useEffect } from 'react';
-import { Sheet, SheetContent, SheetTrigger, SheetClose } from '@/components/ui/sheet';
+import { Sheet, SheetContent, SheetTrigger, SheetClose, SheetTitle } from '@/components/ui/sheet';
 import { cn } from '@/lib/utils';
 
 export function Navbar() {
@@ -111,6 +111,11 @@ export function Navbar() {
             <Link href="/student/labs">Labs</Link>
           </Button>
         );
+         const studentSandboxLink = (
+          <Button variant="ghost" asChild className={commonLinkClasses}>
+            <Link href="/student/sandbox" className="flex items-center gap-1.5"><Code2 className="h-4 w-4"/> Sandbox</Link>
+          </Button>
+        );
         const studentProfileLink = (
            <Button variant="ghost" asChild className={commonLinkClasses}>
             <Link href="/student/profile" className="flex items-center gap-1.5"> <User className="h-4 w-4"/> Profile</Link>
@@ -121,6 +126,9 @@ export function Navbar() {
           authConditionalLinks.push(
             <SheetClose asChild key="student-labs">{studentLabsLink}</SheetClose>
           );
+          authConditionalLinks.push(
+            <SheetClose asChild key="student-sandbox">{studentSandboxLink}</SheetClose>
+          );
            authConditionalLinks.push(
             <SheetClose asChild key="student-profile">{studentProfileLink}</SheetClose>
           );
@@ -128,6 +136,11 @@ export function Navbar() {
           authConditionalLinks.push(
             <Button variant="ghost" asChild className={commonLinkClasses} key="student-labs">
                 <Link href="/student/labs">Labs</Link>
+            </Button>
+          );
+          authConditionalLinks.push(
+            <Button variant="ghost" asChild className={commonLinkClasses} key="student-sandbox">
+               <Link href="/student/sandbox" className="flex items-center gap-1.5"><Code2 className="h-4 w-4"/> Sandbox</Link>
             </Button>
           );
            authConditionalLinks.push(
@@ -218,23 +231,26 @@ export function Navbar() {
               </Button>
             </SheetTrigger>
             <SheetContent side="right" className="w-[300px] sm:w-[400px] bg-background p-6">
-              <div className="flex flex-col space-y-4">
-                <div className="flex justify-between items-center mb-4">
+              {/* Header Section for the Sheet */}
+              <div className="flex justify-between items-center mb-6"> {/* Added mb-6 for spacing below header */}
+                <SheetTitle asChild>
                   <Link href="/" className="flex items-center space-x-2" onClick={() => setIsSheetOpen(false)}>
                     <CodeXml className="h-8 w-8 text-primary" />
                     <span className="font-bold text-xl font-headline">{siteConfig.name}</span>
                   </Link>
-                  <SheetClose asChild>
-                     <Button variant="ghost" size="icon">
-                        <X className="h-6 w-6" />
-                        <span className="sr-only">Close menu</span>
-                      </Button>
-                  </SheetClose>
-                </div>
-                <nav className="flex flex-col space-y-3">
-                 {createNavLinks(true)}
-                </nav>
+                </SheetTitle>
+                <SheetClose asChild>
+                   <Button variant="ghost" size="icon">
+                      <X className="h-6 w-6" />
+                      <span className="sr-only">Close menu</span>
+                    </Button>
+                </SheetClose>
               </div>
+
+              {/* Navigation Section */}
+              <nav className="flex flex-col space-y-3">
+               {createNavLinks(true)}
+              </nav>
             </SheetContent>
           </Sheet>
         </div>
@@ -242,4 +258,3 @@ export function Navbar() {
     </header>
   );
 }
-
