@@ -109,5 +109,18 @@ export interface EnrolledLanguageProgress {
   };
 }
 
+export interface SavedProgram {
+  id: string;
+  userId: string;
+  title: string;
+  code: string;
+  languageName: string;
+  languageId: string; // Store ID of the language for consistency
+  iconName?: string; // Store icon for display in list
+  lastInput?: string; // Store last used sample input
+  createdAt: Timestamp | FieldValue | Date; // Date for client-side sorting
+  updatedAt: Timestamp | FieldValue | Date; // Date for client-side sorting
+}
+    
 
     
