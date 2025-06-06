@@ -12,10 +12,11 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter }
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
-import { Loader2, User, Mail, Building, Award, BarChart2, BookOpen, Star, ArrowLeft, Edit, Phone, KeyRound } from 'lucide-react';
+import { Loader2, User, Mail, Building, Award, BarChart2, BookOpen, Star, ArrowLeft, Edit, Phone, KeyRound, MessageSquarePlus } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import * as LucideIcons from 'lucide-react';
 import { ChangePasswordDialog } from '@/components/auth/ChangePasswordDialog';
+import { FeedbackFormDialog } from '@/components/feedback/FeedbackFormDialog';
 
 interface EnrolledLanguageWithDetails extends EnrolledLanguageProgress {
   totalPossibleScore: number;
@@ -39,6 +40,7 @@ export default function StudentProfilePage() {
   const [totalOverallScore, setTotalOverallScore] = useState(0);
   const [totalPossibleOverallScore, setTotalPossibleOverallScore] = useState(0);
   const [isChangePasswordDialogOpen, setIsChangePasswordDialogOpen] = useState(false);
+  const [isFeedbackDialogOpen, setIsFeedbackDialogOpen] = useState(false);
 
   const fetchStudentProgress = useCallback(async () => {
     if (!userProfile?.uid || !userProfile?.collegeId) {
@@ -187,9 +189,12 @@ export default function StudentProfilePage() {
             </div>
           )}
         </CardContent>
-        <CardFooter className="border-t pt-4">
+        <CardFooter className="border-t pt-4 flex flex-wrap gap-3 items-center">
             <Button variant="outline" onClick={() => setIsChangePasswordDialogOpen(true)}>
                 <KeyRound className="mr-2 h-4 w-4" /> Change Password
+            </Button>
+            <Button variant="outline" onClick={() => setIsFeedbackDialogOpen(true)}>
+                <MessageSquarePlus className="mr-2 h-4 w-4" /> Give Feedback
             </Button>
         </CardFooter>
       </Card>
@@ -291,13 +296,18 @@ export default function StudentProfilePage() {
       
       <div className="text-center mt-8">
         <Button asChild variant="outline">
-            <Link href="/student/labs"><ArrowLeft className="mr-2"/> Back to Labs</Link>
+            <Link href="/student/labs"><ArrowLeft className="mr-2 h-4 w-4"/> Back to Labs</Link>
         </Button>
       </div>
       <ChangePasswordDialog 
         email={userProfile.email}
         isOpen={isChangePasswordDialogOpen}
         onOpenChange={setIsChangePasswordDialogOpen}
+      />
+      <FeedbackFormDialog
+        isOpen={isFeedbackDialogOpen}
+        onOpenChange={setIsFeedbackDialogOpen}
+        studentProfile={userProfile}
       />
     </div>
   );
