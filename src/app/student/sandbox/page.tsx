@@ -68,7 +68,7 @@ function main() {
     // This example assumes the execution environment provides 'readline'.
     // If not, you'd adapt based on how stdin is fed.
     /*
-    const readline = require('readline');
+    const readline = require('readline'); // This might not be available in all sandbox environments
     const rl = readline.createInterface({
         input: process.stdin,
         output: process.stdout,
@@ -90,6 +90,7 @@ function main() {
     });
     */
     // If your code doesn't explicitly read stdin, it will just run.
+    // The 'Sample Input' can be accessed if the execution environment pipes it to stdin.
 }
 
 main();
@@ -140,7 +141,7 @@ export default function StudentSandboxPage() {
   const searchParams = useSearchParams();
 
   const [allCollegeLanguages, setAllCollegeLanguages] = useState<ProgrammingLanguage[]>([]);
-  const [programmingLanguages, setProgrammingLanguages] = useState<ProgrammingLanguage[]>([]);
+  const [programmingLanguages, setProgrammingLanguages] = useState<ProgrammingLanguage[]>([]); // Filtered list excluding "Placements"
   const [savedPrograms, setSavedPrograms] = useState<SavedProgram[]>([]);
   
   const [activeProgramId, setActiveProgramId] = useState<string | null>(null);
@@ -164,52 +165,62 @@ export default function StudentSandboxPage() {
     setCurrentCode(programData.code || '');
     setSampleInput(programData.lastInput || '');
 
-    const languageToLoad = availableLangs.find(lang => lang.name === programData.languageName);
+    const languageToLoadByName = availableLangs.find(lang => lang.name === programData.languageName);
+    const languageToLoadById = programData.languageId ? availableLangs.find(lang => lang.id === programData.languageId) : null;
+    const languageToLoad = languageToLoadById || languageToLoadByName || (availableLangs.length > 0 ? availableLangs[0] : null);
+
     if (languageToLoad) {
       setSelectedLanguage(languageToLoad);
-      if (!programData.code && !isShared) { // Only set default code if it's a truly new or empty loaded program
+      // Set default code only if programData.code is explicitly empty AND it's not a shared program 
+      // (shared program might be intentionally empty or use a language not initially selected)
+      if ((programData.code === undefined || programData.code === '') && !isShared) {
           setCurrentCode(getDefaultCodeForLanguage(languageToLoad.name));
       }
     } else {
       toast({
         title: "Language Mismatch",
-        description: `The language "${programData.languageName}" this program was saved with is not currently available. Defaulting to the first available language or plaintext.`,
+        description: `The language "${programData.languageName || 'unknown'}" this program was saved/shared with is not currently available. Defaulting to plaintext.`,
         variant: "default"
       });
-      if (availableLangs.length > 0) {
-        setSelectedLanguage(availableLangs[0]);
-        setCurrentCode(programData.code || getDefaultCodeForLanguage(availableLangs[0].name));
-      } else {
-        setSelectedLanguage(null);
-        setCurrentCode(programData.code || "// No compatible language available.");
-      }
+      setSelectedLanguage(null); // Explicitly set to null
+      setCurrentCode(programData.code || "// No compatible language available or selected.");
     }
-    setOutput('');
-    setErrorOutput('');
-    setActiveTab("input");
-  }, [toast]);
+
+    setOutput(''); // Clear output
+    setErrorOutput(''); // Clear errors
+    setActiveTab("input"); // Reset to input tab
+  }, [toast, setCurrentCode, setSelectedLanguage, setCurrentProgramTitle, setSampleInput, setOutput, setErrorOutput, setActiveTab]);
 
 
   const handleLoadProgram = useCallback((program: SavedProgram, availableLangs: ProgrammingLanguage[]) => {
     setActiveProgramId(program.id);
     loadProgramIntoEditor(program, availableLangs);
-  }, [loadProgramIntoEditor]);
+  }, [loadProgramIntoEditor, setActiveProgramId]);
 
 
   const handleNewProgram = useCallback(() => {
     setActiveProgramId(null);
-    loadProgramIntoEditor({ title: '', code: '', lastInput: '' }, programmingLanguages);
-     if (programmingLanguages.length > 0 && !selectedLanguage) {
-        const defaultLang = programmingLanguages[0];
-        setSelectedLanguage(defaultLang);
-        setCurrentCode(getDefaultCodeForLanguage(defaultLang.name));
-    } else if (selectedLanguage) {
-        setCurrentCode(getDefaultCodeForLanguage(selectedLanguage.name));
-    } else {
-        setCurrentCode("// No programming languages available to create a new program.");
+    const newProgramDefaults: Partial<SavedProgram> = { title: '', code: '', lastInput: '' };
+    
+    // Determine the language to use for the new program
+    // Prefer currently selected language if available and valid, otherwise first in the list
+    let langForNewProgram = selectedLanguage;
+    if (!langForNewProgram && programmingLanguages.length > 0) {
+        langForNewProgram = programmingLanguages[0];
     }
+    
+    if (langForNewProgram) {
+        newProgramDefaults.languageName = langForNewProgram.name;
+        newProgramDefaults.languageId = langForNewProgram.id;
+        // loadProgramIntoEditor will set default code based on this languageName
+    } else {
+        // No languages available, loadProgramIntoEditor will handle showing placeholder
+    }
+    
+    loadProgramIntoEditor(newProgramDefaults, programmingLanguages);
+
     toast({ title: "New Program Ready", description: "Editor cleared. You can start coding." });
-  }, [programmingLanguages, loadProgramIntoEditor, toast, selectedLanguage]);
+  }, [programmingLanguages, loadProgramIntoEditor, toast, selectedLanguage, setActiveProgramId]);
 
 
   // Fetch initial data: college languages and user's saved programs
@@ -243,11 +254,12 @@ export default function StudentSandboxPage() {
         setSavedPrograms(fetchedPrograms);
 
         // Initial setup for editor if no specific program is active/shared
+        // and no specific shared program is being loaded (checked by searchParams later)
         if (actualProgrammingLangs.length > 0 && !activeProgramId && !searchParams.get('shareUserId')) {
           const initialLang = actualProgrammingLangs[0];
           setSelectedLanguage(initialLang);
           setCurrentCode(getDefaultCodeForLanguage(initialLang.name));
-        } else if (actualProgrammingLangs.length === 0) {
+        } else if (actualProgrammingLangs.length === 0 && !searchParams.get('shareUserId')) {
            setCurrentCode("// No programming languages available in your college for the sandbox. Please contact admin.");
            setSelectedLanguage(null);
         }
@@ -264,8 +276,7 @@ export default function StudentSandboxPage() {
     } else if (!authLoading && !userProfile) {
         setIsLoadingPageData(false); 
     }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [userProfile, authLoading, toast]); // Removed searchParams from deps to avoid re-fetch on param clear
+  }, [userProfile, authLoading, toast]); // Removed searchParams and activeProgramId from deps to manage initial load separately
 
 
   // Effect to handle incoming shared links
@@ -282,11 +293,9 @@ export default function StudentSandboxPage() {
 
           if (programSnap.exists()) {
             const sharedProgramData = programSnap.data() as SavedProgram;
-            // Filter college languages to exclude "Placements" for the sandbox context
-            const actualProgrammingLangs = allCollegeLanguages.filter(lang => lang.name !== PLACEMENTS_COURSE_NAME);
-            
-            loadProgramIntoEditor(sharedProgramData, actualProgrammingLangs, true);
-            setActiveProgramId(null); // Important: Don't set active ID, so "Save" creates a copy
+            // Use allCollegeLanguages for loading shared, as it might be a "Placements" language or one not in filtered list
+            loadProgramIntoEditor(sharedProgramData, allCollegeLanguages, true);
+            setActiveProgramId(null); 
             toast({ title: "Shared Program Loaded", description: `Viewing "${sharedProgramData.title}". You can save it as your own copy.`});
           } else {
             toast({ title: "Error", description: "Shared program not found or access denied.", variant: "destructive" });
@@ -296,17 +305,15 @@ export default function StudentSandboxPage() {
           toast({ title: "Error", description: "Could not load the shared program.", variant: "destructive" });
         } finally {
           setIsLoadingSharedProgram(false);
-          // Clear URL params after attempting to load
           router.replace('/student/sandbox', { scroll: false });
         }
       };
       fetchSharedProgram();
     }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [searchParams, userProfile, allCollegeLanguages, loadProgramIntoEditor, router, toast]);
+  }, [searchParams, userProfile, allCollegeLanguages, loadProgramIntoEditor, router, toast, setActiveProgramId]);
 
 
-  const handleSaveProgram = async () => {
+  const handleSaveProgram = useCallback(async () => {
     if (!userProfile?.uid) {
       toast({ title: "Error", description: "You must be logged in to save.", variant: "destructive" });
       return;
@@ -322,7 +329,7 @@ export default function StudentSandboxPage() {
 
     setIsSaving(true);
     const programDataToSave: Omit<SavedProgram, 'id' | 'createdAt' | 'updatedAt' | 'userId'> & {updatedAt: FieldValue, userId: string, createdAt?: FieldValue} = {
-      title: currentProgramTitle.trim().replace(/^\[Shared\]\s*/, ''), // Remove [Shared] prefix if present
+      title: currentProgramTitle.trim().replace(/^\[Shared\]\s*/, ''),
       code: currentCode,
       languageName: selectedLanguage.name,
       languageId: selectedLanguage.id,
@@ -353,9 +360,9 @@ export default function StudentSandboxPage() {
     } finally {
       setIsSaving(false);
     }
-  };
+  }, [userProfile, currentProgramTitle, selectedLanguage, currentCode, sampleInput, activeProgramId, toast, setActiveProgramId, setSavedPrograms]);
 
-  const handleDeleteProgram = async () => {
+  const handleDeleteProgram = useCallback(async () => {
     if (!programToDelete || !userProfile?.uid) return;
     setIsSaving(true); 
     try {
@@ -372,9 +379,9 @@ export default function StudentSandboxPage() {
       setProgramToDelete(null);
       setIsSaving(false);
     }
-  };
+  },[programToDelete, userProfile, toast, setSavedPrograms, handleNewProgram, activeProgramId, setProgramToDelete]);
 
-  const handleRunCode = async () => {
+  const handleRunCode = useCallback(async () => {
     if (!selectedLanguage || !currentCode.trim()) {
       toast({ title: "Cannot Run", description: "Please select a language and write some code.", variant: "destructive" });
       return;
@@ -429,24 +436,24 @@ export default function StudentSandboxPage() {
     } finally {
       setIsExecuting(false);
     }
-  };
+  }, [selectedLanguage, currentCode, sampleInput, toast, activeProgramId, userProfile, setActiveTab, setOutput, setErrorOutput, setSavedPrograms]);
   
-  const handleLanguageChange = (langId: string) => {
+  const handleLanguageChange = useCallback((langId: string) => {
     const lang = programmingLanguages.find(l => l.id === langId);
     if (lang) {
       setSelectedLanguage(lang);
-      // Only change code to default if not editing an active program
-      // or if the active program's language is different.
       const currentActiveProgram = savedPrograms.find(p => p.id === activeProgramId);
       if (!currentActiveProgram || currentActiveProgram.languageName !== lang.name) {
          setCurrentCode(getDefaultCodeForLanguage(lang.name));
       }
+      // If currentActiveProgram exists and its languageName IS lang.name, currentCode remains as is (user might have edited it).
       setOutput(''); 
       setErrorOutput('');
+      setActiveTab("input");
     }
-  };
+  }, [programmingLanguages, setSelectedLanguage, savedPrograms, activeProgramId, setCurrentCode, setOutput, setErrorOutput, setActiveTab]);
 
-  const handleShareProgram = (program: SavedProgram) => {
+  const handleShareProgram = useCallback((program: SavedProgram) => {
     if (!program.userId || !program.id) {
       toast({title: "Error", description: "Cannot generate share link for this program.", variant: "destructive"});
       return;
@@ -460,7 +467,7 @@ export default function StudentSandboxPage() {
         console.error("Failed to copy share link: ", err);
         toast({title: "Error", description: "Could not copy link. Please try again.", variant: "destructive"});
       });
-  };
+  }, [toast]);
 
 
   if (authLoading || isLoadingPageData || isLoadingSharedProgram) {
@@ -482,11 +489,11 @@ export default function StudentSandboxPage() {
     );
   }
 
-  const isSandboxDisabled = programmingLanguages.length === 0;
+  const isSandboxDisabled = programmingLanguages.length === 0 && !selectedLanguage; // Allow if a shared language (even if not in college list) is loaded.
 
 
   return (
-    <div className="flex flex-col h-[calc(100vh-theme(spacing.24))]">
+    <div className="flex flex-col h-[calc(100vh-theme(spacing.24))] overflow-hidden"> {/* Added overflow-hidden */}
       <div className="flex items-center gap-3 p-2 border-b bg-muted/30 shrink-0">
         <Input
           placeholder="Program Title (e.g., My Quick Sort)"
@@ -498,7 +505,7 @@ export default function StudentSandboxPage() {
         <Select
           value={selectedLanguage?.id || ''}
           onValueChange={handleLanguageChange}
-          disabled={isSaving || isExecuting || isSandboxDisabled}
+          disabled={isSaving || isExecuting || programmingLanguages.length === 0} // Disable if no languages at all
         >
           <SelectTrigger className="w-[180px] h-9 bg-background">
             <SelectValue placeholder="Select Language" />
@@ -510,7 +517,7 @@ export default function StudentSandboxPage() {
           </SelectContent>
         </Select>
         <Button onClick={handleSaveProgram} size="sm" className="h-9" disabled={isSaving || isExecuting || !currentProgramTitle.trim() || !selectedLanguage || isSandboxDisabled}>
-          {isSaving && activeProgramId ? <Loader2 className="animate-spin h-4 w-4 mr-1" /> : <Save className="h-4 w-4 mr-1" />}
+          {isSaving ? <Loader2 className="animate-spin h-4 w-4 mr-1" /> : <Save className="h-4 w-4 mr-1" />}
           <span className="hidden sm:inline">{activeProgramId ? 'Update' : 'Save'}</span>
         </Button>
         <Button onClick={handleRunCode} size="sm" className="h-9" variant="outline" disabled={isSaving || isExecuting || !currentCode.trim() || !selectedLanguage || isSandboxDisabled}>
@@ -519,21 +526,21 @@ export default function StudentSandboxPage() {
         </Button>
       </div>
 
-      <div className="flex flex-1 overflow-hidden">
+      <div className="flex flex-1 overflow-hidden"> {/* Added overflow-hidden */}
         <Card className="w-[280px] flex flex-col border-r rounded-none shrink-0">
           <CardHeader className="p-2 border-b">
             <div className="flex justify-between items-center">
               <CardTitle className="text-base font-semibold">My Programs</CardTitle>
-              <Button variant="ghost" size="icon" className="h-7 w-7" onClick={handleNewProgram} disabled={isSaving || isExecuting || isSandboxDisabled} title="New Program">
+              <Button variant="ghost" size="icon" className="h-7 w-7" onClick={handleNewProgram} disabled={isSaving || isExecuting || programmingLanguages.length === 0} title="New Program">
                 <PlusCircle className="h-5 w-5" />
               </Button>
             </div>
           </CardHeader>
           <ScrollArea className="flex-1">
             <CardContent className="p-1">
-              {savedPrograms.length === 0 && !isSandboxDisabled ? (
+              {savedPrograms.length === 0 && programmingLanguages.length > 0 ? (
                 <p className="p-3 text-xs text-muted-foreground text-center">No saved programs yet. Create one and click "Save"!</p>
-              ) : isSandboxDisabled ? (
+              ) : programmingLanguages.length === 0 && savedPrograms.length === 0 && !selectedLanguage ? ( // Modified condition for sandbox disabled
                 <p className="p-3 text-xs text-muted-foreground text-center">Sandbox disabled. No languages available.</p>
               ) : (
                 <ul className="space-y-0.5">
@@ -552,10 +559,10 @@ export default function StudentSandboxPage() {
                                 "flex flex-1 items-center gap-1.5 p-1.5 cursor-pointer truncate",
                                 activeProgramId === program.id && "text-primary font-medium"
                             )}
-                            onClick={() => !(isSaving || isExecuting) && handleLoadProgram(program, programmingLanguages)}
+                            onClick={() => !(isSaving || isExecuting) && handleLoadProgram(program, allCollegeLanguages)}
                             role="button"
                             tabIndex={isSaving || isExecuting ? -1 : 0}
-                            onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { if (!(isSaving || isExecuting)) handleLoadProgram(program, programmingLanguages); } }}
+                            onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { if (!(isSaving || isExecuting)) handleLoadProgram(program, allCollegeLanguages); } }}
                             title={`Load program: ${program.title}`}
                           >
                             <ProgramIcon className="h-4 w-4 shrink-0" />
@@ -620,7 +627,7 @@ export default function StudentSandboxPage() {
               onChange={(code) => setCurrentCode(code || '')}
               height="100%" 
               options={{ 
-                readOnly: isSaving || isExecuting || !selectedLanguage || isSandboxDisabled,
+                readOnly: isSaving || isExecuting || !selectedLanguage || (programmingLanguages.length === 0 && !selectedLanguage),
                 minimap: { enabled: true, scale: 1 },
                 wordWrap: 'on',
                 fontSize: 14,
@@ -628,12 +635,12 @@ export default function StudentSandboxPage() {
                 padding: { top: 10, bottom: 10 }
               }}
             />
-            {!selectedLanguage && programmingLanguages.length > 0 && !isSandboxDisabled && (
+            {!selectedLanguage && programmingLanguages.length > 0 && (
                 <div className="absolute inset-0 flex items-center justify-center bg-background/80 z-10">
                     <p className="text-muted-foreground p-4 bg-card border rounded-md shadow-lg">Please select a programming language to start coding.</p>
                 </div>
             )}
-            {isSandboxDisabled && !isLoadingPageData && (
+            {programmingLanguages.length === 0 && !selectedLanguage && !isLoadingPageData && (
                  <div className="absolute inset-0 flex items-center justify-center bg-background/80 z-10">
                     <p className="text-destructive p-4 bg-card border rounded-md shadow-lg">No programming languages available in your college for the sandbox. Please contact an administrator.</p>
                 </div>
@@ -660,7 +667,7 @@ export default function StudentSandboxPage() {
                     value={sampleInput}
                     onChange={(e) => setSampleInput(e.target.value)}
                     className="h-full w-full resize-none border-0 rounded-none focus-visible:ring-0 focus-visible:ring-offset-0 font-mono text-sm p-2 bg-background"
-                    disabled={isExecuting || isSandboxDisabled}
+                    disabled={isExecuting || (programmingLanguages.length === 0 && !selectedLanguage)}
                   />
                 </TabsContent>
                 <TabsContent value="output" className="h-full mt-0 p-0">
