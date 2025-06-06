@@ -151,7 +151,7 @@ export default function StudentProfilePage() {
   return (
     <div className="space-y-8">
       <Card className="shadow-xl">
-        <CardHeader className="bg-muted/30">
+        <CardHeader className="bg-gradient-to-br from-primary/5 via-background to-accent/5 dark:from-primary/10 dark:via-background dark:to-accent/10">
           <div className="flex flex-col sm:flex-row items-center space-y-4 sm:space-y-0 sm:space-x-6">
             <Avatar className="h-24 w-24 text-3xl">
               <AvatarImage src={undefined} alt={userProfile.fullName} />
