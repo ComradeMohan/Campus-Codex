@@ -8,7 +8,7 @@ import { db } from '@/lib/firebase';
 import { collection, query, where, getDocs, orderBy, doc, writeBatch, updateDoc, Timestamp } from 'firebase/firestore';
 import type { Feedback, UserProfile } from '@/types';
 
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Loader2, Mailbox, ArrowLeft, AlertTriangle, CheckCircle, MessageSquare } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
