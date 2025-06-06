@@ -13,9 +13,10 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
+import { Sheet, SheetContent, SheetTrigger, SheetClose } from '@/components/ui/sheet';
 import { MonacoCodeEditor } from '@/components/editor/MonacoCodeEditor';
 import { useToast } from '@/hooks/use-toast';
-import { Loader2, Save, Play, Trash2, PlusCircle, FileCode, Terminal, AlertTriangle, ClipboardType, Share2 } from 'lucide-react';
+import { Loader2, Save, Play, Trash2, PlusCircle, FileCode, Terminal, AlertTriangle, ClipboardType, Share2, PanelLeftOpen, X } from 'lucide-react';
 import type { ProgrammingLanguage, SavedProgram } from '@/types';
 import { cn } from '@/lib/utils';
 import * as LucideIcons from 'lucide-react';
@@ -42,9 +43,9 @@ def main():
     print("Hello from Python Sandbox!")
     # Example of reading input:
     # try:
-    #   name = input("Enter your name (from Sample Input): ")
+    #   name = input("Enter your name (from Sample Input):\\n")
     #   print(f"Hello, {name}!")
-    #   num_str = input("Enter a number: ")
+    #   num_str = input("Enter a number:\\n")
     #   num = int(num_str)
     #   print(f"Number squared: {num*num}")
     # except EOFError:
@@ -58,21 +59,18 @@ if __name__ == "__main__":
   } else if (lowerLang === 'javascript') {
     return `// Welcome to the Sandbox! Start coding in JavaScript.
 // Use the "Sample Input" tab below to provide input for your program.
-// In this Node.js-like environment, input is typically read line by line.
-// The full content of "Sample Input" is passed as stdin.
+// Input is typically read line by line from process.stdin.
 
 function main() {
     console.log("Hello from JavaScript Sandbox!");
 
-    // For competitive programming style input handling (reading line by line from process.stdin):
-    // This example assumes the execution environment provides 'readline'.
-    // If not, you'd adapt based on how stdin is fed.
+    // Example for reading input (requires 'readline' module in execution environment):
     /*
-    const readline = require('readline'); // This might not be available in all sandbox environments
+    const readline = require('readline');
     const rl = readline.createInterface({
         input: process.stdin,
         output: process.stdout,
-        terminal: false // Essential for pre-fed stdin
+        terminal: false
     });
 
     let lines = [];
@@ -81,16 +79,13 @@ function main() {
     });
 
     rl.on('close', () => {
-        // All lines from "Sample Input" are now in the 'lines' array.
-        console.log("JavaScript received all input lines:", lines);
+        console.log("Received all input lines:", lines);
         if (lines.length > 0) {
             console.log("First line was:", lines[0]);
         }
-        // Process the input lines here.
+        // Process lines here
     });
     */
-    // If your code doesn't explicitly read stdin, it will just run.
-    // The 'Sample Input' can be accessed if the execution environment pipes it to stdin.
 }
 
 main();
@@ -98,7 +93,7 @@ main();
   } else if (lowerLang === 'java') {
     return `// Welcome to the Sandbox! Start coding in Java.
 // Use the "Sample Input" tab below to provide input for your program.
-// Your program can read this input using a Scanner for System.in.
+// Read input using a Scanner for System.in.
 
 import java.util.Scanner;
 
@@ -118,14 +113,14 @@ public class Main {
         // if (scanner.hasNextInt()) {
         //    int number = scanner.nextInt();
         //    System.out.println("You entered the number: " + number);
-        // } else if (scanner.hasNextLine()) { // Consume the rest of the line if not an int
+        // } else if (scanner.hasNextLine()) { 
         //    scanner.nextLine(); 
         //    System.out.println("That wasn't an integer.");
         // } else {
         //    System.out.println("No further input provided.");
         // }
         
-        scanner.close(); // Good practice to close scanner
+        scanner.close();
     }
 }
 `;
@@ -141,7 +136,7 @@ export default function StudentSandboxPage() {
   const searchParams = useSearchParams();
 
   const [allCollegeLanguages, setAllCollegeLanguages] = useState<ProgrammingLanguage[]>([]);
-  const [programmingLanguages, setProgrammingLanguages] = useState<ProgrammingLanguage[]>([]); // Filtered list excluding "Placements"
+  const [programmingLanguages, setProgrammingLanguages] = useState<ProgrammingLanguage[]>([]);
   const [savedPrograms, setSavedPrograms] = useState<SavedProgram[]>([]);
   
   const [activeProgramId, setActiveProgramId] = useState<string | null>(null);
@@ -153,6 +148,8 @@ export default function StudentSandboxPage() {
   const [output, setOutput] = useState('');
   const [errorOutput, setErrorOutput] = useState('');
   const [activeTab, setActiveTab] = useState("input"); 
+  const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
+
 
   const [isLoadingPageData, setIsLoadingPageData] = useState(true);
   const [isLoadingSharedProgram, setIsLoadingSharedProgram] = useState(false);
@@ -165,45 +162,51 @@ export default function StudentSandboxPage() {
     setCurrentCode(programData.code || '');
     setSampleInput(programData.lastInput || '');
 
-    const languageToLoadByName = availableLangs.find(lang => lang.name === programData.languageName);
-    const languageToLoadById = programData.languageId ? availableLangs.find(lang => lang.id === programData.languageId) : null;
-    const languageToLoad = languageToLoadById || languageToLoadByName || (availableLangs.length > 0 ? availableLangs[0] : null);
+    let languageToLoad: ProgrammingLanguage | null = null;
+    if(programData.languageId) {
+        languageToLoad = availableLangs.find(lang => lang.id === programData.languageId) || null;
+    }
+    if(!languageToLoad && programData.languageName) {
+        languageToLoad = availableLangs.find(lang => lang.name === programData.languageName) || null;
+    }
+    if(!languageToLoad && availableLangs.length > 0) {
+        languageToLoad = availableLangs[0];
+    }
+    
+    setSelectedLanguage(languageToLoad);
 
-    if (languageToLoad) {
-      setSelectedLanguage(languageToLoad);
-      // Set default code only if programData.code is explicitly empty AND it's not a shared program 
-      // (shared program might be intentionally empty or use a language not initially selected)
-      if ((programData.code === undefined || programData.code === '') && !isShared) {
-          setCurrentCode(getDefaultCodeForLanguage(languageToLoad.name));
-      }
+    if ((programData.code === undefined || programData.code === '') && !isShared) {
+        setCurrentCode(getDefaultCodeForLanguage(languageToLoad?.name));
     } else {
-      toast({
-        title: "Language Mismatch",
-        description: `The language "${programData.languageName || 'unknown'}" this program was saved/shared with is not currently available. Defaulting to plaintext.`,
-        variant: "default"
-      });
-      setSelectedLanguage(null); // Explicitly set to null
-      setCurrentCode(programData.code || "// No compatible language available or selected.");
+        setCurrentCode(programData.code || getDefaultCodeForLanguage(languageToLoad?.name));
+    }
+    
+    if (!languageToLoad && programData.languageName) {
+         toast({
+            title: "Language Mismatch",
+            description: `The language "${programData.languageName}" this program was saved/shared with is not currently available. Code loaded as plaintext.`,
+            variant: "default"
+        });
     }
 
-    setOutput(''); // Clear output
-    setErrorOutput(''); // Clear errors
-    setActiveTab("input"); // Reset to input tab
+
+    setOutput('');
+    setErrorOutput('');
+    setActiveTab("input");
   }, [toast, setCurrentCode, setSelectedLanguage, setCurrentProgramTitle, setSampleInput, setOutput, setErrorOutput, setActiveTab]);
 
 
   const handleLoadProgram = useCallback((program: SavedProgram, availableLangs: ProgrammingLanguage[]) => {
     setActiveProgramId(program.id);
     loadProgramIntoEditor(program, availableLangs);
-  }, [loadProgramIntoEditor, setActiveProgramId]);
+    setIsMobileSidebarOpen(false); // Close mobile sidebar if open
+  }, [loadProgramIntoEditor, setActiveProgramId, setIsMobileSidebarOpen]);
 
 
   const handleNewProgram = useCallback(() => {
     setActiveProgramId(null);
     const newProgramDefaults: Partial<SavedProgram> = { title: '', code: '', lastInput: '' };
     
-    // Determine the language to use for the new program
-    // Prefer currently selected language if available and valid, otherwise first in the list
     let langForNewProgram = selectedLanguage;
     if (!langForNewProgram && programmingLanguages.length > 0) {
         langForNewProgram = programmingLanguages[0];
@@ -212,18 +215,14 @@ export default function StudentSandboxPage() {
     if (langForNewProgram) {
         newProgramDefaults.languageName = langForNewProgram.name;
         newProgramDefaults.languageId = langForNewProgram.id;
-        // loadProgramIntoEditor will set default code based on this languageName
-    } else {
-        // No languages available, loadProgramIntoEditor will handle showing placeholder
     }
     
     loadProgramIntoEditor(newProgramDefaults, programmingLanguages);
-
+    setIsMobileSidebarOpen(false); // Close mobile sidebar if open
     toast({ title: "New Program Ready", description: "Editor cleared. You can start coding." });
-  }, [programmingLanguages, loadProgramIntoEditor, toast, selectedLanguage, setActiveProgramId]);
+  }, [programmingLanguages, loadProgramIntoEditor, toast, selectedLanguage, setActiveProgramId, setIsMobileSidebarOpen]);
 
 
-  // Fetch initial data: college languages and user's saved programs
   useEffect(() => {
     const fetchData = async () => {
       if (!userProfile?.uid || !userProfile?.collegeId) {
@@ -253,8 +252,6 @@ export default function StudentSandboxPage() {
         } as SavedProgram));
         setSavedPrograms(fetchedPrograms);
 
-        // Initial setup for editor if no specific program is active/shared
-        // and no specific shared program is being loaded (checked by searchParams later)
         if (actualProgrammingLangs.length > 0 && !activeProgramId && !searchParams.get('shareUserId')) {
           const initialLang = actualProgrammingLangs[0];
           setSelectedLanguage(initialLang);
@@ -276,10 +273,9 @@ export default function StudentSandboxPage() {
     } else if (!authLoading && !userProfile) {
         setIsLoadingPageData(false); 
     }
-  }, [userProfile, authLoading, toast]); // Removed searchParams and activeProgramId from deps to manage initial load separately
+  }, [userProfile, authLoading, toast]);
 
 
-  // Effect to handle incoming shared links
   useEffect(() => {
     const shareUserId = searchParams.get('shareUserId');
     const shareProgramId = searchParams.get('shareProgramId');
@@ -293,7 +289,6 @@ export default function StudentSandboxPage() {
 
           if (programSnap.exists()) {
             const sharedProgramData = programSnap.data() as SavedProgram;
-            // Use allCollegeLanguages for loading shared, as it might be a "Placements" language or one not in filtered list
             loadProgramIntoEditor(sharedProgramData, allCollegeLanguages, true);
             setActiveProgramId(null); 
             toast({ title: "Shared Program Loaded", description: `Viewing "${sharedProgramData.title}". You can save it as your own copy.`});
@@ -446,7 +441,6 @@ export default function StudentSandboxPage() {
       if (!currentActiveProgram || currentActiveProgram.languageName !== lang.name) {
          setCurrentCode(getDefaultCodeForLanguage(lang.name));
       }
-      // If currentActiveProgram exists and its languageName IS lang.name, currentCode remains as is (user might have edited it).
       setOutput(''); 
       setErrorOutput('');
       setActiveTab("input");
@@ -469,10 +463,115 @@ export default function StudentSandboxPage() {
       });
   }, [toast]);
 
+  const sidebarContent = (isMobileContext = false) => (
+    <>
+      <CardHeader className="p-2 border-b">
+        <div className="flex justify-between items-center">
+          <CardTitle className="text-base font-semibold">My Programs</CardTitle>
+          <Button 
+            variant="ghost" 
+            size="icon" 
+            className="h-7 w-7" 
+            onClick={handleNewProgram} 
+            disabled={isSaving || isExecuting || programmingLanguages.length === 0} 
+            title="New Program"
+          >
+            <PlusCircle className="h-5 w-5" />
+          </Button>
+        </div>
+      </CardHeader>
+      <ScrollArea className="flex-1">
+        <CardContent className="p-1">
+          {savedPrograms.length === 0 && programmingLanguages.length > 0 ? (
+            <p className="p-3 text-xs text-muted-foreground text-center">No saved programs yet. Create one and click "Save"!</p>
+          ) : programmingLanguages.length === 0 && savedPrograms.length === 0 && !selectedLanguage ? (
+            <p className="p-3 text-xs text-muted-foreground text-center">Sandbox disabled. No languages available.</p>
+          ) : (
+            <ul className="space-y-0.5">
+              {savedPrograms.map(program => {
+                const ProgramIcon = getIconComponent(program.iconName);
+                return (
+                   <li 
+                      key={program.id} 
+                      className={cn(
+                        "group flex items-center justify-between rounded-sm hover:bg-muted/50",
+                        activeProgramId === program.id && "bg-primary/10"
+                      )}
+                    >
+                      <div
+                        className={cn(
+                            "flex flex-1 items-center gap-1.5 p-1.5 cursor-pointer truncate text-xs",
+                            activeProgramId === program.id && "text-primary font-medium"
+                        )}
+                        onClick={() => !(isSaving || isExecuting) && handleLoadProgram(program, allCollegeLanguages)}
+                        role="button"
+                        tabIndex={isSaving || isExecuting ? -1 : 0}
+                        onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { if (!(isSaving || isExecuting)) handleLoadProgram(program, allCollegeLanguages); } }}
+                        title={`Load program: ${program.title}`}
+                      >
+                        <ProgramIcon className="h-4 w-4 shrink-0" />
+                        <span className="flex-1 truncate" title={program.title}>{program.title}</span>
+                      </div>
+                      <div className="flex shrink-0">
+                        <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-6 w-6 opacity-60 group-hover:opacity-100 focus:opacity-100 p-1"
+                            onClick={(e) => { e.stopPropagation(); handleShareProgram(program); }}
+                            disabled={isSaving || isExecuting}
+                            title="Share Program"
+                        >
+                            <Share2 className="h-3.5 w-3.5 text-blue-500" />
+                        </Button>
+                        <AlertDialog onOpenChange={(open) => !open && setProgramToDelete(null)}>
+                            <AlertDialogTrigger asChild>
+                            <Button
+                                variant="ghost"
+                                size="icon"
+                                className="h-6 w-6 opacity-60 group-hover:opacity-100 focus:opacity-100 p-1"
+                                onClick={(e) => { e.stopPropagation(); setProgramToDelete(program);}}
+                                disabled={isSaving || isExecuting}
+                                title="Delete Program"
+                            >
+                                <Trash2 className="h-3.5 w-3.5 text-destructive" />
+                            </Button>
+                            </AlertDialogTrigger>
+                            {programToDelete && programToDelete.id === program.id && (
+                            <AlertDialogContent>
+                                <AlertDialogHeader>
+                                <AlertDialogTitle>Delete "{programToDelete.title}"?</AlertDialogTitle>
+                                <AlertDialogDescription>
+                                    This action cannot be undone. This will permanently delete your saved program.
+                                </AlertDialogDescription>
+                                </AlertDialogHeader>
+                                <AlertDialogFooter>
+                                <AlertDialogCancel onClick={() => setProgramToDelete(null)}>Cancel</AlertDialogCancel>
+                                <AlertDialogAction onClick={handleDeleteProgram} className="bg-destructive hover:bg-destructive/90">
+                                    {isSaving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />} Delete
+                                </AlertDialogAction>
+                                </AlertDialogFooter>
+                            </AlertDialogContent>
+                            )}
+                        </AlertDialog>
+                      </div>
+                    </li>
+                );
+              })}
+            </ul>
+          )}
+        </CardContent>
+      </ScrollArea>
+       {isMobileContext && 
+        <SheetClose asChild>
+            <Button variant="outline" className="m-2 text-xs h-8">Close Panel</Button>
+        </SheetClose>}
+    </>
+  );
+
 
   if (authLoading || isLoadingPageData || isLoadingSharedProgram) {
     return (
-      <div className="flex h-[calc(100vh-theme(spacing.24))] items-center justify-center">
+      <div className="flex h-[calc(100vh-theme(spacing.16))] items-center justify-center">
         <Loader2 className="h-12 w-12 animate-spin text-primary" />
         <span className="ml-3 text-lg">
             {isLoadingSharedProgram ? "Loading Shared Program..." : "Loading Sandbox..."}
@@ -483,142 +582,70 @@ export default function StudentSandboxPage() {
   
   if (!userProfile) {
      return (
-      <div className="flex h-[calc(100vh-theme(spacing.24))] items-center justify-center">
+      <div className="flex h-[calc(100vh-theme(spacing.16))] items-center justify-center">
           <p className="text-muted-foreground">Please log in to use the sandbox.</p>
       </div>
     );
   }
 
-  const isSandboxDisabled = programmingLanguages.length === 0 && !selectedLanguage; // Allow if a shared language (even if not in college list) is loaded.
+  const isSandboxDisabled = programmingLanguages.length === 0 && !selectedLanguage;
 
 
   return (
-    <div className="flex flex-col h-[calc(100vh-theme(spacing.24))] overflow-hidden"> {/* Added overflow-hidden */}
-      <div className="flex items-center gap-3 p-2 border-b bg-muted/30 shrink-0">
+    <div className="flex flex-col h-[calc(100vh-theme(spacing.16))] overflow-hidden">
+      {/* Top Control Bar */}
+      <div className="flex items-center flex-wrap gap-2 p-2 border-b bg-muted/30 shrink-0">
+        <Sheet open={isMobileSidebarOpen} onOpenChange={setIsMobileSidebarOpen}>
+          <SheetTrigger asChild>
+            <Button variant="outline" size="icon" className="h-9 w-9 md:hidden">
+              <PanelLeftOpen className="h-5 w-5" />
+              <span className="sr-only">Toggle File Explorer</span>
+            </Button>
+          </SheetTrigger>
+          <SheetContent side="left" className="w-[280px] p-0 flex flex-col">
+            {sidebarContent(true)}
+          </SheetContent>
+        </Sheet>
         <Input
-          placeholder="Program Title (e.g., My Quick Sort)"
+          placeholder="Program Title"
           value={currentProgramTitle}
           onChange={(e) => setCurrentProgramTitle(e.target.value)}
-          className="h-9 flex-grow max-w-sm bg-background"
+          className="h-9 flex-grow min-w-[150px] sm:flex-auto sm:max-w-xs md:max-w-sm bg-background text-xs md:text-sm"
           disabled={isSaving || isExecuting || isSandboxDisabled}
         />
         <Select
           value={selectedLanguage?.id || ''}
           onValueChange={handleLanguageChange}
-          disabled={isSaving || isExecuting || programmingLanguages.length === 0} // Disable if no languages at all
+          disabled={isSaving || isExecuting || programmingLanguages.length === 0}
         >
-          <SelectTrigger className="w-[180px] h-9 bg-background">
-            <SelectValue placeholder="Select Language" />
+          <SelectTrigger className="w-auto md:w-[160px] h-9 bg-background text-xs md:text-sm">
+            <SelectValue placeholder="Language" />
           </SelectTrigger>
           <SelectContent>
             {programmingLanguages.length > 0 ? programmingLanguages.map(lang => (
-              <SelectItem key={lang.id} value={lang.id}>{lang.name}</SelectItem>
-            )) : <SelectItem value="none" disabled>No languages available</SelectItem>}
+              <SelectItem key={lang.id} value={lang.id} className="text-xs md:text-sm">{lang.name}</SelectItem>
+            )) : <SelectItem value="none" disabled>No languages</SelectItem>}
           </SelectContent>
         </Select>
-        <Button onClick={handleSaveProgram} size="sm" className="h-9" disabled={isSaving || isExecuting || !currentProgramTitle.trim() || !selectedLanguage || isSandboxDisabled}>
+        <Button onClick={handleSaveProgram} size="sm" className="h-9 text-xs md:text-sm" disabled={isSaving || isExecuting || !currentProgramTitle.trim() || !selectedLanguage || isSandboxDisabled}>
           {isSaving ? <Loader2 className="animate-spin h-4 w-4 mr-1" /> : <Save className="h-4 w-4 mr-1" />}
           <span className="hidden sm:inline">{activeProgramId ? 'Update' : 'Save'}</span>
+          <span className="sm:hidden">Save</span>
         </Button>
-        <Button onClick={handleRunCode} size="sm" className="h-9" variant="outline" disabled={isSaving || isExecuting || !currentCode.trim() || !selectedLanguage || isSandboxDisabled}>
+        <Button onClick={handleRunCode} size="sm" className="h-9 text-xs md:text-sm" variant="outline" disabled={isSaving || isExecuting || !currentCode.trim() || !selectedLanguage || isSandboxDisabled}>
           {isExecuting ? <Loader2 className="animate-spin h-4 w-4 mr-1" /> : <Play className="h-4 w-4 mr-1" />}
           <span className="hidden sm:inline">Run</span>
+           <span className="sm:hidden">Run</span>
         </Button>
       </div>
 
-      <div className="flex flex-1 overflow-hidden"> {/* Added overflow-hidden */}
-        <Card className="w-[280px] flex flex-col border-r rounded-none shrink-0">
-          <CardHeader className="p-2 border-b">
-            <div className="flex justify-between items-center">
-              <CardTitle className="text-base font-semibold">My Programs</CardTitle>
-              <Button variant="ghost" size="icon" className="h-7 w-7" onClick={handleNewProgram} disabled={isSaving || isExecuting || programmingLanguages.length === 0} title="New Program">
-                <PlusCircle className="h-5 w-5" />
-              </Button>
-            </div>
-          </CardHeader>
-          <ScrollArea className="flex-1">
-            <CardContent className="p-1">
-              {savedPrograms.length === 0 && programmingLanguages.length > 0 ? (
-                <p className="p-3 text-xs text-muted-foreground text-center">No saved programs yet. Create one and click "Save"!</p>
-              ) : programmingLanguages.length === 0 && savedPrograms.length === 0 && !selectedLanguage ? ( // Modified condition for sandbox disabled
-                <p className="p-3 text-xs text-muted-foreground text-center">Sandbox disabled. No languages available.</p>
-              ) : (
-                <ul className="space-y-0.5">
-                  {savedPrograms.map(program => {
-                    const ProgramIcon = getIconComponent(program.iconName);
-                    return (
-                       <li 
-                          key={program.id} 
-                          className={cn(
-                            "group flex items-center justify-between rounded-sm hover:bg-muted/50",
-                            activeProgramId === program.id && "bg-primary/10"
-                          )}
-                        >
-                          <div
-                            className={cn(
-                                "flex flex-1 items-center gap-1.5 p-1.5 cursor-pointer truncate",
-                                activeProgramId === program.id && "text-primary font-medium"
-                            )}
-                            onClick={() => !(isSaving || isExecuting) && handleLoadProgram(program, allCollegeLanguages)}
-                            role="button"
-                            tabIndex={isSaving || isExecuting ? -1 : 0}
-                            onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { if (!(isSaving || isExecuting)) handleLoadProgram(program, allCollegeLanguages); } }}
-                            title={`Load program: ${program.title}`}
-                          >
-                            <ProgramIcon className="h-4 w-4 shrink-0" />
-                            <span className="flex-1 truncate" title={program.title}>{program.title}</span>
-                          </div>
-                          <div className="flex shrink-0">
-                            <Button
-                                variant="ghost"
-                                size="icon"
-                                className="h-7 w-7 opacity-0 group-hover:opacity-100 focus:opacity-100 p-1"
-                                onClick={(e) => { e.stopPropagation(); handleShareProgram(program); }}
-                                disabled={isSaving || isExecuting}
-                                title="Share Program"
-                            >
-                                <Share2 className="h-4 w-4 text-blue-500" />
-                            </Button>
-                            <AlertDialog onOpenChange={(open) => !open && setProgramToDelete(null)}>
-                                <AlertDialogTrigger asChild>
-                                <Button
-                                    variant="ghost"
-                                    size="icon"
-                                    className="h-7 w-7 opacity-0 group-hover:opacity-100 focus:opacity-100 p-1"
-                                    onClick={(e) => { e.stopPropagation(); setProgramToDelete(program);}}
-                                    disabled={isSaving || isExecuting}
-                                    title="Delete Program"
-                                >
-                                    <Trash2 className="h-4 w-4 text-destructive" />
-                                </Button>
-                                </AlertDialogTrigger>
-                                {programToDelete && programToDelete.id === program.id && (
-                                <AlertDialogContent>
-                                    <AlertDialogHeader>
-                                    <AlertDialogTitle>Delete "{programToDelete.title}"?</AlertDialogTitle>
-                                    <AlertDialogDescription>
-                                        This action cannot be undone. This will permanently delete your saved program.
-                                    </AlertDialogDescription>
-                                    </AlertDialogHeader>
-                                    <AlertDialogFooter>
-                                    <AlertDialogCancel onClick={() => setProgramToDelete(null)}>Cancel</AlertDialogCancel>
-                                    <AlertDialogAction onClick={handleDeleteProgram} className="bg-destructive hover:bg-destructive/90">
-                                        {isSaving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />} Delete
-                                    </AlertDialogAction>
-                                    </AlertDialogFooter>
-                                </AlertDialogContent>
-                                )}
-                            </AlertDialog>
-                          </div>
-                        </li>
-                    );
-                  })}
-                </ul>
-              )}
-            </CardContent>
-          </ScrollArea>
+      <div className="flex flex-1 overflow-hidden">
+        {/* Desktop Sidebar */}
+        <Card className="w-[240px] md:w-[280px] hidden md:flex flex-col border-r rounded-none shrink-0">
+          {sidebarContent()}
         </Card>
 
+        {/* Main Editor and Output Area */}
         <div className="flex-1 flex flex-col overflow-hidden">
           <div className="flex-grow relative">
             <MonacoCodeEditor
@@ -630,34 +657,35 @@ export default function StudentSandboxPage() {
                 readOnly: isSaving || isExecuting || !selectedLanguage || (programmingLanguages.length === 0 && !selectedLanguage),
                 minimap: { enabled: true, scale: 1 },
                 wordWrap: 'on',
-                fontSize: 14,
+                fontSize: 13, // Slightly smaller for mobile potentially
                 scrollBeyondLastLine: false,
-                padding: { top: 10, bottom: 10 }
+                padding: { top: 8, bottom: 8 }
               }}
             />
             {!selectedLanguage && programmingLanguages.length > 0 && (
-                <div className="absolute inset-0 flex items-center justify-center bg-background/80 z-10">
-                    <p className="text-muted-foreground p-4 bg-card border rounded-md shadow-lg">Please select a programming language to start coding.</p>
+                <div className="absolute inset-0 flex items-center justify-center bg-background/80 z-10 p-4">
+                    <p className="text-muted-foreground text-center p-4 bg-card border rounded-md shadow-lg text-sm">Please select a programming language to start coding.</p>
                 </div>
             )}
             {programmingLanguages.length === 0 && !selectedLanguage && !isLoadingPageData && (
-                 <div className="absolute inset-0 flex items-center justify-center bg-background/80 z-10">
-                    <p className="text-destructive p-4 bg-card border rounded-md shadow-lg">No programming languages available in your college for the sandbox. Please contact an administrator.</p>
+                 <div className="absolute inset-0 flex items-center justify-center bg-background/80 z-10 p-4">
+                    <p className="text-destructive text-center p-4 bg-card border rounded-md shadow-lg text-sm">No programming languages available in your college for the sandbox. Please contact an administrator.</p>
                 </div>
             )}
           </div>
 
-          <div className="h-[250px] border-t flex flex-col bg-muted/20 shrink-0">
+          {/* Bottom Tabs for Input/Output/Errors */}
+          <div className="h-[200px] md:h-[250px] border-t flex flex-col bg-muted/20 shrink-0">
             <Tabs value={activeTab} onValueChange={setActiveTab} className="flex flex-col flex-1 overflow-hidden">
-              <TabsList className="shrink-0 rounded-none border-b bg-muted/50 justify-start px-2 h-10">
-                <TabsTrigger value="input" className="text-xs px-3 py-1.5 h-auto data-[state=active]:bg-background">
-                    <ClipboardType className="mr-1.5 h-3.5 w-3.5"/> Sample Input
+              <TabsList className="shrink-0 rounded-none border-b bg-muted/50 justify-start px-1 md:px-2 h-9 md:h-10">
+                <TabsTrigger value="input" className="text-xs px-2 py-1 md:px-3 md:py-1.5 h-auto data-[state=active]:bg-background">
+                    <ClipboardType className="mr-1 h-3 w-3 md:h-3.5 md:w-3.5"/> Sample Input
                 </TabsTrigger>
-                <TabsTrigger value="output" className="text-xs px-3 py-1.5 h-auto data-[state=active]:bg-background">
-                    <Terminal className="mr-1.5 h-3.5 w-3.5"/> Output
+                <TabsTrigger value="output" className="text-xs px-2 py-1 md:px-3 md:py-1.5 h-auto data-[state=active]:bg-background">
+                    <Terminal className="mr-1 h-3 w-3 md:h-3.5 md:w-3.5"/> Output
                 </TabsTrigger>
-                <TabsTrigger value="errors" className="text-xs px-3 py-1.5 h-auto data-[state=active]:bg-background">
-                    <AlertTriangle className="mr-1.5 h-3.5 w-3.5"/> Errors
+                <TabsTrigger value="errors" className="text-xs px-2 py-1 md:px-3 md:py-1.5 h-auto data-[state=active]:bg-background">
+                    <AlertTriangle className="mr-1 h-3 w-3 md:h-3.5 md:w-3.5"/> Errors
                 </TabsTrigger>
               </TabsList>
               <div className="flex-1 overflow-hidden p-0 m-0">
@@ -666,13 +694,13 @@ export default function StudentSandboxPage() {
                     placeholder="Enter sample input for your code here..."
                     value={sampleInput}
                     onChange={(e) => setSampleInput(e.target.value)}
-                    className="h-full w-full resize-none border-0 rounded-none focus-visible:ring-0 focus-visible:ring-offset-0 font-mono text-sm p-2 bg-background"
+                    className="h-full w-full resize-none border-0 rounded-none focus-visible:ring-0 focus-visible:ring-offset-0 font-mono text-xs md:text-sm p-2 bg-background"
                     disabled={isExecuting || (programmingLanguages.length === 0 && !selectedLanguage)}
                   />
                 </TabsContent>
                 <TabsContent value="output" className="h-full mt-0 p-0">
                   <ScrollArea className="h-full bg-background">
-                    <pre className="p-2 text-sm whitespace-pre-wrap font-mono min-h-full">
+                    <pre className="p-2 text-xs md:text-sm whitespace-pre-wrap font-mono min-h-full">
                       {isExecuting && !output && !errorOutput && <div className="flex justify-center items-center h-full"><Loader2 className="h-5 w-5 animate-spin" /></div>}
                       {output || (!isExecuting && "Code output will appear here.")}
                     </pre>
@@ -680,7 +708,7 @@ export default function StudentSandboxPage() {
                 </TabsContent>
                 <TabsContent value="errors" className="h-full mt-0 p-0">
                   <ScrollArea className="h-full bg-background">
-                    <pre className="p-2 text-sm text-destructive whitespace-pre-wrap font-mono min-h-full">
+                    <pre className="p-2 text-xs md:text-sm text-destructive whitespace-pre-wrap font-mono min-h-full">
                        {isExecuting && !output && !errorOutput && <div className="flex justify-center items-center h-full"><Loader2 className="h-5 w-5 animate-spin" /></div>}
                       {errorOutput || (!isExecuting && "Compilation or runtime errors will appear here.")}
                     </pre>

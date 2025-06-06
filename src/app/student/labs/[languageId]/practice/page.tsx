@@ -164,7 +164,6 @@ export default function StudentPracticePage() {
       
       let savedCode = completedQuestionData?.submittedCode;
       // For placements, if the saved code was for a different language, don't use it.
-      // This logic could be enhanced if `solvedWithLanguage` was stored previously.
       if (isPlacementCourse && completedQuestionData && completedQuestionData.solvedWithLanguage !== selectedSolveLanguage?.name) {
           savedCode = undefined; // Reset if different language selected now
       }
@@ -267,8 +266,6 @@ export default function StudentPracticePage() {
                     let isNewCompletion = true;
 
                     if (currentProgressData.completedQuestions && currentProgressData.completedQuestions[currentQuestion.id]) {
-                        // Question already completed. No new score, but update code if re-submitting.
-                        // For Placements, if they re-solve with a different language, it's still considered a re-submission.
                         scoreEarned = 0; 
                         isNewCompletion = false;
                     }
@@ -286,7 +283,6 @@ export default function StudentPracticePage() {
                             updates.currentScore = increment(scoreEarned);
                             updates[`completedQuestions.${currentQuestion.id}.scoreAchieved`] = scoreEarned;
                         } else {
-                             // Preserve existing score if re-submitting successfully
                             updates[`completedQuestions.${currentQuestion.id}.scoreAchieved`] = currentProgressData.completedQuestions[currentQuestion.id]?.scoreAchieved || 0;
                         }
 
@@ -295,7 +291,7 @@ export default function StudentPracticePage() {
                         setEnrollmentProgress(prev => {
                             const newCompletedQuestionsData: any = {
                                 scoreAchieved: updates[`completedQuestions.${currentQuestion.id}.scoreAchieved`],
-                                completedAt: serverTimestamp() as FieldValue, // Simulate timestamp for UI update
+                                completedAt: serverTimestamp() as FieldValue, 
                                 submittedCode: studentCode,
                             };
                             if (language?.name === PLACEMENTS_COURSE_NAME && selectedSolveLanguage) {
@@ -422,13 +418,13 @@ export default function StudentPracticePage() {
   const isPlacementCourse = language?.name === PLACEMENTS_COURSE_NAME;
 
   return (
-    <div className="container mx-auto py-8 space-y-6">
+    <div className="container mx-auto py-4 md:py-8 space-y-6">
       <div className="flex justify-between items-center">
-        <h1 className="text-3xl font-headline flex items-center">
-          {isPlacementCourse ? <Briefcase className="w-8 h-8 mr-3 text-primary" /> : <BookOpen className="w-8 h-8 mr-3 text-primary" />}
+        <h1 className="text-2xl md:text-3xl font-headline flex items-center">
+          {isPlacementCourse ? <Briefcase className="w-7 h-7 md:w-8 md:h-8 mr-2 md:mr-3 text-primary" /> : <BookOpen className="w-7 h-7 md:w-8 md:h-8 mr-2 md:mr-3 text-primary" />}
           Practice: {language?.name || 'Course'}
         </h1>
-        <Button asChild variant="outline">
+        <Button asChild variant="outline" size="sm">
           <Link href="/student/labs" className="flex items-center gap-2">
             <ArrowLeft className="h-4 w-4" /> Back to Labs
           </Link>
@@ -437,12 +433,12 @@ export default function StudentPracticePage() {
 
       {language && enrollmentProgress && totalPossibleLanguageScore > 0 && (
         <Card className="shadow-md">
-          <CardHeader>
-            <CardTitle className="text-lg font-semibold">Overall {language.name} Progress</CardTitle>
+          <CardHeader className="py-3 px-4 md:p-6">
+            <CardTitle className="text-md md:text-lg font-semibold">Overall {language.name} Progress</CardTitle>
           </CardHeader>
-          <CardContent>
-            <Progress value={currentProgressPercent} className="w-full h-3 mb-1" />
-            <p className="text-sm text-muted-foreground text-right">
+          <CardContent className="py-3 px-4 md:p-6">
+            <Progress value={currentProgressPercent} className="w-full h-2.5 md:h-3 mb-1" />
+            <p className="text-xs md:text-sm text-muted-foreground text-right">
               {enrollmentProgress.currentScore} / {totalPossibleLanguageScore} points ({currentProgressPercent}%)
             </p>
           </CardContent>
@@ -451,32 +447,32 @@ export default function StudentPracticePage() {
 
       {isPlacementCourse && !isLoadingPageData && (
         <Card className="shadow-md">
-            <CardHeader>
-                <CardTitle className="text-lg">Select Language to Solve</CardTitle>
-                <CardDescription>Choose one of your enrolled languages to attempt placement questions.</CardDescription>
+            <CardHeader className="py-3 px-4 md:p-6">
+                <CardTitle className="text-md md:text-lg">Select Language to Solve</CardTitle>
+                <CardDescription className="text-xs md:text-sm">Choose one of your enrolled languages to attempt placement questions.</CardDescription>
             </CardHeader>
-            <CardContent>
+            <CardContent className="py-3 px-4 md:p-6">
                 {allStudentEnrolledLanguages.length > 0 ? (
                     <div className="max-w-xs">
-                        <Label htmlFor="placement-language-select">Solving Language</Label>
+                        <Label htmlFor="placement-language-select" className="text-xs md:text-sm">Solving Language</Label>
                         <Select 
                             value={selectedSolveLanguage?.id || ''} 
                             onValueChange={handlePlacementLanguageChange}
                             disabled={isExecutingCode}
                         >
-                            <SelectTrigger id="placement-language-select">
+                            <SelectTrigger id="placement-language-select" className="h-9 text-xs md:text-sm">
                                 <SelectValue placeholder="Select a language" />
                             </SelectTrigger>
                             <SelectContent>
                                 {allStudentEnrolledLanguages.map(lang => (
-                                    <SelectItem key={lang.id} value={lang.id}>{lang.name}</SelectItem>
+                                    <SelectItem key={lang.id} value={lang.id} className="text-xs md:text-sm">{lang.name}</SelectItem>
                                 ))}
                             </SelectContent>
                         </Select>
                     </div>
                 ) : (
-                    <div className="p-4 bg-amber-50 border border-amber-200 rounded-md text-amber-700 flex items-center gap-2">
-                        <AlertTriangle className="h-5 w-5"/>
+                    <div className="p-3 md:p-4 bg-amber-50 border border-amber-200 rounded-md text-amber-700 flex items-center gap-2 text-xs md:text-sm">
+                        <AlertTriangle className="h-4 w-4 md:h-5 md:w-5"/>
                         <p>You are not enrolled in any programming languages yet. Please enroll in a language course to solve placement questions.</p>
                     </div>
                 )}
@@ -487,147 +483,147 @@ export default function StudentPracticePage() {
 
       {questions.length === 0 && !isLoadingPageData ? (
         <Card className="shadow-lg">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-                <PackageSearch className="h-6 w-6"/>
+          <CardHeader className="py-3 px-4 md:p-6">
+            <CardTitle className="flex items-center gap-2 text-md md:text-lg">
+                <PackageSearch className="h-5 w-5 md:h-6 md:w-6"/>
                 No Questions Yet
             </CardTitle>
           </CardHeader>
-          <CardContent>
+          <CardContent className="py-3 px-4 md:p-6 text-xs md:text-sm">
             <p className="text-muted-foreground">There are currently no questions available for this {language?.name} course. Please check back later, or inform your instructor.</p>
           </CardContent>
         </Card>
       ) : !currentQuestion && !isLoadingPageData ? (
          <Card className="shadow-lg">
-          <CardHeader><CardTitle>Loading Question...</CardTitle></CardHeader>
-          <CardContent><Loader2 className="h-8 w-8 animate-spin text-primary"/></CardContent>
+          <CardHeader className="py-3 px-4 md:p-6"><CardTitle className="text-md md:text-lg">Loading Question...</CardTitle></CardHeader>
+          <CardContent className="py-3 px-4 md:p-6"><Loader2 className="h-6 w-6 md:h-8 md:h-8 animate-spin text-primary"/></CardContent>
         </Card>
       ) : currentQuestion && languageForEditorAndExecution ? (
         <>
           <Card className="shadow-lg">
-            <CardHeader>
+            <CardHeader className="py-3 px-4 md:p-6">
               <div className="flex justify-between items-start flex-wrap gap-2">
                 <div>
-                    <CardTitle className="text-xl font-semibold mb-1">Question {currentQuestionIndex + 1} of {questions.length}</CardTitle>
+                    <CardTitle className="text-lg md:text-xl font-semibold mb-1">Question {currentQuestionIndex + 1} of {questions.length}</CardTitle>
                     <div className="flex items-center gap-2 flex-wrap mt-1">
-                        <Badge variant={getDifficultyBadgeVariant(currentQuestion.difficulty)} className="capitalize text-xs px-2 py-0.5">
-                           <Tag className="w-3 h-3 mr-1" /> {currentQuestion.difficulty || 'easy'}
+                        <Badge variant={getDifficultyBadgeVariant(currentQuestion.difficulty)} className="capitalize text-xs px-1.5 py-0.5 md:px-2 md:py-0.5">
+                           <Tag className="w-2.5 h-2.5 md:w-3 md:h-3 mr-1" /> {currentQuestion.difficulty || 'easy'}
                         </Badge>
                         {enrollmentProgress?.completedQuestions?.[currentQuestion.id] ? (
-                            <Badge variant="default" className="bg-green-600 hover:bg-green-700 text-white capitalize text-xs px-2 py-0.5">
-                                <CheckCircle className="w-3 h-3 mr-1" />
+                            <Badge variant="default" className="bg-green-600 hover:bg-green-700 text-white capitalize text-xs px-1.5 py-0.5 md:px-2 md:py-0.5">
+                                <CheckCircle className="w-2.5 h-2.5 md:w-3 md:h-3 mr-1" />
                                 Score Achieved: {enrollmentProgress.completedQuestions[currentQuestion.id].scoreAchieved}
                                 {isPlacementCourse && enrollmentProgress.completedQuestions[currentQuestion.id].solvedWithLanguage && (
                                     ` (using ${enrollmentProgress.completedQuestions[currentQuestion.id].solvedWithLanguage})`
                                 )}
                             </Badge>
                         ) : (
-                            <Badge variant="outline" className="text-xs px-2 py-0.5">
-                                <Star className="w-3 h-3 mr-1" /> Max Score: {currentQuestion.maxScore || 100}
+                            <Badge variant="outline" className="text-xs px-1.5 py-0.5 md:px-2 md:py-0.5">
+                                <Star className="w-2.5 h-2.5 md:w-3 md:h-3 mr-1" /> Max Score: {currentQuestion.maxScore || 100}
                             </Badge>
                         )}
                     </div>
                 </div>
                 <div className="flex space-x-2 shrink-0">
-                  <Button onClick={handlePrevQuestion} disabled={currentQuestionIndex === 0 || isExecutingCode} variant="outline" size="sm">
-                    <ChevronLeft className="h-4 w-4 mr-1" /> Prev
+                  <Button onClick={handlePrevQuestion} disabled={currentQuestionIndex === 0 || isExecutingCode} variant="outline" size="sm" className="text-xs h-8">
+                    <ChevronLeft className="h-3.5 w-3.5 md:h-4 md:w-4 mr-1" /> Prev
                   </Button>
-                  <Button onClick={handleNextQuestion} disabled={currentQuestionIndex === questions.length - 1 || isExecutingCode} variant="outline" size="sm">
-                    Next <ChevronRight className="h-4 w-4 ml-1" />
+                  <Button onClick={handleNextQuestion} disabled={currentQuestionIndex === questions.length - 1 || isExecutingCode} variant="outline" size="sm" className="text-xs h-8">
+                    Next <ChevronRight className="h-3.5 w-3.5 md:h-4 md:w-4 ml-1" />
                   </Button>
                 </div>
               </div>
-              <CardDescription className="mt-3">Read the problem statement carefully and write your solution below.</CardDescription>
+              <CardDescription className="mt-3 text-xs md:text-sm">Read the problem statement carefully and write your solution below.</CardDescription>
             </CardHeader>
-            <CardContent className="space-y-4">
-              <p className="text-base whitespace-pre-wrap">{currentQuestion.questionText}</p>
+            <CardContent className="space-y-3 md:space-y-4 py-3 px-4 md:p-6">
+              <p className="text-sm md:text-base whitespace-pre-wrap">{currentQuestion.questionText}</p>
               {currentQuestion.sampleInput && (
                 <div>
-                  <h4 className="font-semibold text-sm mb-1">Sample Input:</h4>
-                  <pre className="bg-muted p-3 rounded-md text-sm overflow-x-auto">{currentQuestion.sampleInput}</pre>
+                  <h4 className="font-semibold text-xs md:text-sm mb-1">Sample Input:</h4>
+                  <pre className="bg-muted p-2 md:p-3 rounded-md text-xs md:text-sm overflow-x-auto">{currentQuestion.sampleInput}</pre>
                 </div>
               )}
               {currentQuestion.sampleOutput && (
                 <div>
-                  <h4 className="font-semibold text-sm mb-1">Sample Output:</h4>
-                  <pre className="bg-muted p-3 rounded-md text-sm overflow-x-auto">{currentQuestion.sampleOutput}</pre>
+                  <h4 className="font-semibold text-xs md:text-sm mb-1">Sample Output:</h4>
+                  <pre className="bg-muted p-2 md:p-3 rounded-md text-xs md:text-sm overflow-x-auto">{currentQuestion.sampleOutput}</pre>
                 </div>
               )}
             </CardContent>
           </Card>
 
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 md:gap-6">
             <Card className="shadow-md">
-              <CardHeader>
-                <CardTitle className="text-lg flex items-center"><Terminal className="w-5 h-5 mr-2" /> Your Code ({languageForEditorAndExecution.name})</CardTitle>
+              <CardHeader className="py-3 px-4 md:p-6">
+                <CardTitle className="text-md md:text-lg flex items-center"><Terminal className="w-4 h-4 md:w-5 md:w-5 mr-2" /> Your Code ({languageForEditorAndExecution.name})</CardTitle>
               </CardHeader>
-              <CardContent>
+              <CardContent className="py-0 px-0 md:p-0 h-[40vh] md:h-[50vh] lg:h-[500px]">
                 <MonacoCodeEditor
                   language={languageForEditorAndExecution.name}
                   value={studentCode}
                   onChange={(code) => setStudentCode(code || '')}
-                  height="500px"
-                  options={{ readOnly: isExecutingCode || (isPlacementCourse && allStudentEnrolledLanguages.length === 0) }}
+                  height="100%"
+                  options={{ readOnly: isExecutingCode || (isPlacementCourse && allStudentEnrolledLanguages.length === 0), minimap: { enabled: false } }}
                 />
               </CardContent>
             </Card>
 
             <Card className="shadow-md">
-              <CardHeader>
-                <CardTitle className="text-lg flex items-center"><Lightbulb className="w-5 h-5 mr-2" /> Output / Console</CardTitle>
+              <CardHeader className="py-3 px-4 md:p-6">
+                <CardTitle className="text-md md:text-lg flex items-center"><Lightbulb className="w-4 h-4 md:w-5 md:w-5 mr-2" /> Output / Console</CardTitle>
               </CardHeader>
-              <CardContent>
+              <CardContent className="py-3 px-4 md:p-6">
                 {compileError && (
-                    <div className="mb-4 p-3 bg-destructive/10 border border-destructive text-destructive rounded-md text-sm">
-                        <div className="flex items-center font-semibold mb-1"><AlertTriangle className="w-4 h-4 mr-2" />Compilation Error:</div>
+                    <div className="mb-3 p-2 md:p-3 bg-destructive/10 border border-destructive text-destructive rounded-md text-xs md:text-sm">
+                        <div className="flex items-center font-semibold mb-1"><AlertTriangle className="w-3.5 h-3.5 md:w-4 md:w-4 mr-2" />Compilation Error:</div>
                         <pre className="whitespace-pre-wrap font-mono text-xs">{compileError}</pre>
                     </div>
                 )}
                 {executionError && !compileError && (
-                     <div className="mb-4 p-3 bg-destructive/10 border border-destructive text-destructive rounded-md text-sm">
-                        <div className="flex items-center font-semibold mb-1"><AlertTriangle className="w-4 h-4 mr-2" />Execution Error:</div>
+                     <div className="mb-3 p-2 md:p-3 bg-destructive/10 border border-destructive text-destructive rounded-md text-xs md:text-sm">
+                        <div className="flex items-center font-semibold mb-1"><AlertTriangle className="w-3.5 h-3.5 md:w-4 md:w-4 mr-2" />Execution Error:</div>
                         <pre className="whitespace-pre-wrap font-mono text-xs">{executionError}</pre>
                     </div>
                 )}
                 <pre
-                  className="font-mono text-sm bg-muted/50 p-4 rounded-md min-h-[150px] max-h-[300px] overflow-y-auto whitespace-pre-wrap"
+                  className="font-mono text-xs md:text-sm bg-muted/50 p-3 md:p-4 rounded-md min-h-[100px] max-h-[200px] md:min-h-[150px] md:max-h-[300px] overflow-y-auto whitespace-pre-wrap"
                   aria-live="polite"
                 >
                   {output || "Code output and test results will appear here..."}
                 </pre>
 
                 {testResults.length > 0 && !compileError && (
-                  <div className="mt-4 space-y-3 max-h-[250px] overflow-y-auto">
-                    <h4 className="text-md font-semibold">Test Case Results:</h4>
+                  <div className="mt-3 space-y-2 md:space-y-3 max-h-[200px] md:max-h-[250px] overflow-y-auto">
+                    <h4 className="text-sm md:text-md font-semibold">Test Case Results:</h4>
                     {testResults.map((result) => (
-                      <Card key={result.testCaseNumber.toString()} className={`p-3 ${result.passed ? 'bg-green-500/10 border-green-500' : 'bg-red-500/10 border-red-500'}`}>
+                      <Card key={result.testCaseNumber.toString()} className={`p-2 md:p-3 ${result.passed ? 'bg-green-500/10 border-green-500' : 'bg-red-500/10 border-red-500'}`}>
                         <div className="flex justify-between items-center mb-1">
-                          <span className="font-medium">Test Case {result.testCaseNumber}</span>
+                          <span className="font-medium text-xs md:text-sm">Test Case {result.testCaseNumber}</span>
                           {result.passed ? (
-                            <span className="text-xs font-semibold text-green-700 bg-green-200 px-2 py-0.5 rounded-full flex items-center"><CheckCircle className="w-3 h-3 mr-1"/> PASSED</span>
+                            <span className="text-xs font-semibold text-green-700 bg-green-200 px-1.5 py-0.5 rounded-full flex items-center"><CheckCircle className="w-2.5 h-2.5 md:w-3 md:w-3 mr-1"/> PASSED</span>
                           ) : (
-                            <span className="text-xs font-semibold text-red-700 bg-red-200 px-2 py-0.5 rounded-full flex items-center"><XCircle className="w-3 h-3 mr-1"/> FAILED</span>
+                            <span className="text-xs font-semibold text-red-700 bg-red-200 px-1.5 py-0.5 rounded-full flex items-center"><XCircle className="w-2.5 h-2.5 md:w-3 md:w-3 mr-1"/> FAILED</span>
                           )}
                         </div>
                         <div className="text-xs space-y-1">
-                          <div><strong className="text-muted-foreground">Input:</strong> <pre className="inline whitespace-pre-wrap font-mono bg-muted/30 p-1 rounded text-xs">{result.input}</pre></div>
-                          <div><strong className="text-muted-foreground">Expected:</strong> <pre className="inline whitespace-pre-wrap font-mono bg-muted/30 p-1 rounded text-xs">{result.expectedOutput}</pre></div>
-                           {!result.passed && <div><strong className="text-muted-foreground">Actual:</strong> <pre className="inline whitespace-pre-wrap font-mono bg-muted/30 p-1 rounded text-xs">{result.actualOutput}</pre></div>}
-                           {result.error && <div className="text-red-600"><strong className="text-muted-foreground">Error Detail:</strong> <pre className="inline whitespace-pre-wrap font-mono bg-muted/30 p-1 rounded text-xs">{result.error}</pre></div>}
+                          <div><strong className="text-muted-foreground">Input:</strong> <pre className="inline whitespace-pre-wrap font-mono bg-muted/30 p-0.5 md:p-1 rounded text-xs">{result.input}</pre></div>
+                          <div><strong className="text-muted-foreground">Expected:</strong> <pre className="inline whitespace-pre-wrap font-mono bg-muted/30 p-0.5 md:p-1 rounded text-xs">{result.expectedOutput}</pre></div>
+                           {!result.passed && <div><strong className="text-muted-foreground">Actual:</strong> <pre className="inline whitespace-pre-wrap font-mono bg-muted/30 p-0.5 md:p-1 rounded text-xs">{result.actualOutput}</pre></div>}
+                           {result.error && <div className="text-red-600"><strong className="text-muted-foreground">Error Detail:</strong> <pre className="inline whitespace-pre-wrap font-mono bg-muted/30 p-0.5 md:p-1 rounded text-xs">{result.error}</pre></div>}
                         </div>
                       </Card>
                     ))}
                   </div>
                 )}
                  <div className="mt-4 flex flex-col sm:flex-row gap-2">
-                    <Button onClick={handleRunSample} disabled={isExecutingCode || !studentCode.trim() || (isPlacementCourse && allStudentEnrolledLanguages.length === 0)} className="flex-1" variant="outline">
-                    {isExecutingCode && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                    <Play className="mr-2 h-4 w-4" />
+                    <Button onClick={handleRunSample} disabled={isExecutingCode || !studentCode.trim() || (isPlacementCourse && allStudentEnrolledLanguages.length === 0)} className="flex-1 text-xs md:text-sm h-9 md:h-10" variant="outline">
+                    {isExecutingCode && <Loader2 className="mr-2 h-3.5 w-3.5 md:h-4 md:w-4 animate-spin" />}
+                    <Play className="mr-2 h-3.5 w-3.5 md:h-4 md:w-4" />
                     Run with Sample
                     </Button>
-                    <Button onClick={handleSubmitTestCases} disabled={isExecutingCode || !studentCode.trim() || (isPlacementCourse && allStudentEnrolledLanguages.length === 0)} className="flex-1">
-                    {isExecutingCode && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                    <CheckSquare className="mr-2 h-4 w-4" />
+                    <Button onClick={handleSubmitTestCases} disabled={isExecutingCode || !studentCode.trim() || (isPlacementCourse && allStudentEnrolledLanguages.length === 0)} className="flex-1 text-xs md:text-sm h-9 md:h-10">
+                    {isExecutingCode && <Loader2 className="mr-2 h-3.5 w-3.5 md:h-4 md:w-4 animate-spin" />}
+                    <CheckSquare className="mr-2 h-3.5 w-3.5 md:h-4 md:w-4" />
                     Submit & Test All
                     </Button>
                 </div>
@@ -637,7 +633,7 @@ export default function StudentPracticePage() {
         </>
       ) : (
         <div className="text-center py-10">
-            <Loader2 className="h-12 w-12 animate-spin text-primary mx-auto mb-4" />
+            <Loader2 className="h-10 w-10 md:h-12 md:w-12 animate-spin text-primary mx-auto mb-4" />
             <p className="text-muted-foreground">Loading question content...</p>
         </div>
       )}
