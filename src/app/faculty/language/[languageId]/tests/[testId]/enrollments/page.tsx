@@ -6,7 +6,7 @@ import Link from 'next/link';
 import { useParams, useRouter } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContext';
 import { db } from '@/lib/firebase';
-import { doc, getDoc, updateDoc, arrayRemove, arrayUnion, serverTimestamp, FieldValue } from 'firebase/firestore';
+import { doc, getDoc, updateDoc, arrayRemove, arrayUnion, serverTimestamp, FieldValue, Timestamp } from 'firebase/firestore';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
@@ -57,7 +57,8 @@ export default function FacultyManageEnrollmentsPage() {
 
       if (testSnap.exists()) {
         const testData = testSnap.data() as OnlineTest;
-        if (testData.facultyId !== userProfile.uid) {
+        // Faculty can only manage enrollments for tests they created
+        if (!testData.isFacultyCreated || testData.facultyId !== userProfile.uid) {
           toast({ title: "Unauthorized", description: "You can only manage enrollments for your own tests.", variant: "destructive" });
           setIsAuthorized(false);
           router.push(`/faculty/language/${languageId}/tests`);
@@ -103,7 +104,7 @@ export default function FacultyManageEnrollmentsPage() {
       if (!updatedApprovedStudentUids.includes(studentUid)) {
         updatedApprovedStudentUids.push(studentUid);
       }
-    } else if (newStatus === 'rejected') { // Or any other status that means not approved
+    } else if (newStatus === 'rejected') { 
       updatedApprovedStudentUids = updatedApprovedStudentUids.filter(uid => uid !== studentUid);
     }
 
@@ -116,7 +117,9 @@ export default function FacultyManageEnrollmentsPage() {
       
       setTest(prevTest => prevTest ? ({ 
         ...prevTest, 
-        enrollmentRequests: updatedEnrollmentRequests,
+        enrollmentRequests: updatedEnrollmentRequests.map(req => 
+            req.studentUid === studentUid && req.processedAt ? { ...req, processedAt: Timestamp.now() } : req // Simulate timestamp for UI
+        ), // Update local state with new processedAt if applicable
         approvedStudentUids: updatedApprovedStudentUids,
       }) : null);
 
@@ -130,9 +133,9 @@ export default function FacultyManageEnrollmentsPage() {
   };
   
   const getStatusBadgeVariant = (status: EnrollmentRequestStatus) => {
-    if (status === 'approved') return 'default'; // Typically green or primary
+    if (status === 'approved') return 'default'; 
     if (status === 'rejected') return 'destructive';
-    if (status === 'pending') return 'secondary'; // Yellow or gray
+    if (status === 'pending') return 'secondary'; 
     return 'outline';
   };
 
@@ -144,7 +147,7 @@ export default function FacultyManageEnrollmentsPage() {
     );
   }
   
-  if (!isAuthorized && !isLoading) return null; // Handled by redirect
+  if (!isAuthorized && !isLoading) return null; 
 
   if (!test || !language) {
     return (
@@ -159,7 +162,11 @@ export default function FacultyManageEnrollmentsPage() {
   }
   
   const pendingRequests = test.enrollmentRequests?.filter(req => req.status === 'pending') || [];
-  const processedRequests = test.enrollmentRequests?.filter(req => req.status !== 'pending').sort((a,b) => (b.processedAt as Timestamp)?.seconds - (a.processedAt as Timestamp)?.seconds) || [];
+  const processedRequests = test.enrollmentRequests?.filter(req => req.status !== 'pending').sort((a,b) => {
+    const timeA = a.processedAt instanceof Timestamp ? a.processedAt.toMillis() : Date.now();
+    const timeB = b.processedAt instanceof Timestamp ? b.processedAt.toMillis() : Date.now();
+    return timeB - timeA;
+  }) || [];
 
 
   return (

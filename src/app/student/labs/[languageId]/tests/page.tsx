@@ -73,8 +73,8 @@ export default function StudentLanguageTestsPage() {
   }, [authLoading, userProfile, fetchLanguageAndTests, router]);
   
   const handleRequestEnrollment = async (test: OnlineTest) => {
-    if (!userProfile || !test.facultyId || !test.id) { // Only for faculty created tests
-        toast({title: "Error", description: "Cannot request enrollment. Missing details.", variant: "destructive"});
+    if (!userProfile || !test.isFacultyCreated || !test.facultyId || !test.id) { 
+        toast({title: "Error", description: "Cannot request enrollment for this test.", variant: "destructive"});
         return;
     }
     setIsRequestingEnrollment(prev => ({ ...prev, [test.id]: true }));
@@ -89,14 +89,19 @@ export default function StudentLanguageTestsPage() {
     };
 
     try {
+        // Ensure enrollmentRequests array exists before trying to update it
+        const testSnap = await getDoc(testDocRef);
+        const currentTestData = testSnap.data() as OnlineTest;
+        const existingRequests = currentTestData.enrollmentRequests || [];
+
         await updateDoc(testDocRef, {
-            enrollmentRequests: arrayUnion(newRequest),
+            enrollmentRequests: arrayUnion(newRequest), // arrayUnion handles non-existence gracefully
             updatedAt: serverTimestamp()
         });
-        // Optimistically update local state
+        
         setAllTests(prevTests => prevTests.map(t => 
             t.id === test.id 
-            ? { ...t, enrollmentRequests: [...(t.enrollmentRequests || []), newRequest] } 
+            ? { ...t, enrollmentRequests: [...existingRequests, newRequest] } 
             : t
         ));
         toast({ title: "Enrollment Requested", description: `Your request to enroll in "${test.title}" has been sent.` });
@@ -165,7 +170,6 @@ export default function StudentLanguageTestsPage() {
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {allTests.map((test) => {
             const enrollmentInfo = getStudentEnrollmentStatus(test);
-            const facultyName = test.isFacultyCreated ? "Faculty Test" : "Admin Test"; // Placeholder
             return (
               <Card key={test.id} className="shadow-md hover:shadow-lg transition-shadow flex flex-col">
                 <CardHeader>
@@ -201,14 +205,12 @@ export default function StudentLanguageTestsPage() {
                             <div className="w-full p-2 text-center text-sm bg-destructive/10 text-destructive rounded-md">
                                 <XCircle className="inline h-4 w-4 mr-1 mb-0.5"/> Enrollment Rejected.
                                 {enrollmentInfo.message && <p className="text-xs mt-0.5">{enrollmentInfo.message}</p>}
-                                {/* Consider adding a "Request Again" button with cooldown */}
                             </div>
                         )}
                     </>
                    )}
-                   {!test.isFacultyCreated && ( // Admin created tests are directly accessible (assuming)
+                   {!test.isFacultyCreated && ( 
                        <Button className="w-full" disabled>Start Test (Coming Soon)</Button>
-                       // <Button asChild className="w-full"><Link href={`/student/tests/${test.id}/attempt`}>Start Test</Link></Button>
                    )}
                 </CardFooter>
               </Card>

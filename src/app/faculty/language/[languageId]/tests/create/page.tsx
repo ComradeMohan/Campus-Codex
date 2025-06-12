@@ -21,7 +21,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useToast } from '@/hooks/use-toast';
-import { Loader2, ArrowLeft, ClipboardEdit, ListChecks, Tag, Star, AlertTriangle, CheckCircle, Send } from 'lucide-react';
+import { Loader2, ArrowLeft, ClipboardEdit, ListChecks, Tag, Star, AlertTriangle, CheckCircle, Send, PlusCircle } from 'lucide-react';
 import type { ProgrammingLanguage, Question as QuestionType, OnlineTest, QuestionDifficulty, OnlineTestStatus } from '@/types';
 
 const createTestFormSchema = z.object({
@@ -50,6 +50,7 @@ export default function FacultyCreateOrEditTestPage({ params: routeParams }: { p
   const [totalScore, setTotalScore] = useState(0);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isAuthorized, setIsAuthorized] = useState(false);
+  const [existingTest, setExistingTest] = useState<OnlineTest | null>(null);
 
   const form = useForm<CreateTestFormData>({
     resolver: zodResolver(createTestFormSchema),
@@ -102,6 +103,7 @@ export default function FacultyCreateOrEditTestPage({ params: routeParams }: { p
              router.push(`/faculty/language/${languageId}/tests`);
              return;
           }
+          setExistingTest(testData);
           form.reset({
             title: testData.title,
             description: testData.description,
@@ -169,12 +171,12 @@ export default function FacultyCreateOrEditTestPage({ params: routeParams }: { p
         questionsSnapshot,
         totalScore: totalScore,
         status: data.status,
-        createdBy: userProfile.uid,
+        createdBy: userProfile.uid, // This will be faculty UID
         facultyId: userProfile.uid,
         isFacultyCreated: true,
         updatedAt: serverTimestamp(),
-        enrollmentRequests: isEditing ? tests.find(t=>t.id === testIdToEdit)?.enrollmentRequests || [] : [],
-        approvedStudentUids: isEditing ? tests.find(t=>t.id === testIdToEdit)?.approvedStudentUids || [] : [],
+        enrollmentRequests: isEditing && existingTest ? existingTest.enrollmentRequests || [] : [],
+        approvedStudentUids: isEditing && existingTest ? existingTest.approvedStudentUids || [] : [],
       };
 
       if (isEditing && testIdToEdit) {
@@ -349,10 +351,10 @@ export default function FacultyCreateOrEditTestPage({ params: routeParams }: { p
           </Card>
           
           <div className="flex justify-end pt-4">
-            <Button type="submit" disabled={isSubmitting} size="lg" className={data.status === 'published' ? 'bg-green-600 hover:bg-green-700' : ''}>
+            <Button type="submit" disabled={isSubmitting} size="lg" className={form.getValues('status') === 'published' ? 'bg-green-600 hover:bg-green-700' : ''}>
               {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
               {isEditing ? <><Edit3 className="mr-2 h-4 w-4" /> Update Test</> : <><PlusCircle className="mr-2 h-4 w-4" /> Create Test</>}
-              {data.status === 'published' && <Send className="ml-2 h-4 w-4"/>}
+              {form.getValues('status') === 'published' && <Send className="ml-2 h-4 w-4"/>}
             </Button>
           </div>
         </form>

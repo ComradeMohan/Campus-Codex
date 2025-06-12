@@ -73,17 +73,16 @@ export interface Question {
 }
 
 export type OnlineTestStatus = 'draft' | 'published' | 'archived';
-
 export type EnrollmentRequestStatus = 'pending' | 'approved' | 'rejected';
 
 export interface EnrollmentRequest {
   studentUid: string;
   studentName: string;
-  studentEmail?: string; // Optional, can be fetched if needed
+  studentEmail?: string; 
   requestedAt: Timestamp | FieldValue;
   status: EnrollmentRequestStatus;
-  rejectionReason?: string; // Optional reason if faculty rejects
-  processedBy?: string; // UID of faculty who processed
+  rejectionReason?: string; 
+  processedBy?: string; 
   processedAt?: Timestamp | FieldValue;
 }
 
@@ -101,11 +100,11 @@ export interface OnlineTest {
   scheduledAt?: Timestamp;
   createdAt: Timestamp | FieldValue;
   updatedAt: Timestamp | FieldValue;
-  createdBy: string; // UID of the admin or faculty who created it
-  isFacultyCreated?: boolean; // True if created by faculty
-  facultyId?: string; // UID of faculty if isFacultyCreated is true
-  enrollmentRequests?: EnrollmentRequest[]; // Array of enrollment requests
-  approvedStudentUids?: string[]; // Array of UIDs of students approved for this test
+  createdBy: string; 
+  isFacultyCreated?: boolean; 
+  facultyId?: string; 
+  enrollmentRequests?: EnrollmentRequest[]; 
+  approvedStudentUids?: string[]; 
 }
 
 
