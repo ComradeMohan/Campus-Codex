@@ -16,7 +16,7 @@ import {
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { useToast } from '@/hooks/use-toast';
-import { signInWithEmailAndPassword, isSignInWithEmailLink, signInWithEmailLink, sendPasswordResetEmail, type Auth } from 'firebase/auth';
+import { signInWithEmailAndPassword, isSignInWithEmailLink, signInWithEmailLink, sendPasswordResetEmail, type Auth, sendEmailVerification } from 'firebase/auth';
 import { auth, db } from '@/lib/firebase';
 import { doc, getDoc, setDoc, serverTimestamp, collection, addDoc } from 'firebase/firestore';
 import type { UserProfile } from '@/types';
@@ -130,43 +130,74 @@ export function LoginForm() {
       const userCredential = await signInWithEmailAndPassword(auth, values.email, values.password);
       const user = userCredential.user;
 
-      if (!user.emailVerified) {
-        toast({
-          title: 'Email Not Verified',
-          description: 'Please verify your email address before logging in. Check your inbox for the verification link.',
-          variant: 'destructive',
-        });
-        setIsLoading(false);
-        return;
-      }
-
       const userDocRef = doc(db, 'users', user.uid);
       const userDocSnap = await getDoc(userDocRef);
 
       if (userDocSnap.exists()) {
         const userProfile = userDocSnap.data() as UserProfile;
+
+        // Faculty can log in even if Firebase Auth emailVerified is false,
+        // because admin sets isEmailVerified: true in their Firestore profile.
+        if (userProfile.role === 'faculty') {
+          await refreshUserProfile();
+          router.push('/faculty/dashboard');
+          toast({ title: 'Login Successful', description: 'Welcome back!' });
+          setIsLoading(false);
+          return;
+        }
+        
+        // For other roles (e.g., student), check Firebase Auth emailVerified status
+        if (!user.emailVerified) {
+          try {
+            await sendEmailVerification(user);
+            toast({
+              title: 'Email Not Verified',
+              description: 'Your email is not verified. A new verification link has been sent. Please check your email and verify to log in.',
+              variant: 'destructive',
+              duration: 7000,
+            });
+          } catch (verificationError) {
+             console.error('Error resending verification email:', verificationError);
+             toast({
+              title: 'Email Not Verified',
+              description: 'Please verify your email to log in. Could not resend verification email at this time.',
+              variant: 'destructive',
+              duration: 7000,
+            });
+          }
+          setIsLoading(false);
+          return; // Stop login process
+        }
+        
+        // If email is verified (for non-faculty) or if faculty (already handled)
         await refreshUserProfile(); 
         if (userProfile.role === 'admin') {
           router.push('/admin/dashboard');
         } else if (userProfile.role === 'student') {
           router.push('/student/labs');
-        } else if (userProfile.role === 'faculty') {
-          router.push('/faculty/dashboard');
         }
          else {
+          // Fallback for any other roles, though faculty already handled
           router.push('/'); 
         }
         toast({ title: 'Login Successful', description: 'Welcome back!' });
+
       } else {
-        throw new Error('User profile not found.');
+        // This case should ideally not happen if registration is done correctly
+        // where a Firestore profile is always created.
+        toast({
+          title: 'Login Error',
+          description: 'User profile not found in our records. Please ensure you have completed registration or contact support.',
+          variant: 'destructive',
+        });
       }
     } catch (error: any) {
       console.error('Login error:', error);
       let errorMessage = 'Invalid email or password.';
       if (error.code === 'auth/user-not-found' || error.code === 'auth/wrong-password' || error.code === 'auth/invalid-credential') {
         errorMessage = 'Invalid email or password. Please try again.';
-      } else if (error.message === 'User profile not found.') {
-        errorMessage = 'User profile not found. Please register first or contact support.';
+      } else if (error.code === 'auth/too-many-requests') {
+        errorMessage = 'Access to this account has been temporarily disabled due to many failed login attempts. You can immediately restore it by resetting your password or you can try again later.';
       }
       toast({
         title: 'Login Error',
@@ -202,9 +233,6 @@ export function LoginForm() {
       console.error('Forgot password error:', error);
       let description = 'Failed to send password reset email. Please try again.';
       if (error.code === 'auth/user-not-found') {
-        // To prevent user enumeration, we can show a generic message for user-not-found too.
-        // However, for better UX during development or specific app needs, you might show different messages.
-        // For this implementation, we'll keep the success message generic to avoid confirming email existence.
          description = `If an account exists for ${emailValidation.data}, a password reset link has been sent. Please check your inbox.`;
          toast({
             title: 'Password Reset Email Sent',
@@ -328,4 +356,3 @@ export function LoginForm() {
     </Card>
   );
 }
-
