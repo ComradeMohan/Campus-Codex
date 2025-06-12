@@ -7,9 +7,9 @@ import { useAuth } from '@/contexts/AuthContext';
 import { db } from '@/lib/firebase';
 import { collection, getDocs, query, where, doc, getDoc } from 'firebase/firestore';
 import type { UserProfile, ProgrammingLanguage } from '@/types';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Loader2, BookUser, ClipboardList, BarChart3, ArrowRight, AlertTriangle } from 'lucide-react';
+import { Loader2, BookUser, ClipboardList, BarChart3, ArrowRight, AlertTriangle, BookOpen, Settings } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import * as LucideIcons from 'lucide-react';
 
@@ -99,14 +99,14 @@ export default function FacultyDashboardPage() {
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <p>From here, you can access analytics for the programming languages you oversee.</p>
+          <p>From here, you can create tests, manage student enrollments, and view analytics for the programming languages you oversee.</p>
         </CardContent>
       </Card>
 
       <Card>
         <CardHeader>
           <CardTitle className="text-xl font-headline">Your Managed Languages</CardTitle>
-          <CardDescription>Select a language to view student progress and analytics.</CardDescription>
+          <CardDescription>Select a language to manage tests and view student progress.</CardDescription>
         </CardHeader>
         <CardContent>
           {managedLanguagesDetails.length === 0 ? (
@@ -124,17 +124,22 @@ export default function FacultyDashboardPage() {
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
               {managedLanguagesDetails.map((lang) => (
-                <Card key={lang.id} className="shadow-md hover:shadow-lg transition-shadow">
+                <Card key={lang.id} className="shadow-md hover:shadow-lg transition-shadow flex flex-col">
                   <CardHeader className="flex flex-row items-center space-x-3 pb-2">
                     <lang.iconComponent className="w-8 h-8 text-primary" />
                     <CardTitle className="text-lg font-semibold">{lang.name}</CardTitle>
                   </CardHeader>
-                  <CardContent>
+                  <CardContent className="flex-grow">
                     <p className="text-sm text-muted-foreground h-12 line-clamp-2">
-                      {lang.description || `Analytics and student progress for ${lang.name}.`}
+                      {lang.description || `Manage tests and student progress for ${lang.name}.`}
                     </p>
                   </CardContent>
-                  <CardFooter>
+                  <CardFooter className="flex flex-col sm:flex-row gap-2">
+                    <Button asChild className="w-full" variant="outline">
+                      <Link href={`/faculty/language/${lang.id}/tests`} className="flex items-center">
+                        <Settings className="w-4 h-4 mr-2" /> Manage Tests <ArrowRight className="w-4 h-4 ml-auto"/>
+                      </Link>
+                    </Button>
                     <Button asChild className="w-full">
                       <Link href={`/faculty/analytics/${lang.id}`} className="flex items-center">
                         <BarChart3 className="w-4 h-4 mr-2" /> View Analytics <ArrowRight className="w-4 h-4 ml-auto"/>

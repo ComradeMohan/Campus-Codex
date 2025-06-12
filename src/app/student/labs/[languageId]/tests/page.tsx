@@ -6,13 +6,13 @@ import Link from 'next/link';
 import { useParams, useRouter } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContext';
 import { db } from '@/lib/firebase';
-import { doc, getDoc, collection, query, where, getDocs, orderBy } from 'firebase/firestore';
+import { doc, getDoc, collection, query, where, getDocs, orderBy, updateDoc, arrayUnion, serverTimestamp, FieldValue } from 'firebase/firestore';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
-import { Loader2, ArrowLeft, ListChecks, FileText, Clock, AlertTriangle, BarChart, Percent } from 'lucide-react';
-import type { ProgrammingLanguage, OnlineTest } from '@/types';
+import { Loader2, ArrowLeft, ListChecks, FileText, Clock, AlertTriangle, BarChart, Percent, Send, Hourglass, CheckCircle, XCircle } from 'lucide-react';
+import type { ProgrammingLanguage, OnlineTest, EnrollmentRequest } from '@/types';
 
 export default function StudentLanguageTestsPage() {
   const { userProfile, loading: authLoading } = useAuth();
@@ -23,20 +23,18 @@ export default function StudentLanguageTestsPage() {
   const languageId = params.languageId as string;
 
   const [language, setLanguage] = useState<ProgrammingLanguage | null>(null);
-  const [tests, setTests] = useState<OnlineTest[]>([]);
+  const [allTests, setAllTests] = useState<OnlineTest[]>([]); // Combined admin and faculty tests
   const [isLoadingPageData, setIsLoadingPageData] = useState(true);
+  const [isRequestingEnrollment, setIsRequestingEnrollment] = useState<Record<string, boolean>>({});
+
 
   const fetchLanguageAndTests = useCallback(async () => {
     if (!userProfile?.collegeId || !languageId) {
-      if (!authLoading) {
-        toast({ title: "Error", description: "Missing user or language information.", variant: "destructive" });
-        router.push('/student/labs');
-      }
+      if (!authLoading) router.push('/student/labs');
       return;
     }
     setIsLoadingPageData(true);
     try {
-      // Fetch language details
       const langDocRef = doc(db, 'colleges', userProfile.collegeId, 'languages', languageId);
       const langSnap = await getDoc(langDocRef);
       if (!langSnap.exists()) {
@@ -47,12 +45,12 @@ export default function StudentLanguageTestsPage() {
       const langData = { id: langSnap.id, ...langSnap.data() } as ProgrammingLanguage;
       setLanguage(langData);
 
-      // Fetch published tests for this language
+      // Fetch all published tests (admin and faculty) for this language
       const testsRef = collection(db, 'colleges', userProfile.collegeId, 'languages', languageId, 'tests');
       const q = query(testsRef, where('status', '==', 'published'), orderBy('createdAt', 'desc'));
       const testsSnap = await getDocs(q);
       const fetchedTests = testsSnap.docs.map(docSnap => ({ id: docSnap.id, ...docSnap.data() } as OnlineTest));
-      setTests(fetchedTests);
+      setAllTests(fetchedTests);
 
       if (fetchedTests.length === 0) {
         toast({ title: "No Tests Available", description: `There are currently no published tests for ${langData.name}.`, variant: "default", duration: 5000 });
@@ -67,13 +65,60 @@ export default function StudentLanguageTestsPage() {
   }, [userProfile?.collegeId, languageId, toast, router, authLoading]);
 
   useEffect(() => {
-    if (!authLoading && userProfile) { // Ensure userProfile is loaded before fetching
-        fetchLanguageAndTests();
+    if (!authLoading && userProfile) {
+      fetchLanguageAndTests();
     } else if (!authLoading && !userProfile) {
-        // Handle case where user is not logged in but tries to access page
-        router.push('/login');
+      router.push('/login');
     }
   }, [authLoading, userProfile, fetchLanguageAndTests, router]);
+  
+  const handleRequestEnrollment = async (test: OnlineTest) => {
+    if (!userProfile || !test.facultyId || !test.id) { // Only for faculty created tests
+        toast({title: "Error", description: "Cannot request enrollment. Missing details.", variant: "destructive"});
+        return;
+    }
+    setIsRequestingEnrollment(prev => ({ ...prev, [test.id]: true }));
+
+    const testDocRef = doc(db, 'colleges', userProfile.collegeId!, 'languages', languageId, 'tests', test.id);
+    const newRequest: EnrollmentRequest = {
+        studentUid: userProfile.uid,
+        studentName: userProfile.fullName,
+        studentEmail: userProfile.email || undefined,
+        requestedAt: serverTimestamp() as FieldValue,
+        status: 'pending',
+    };
+
+    try {
+        await updateDoc(testDocRef, {
+            enrollmentRequests: arrayUnion(newRequest),
+            updatedAt: serverTimestamp()
+        });
+        // Optimistically update local state
+        setAllTests(prevTests => prevTests.map(t => 
+            t.id === test.id 
+            ? { ...t, enrollmentRequests: [...(t.enrollmentRequests || []), newRequest] } 
+            : t
+        ));
+        toast({ title: "Enrollment Requested", description: `Your request to enroll in "${test.title}" has been sent.` });
+    } catch (error) {
+        console.error("Error requesting enrollment:", error);
+        toast({ title: "Error", description: "Failed to request enrollment.", variant: "destructive" });
+    } finally {
+        setIsRequestingEnrollment(prev => ({ ...prev, [test.id]: false }));
+    }
+  };
+
+  const getStudentEnrollmentStatus = (test: OnlineTest): { status: 'not_enrolled' | 'pending' | 'approved' | 'rejected', message?: string } => {
+    if (!userProfile) return { status: 'not_enrolled' };
+    if (test.approvedStudentUids?.includes(userProfile.uid)) return { status: 'approved' };
+    
+    const request = test.enrollmentRequests?.find(req => req.studentUid === userProfile.uid);
+    if (request) {
+        if (request.status === 'pending') return { status: 'pending' };
+        if (request.status === 'rejected') return { status: 'rejected', message: request.rejectionReason || "Your enrollment request was not approved." };
+    }
+    return { status: 'not_enrolled' };
+  };
 
 
   if (authLoading || isLoadingPageData) {
@@ -97,11 +142,6 @@ export default function StudentLanguageTestsPage() {
     );
   }
   
-  // Check if student is enrolled in this language
-  // This is a basic check. For more robust security, you might check enrollment status from Firestore `users/{uid}/enrolledLanguages`.
-  // However, since navigation to this page comes from an enrolled language card, this might be sufficient for UX.
-  // For now, we assume if they reached this page, they are likely enrolled.
-
   return (
     <div className="container mx-auto py-8 space-y-6">
       <div className="flex justify-between items-center">
@@ -116,55 +156,64 @@ export default function StudentLanguageTestsPage() {
         </Button>
       </div>
 
-      {tests.length === 0 ? (
+      {allTests.length === 0 ? (
         <Card className="shadow-lg">
-          <CardHeader>
-            <CardTitle className="flex items-center"><AlertTriangle className="w-6 h-6 mr-2 text-amber-500"/>No Published Tests</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p className="text-muted-foreground">
-              There are currently no published tests available for {language.name}. 
-              Please check back later or contact your instructor.
-            </p>
-          </CardContent>
+          <CardHeader><CardTitle className="flex items-center"><AlertTriangle className="w-6 h-6 mr-2 text-amber-500"/>No Published Tests</CardTitle></CardHeader>
+          <CardContent><p className="text-muted-foreground">There are currently no published tests available for {language.name}.</p></CardContent>
         </Card>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {tests.map((test) => (
-            <Card key={test.id} className="shadow-md hover:shadow-lg transition-shadow flex flex-col">
-              <CardHeader>
-                <CardTitle className="text-xl font-semibold flex items-center">
-                  <FileText className="w-6 h-6 mr-2 text-primary" />
-                  {test.title}
-                </CardTitle>
-                {test.description && (
-                  <CardDescription className="text-sm mt-1 line-clamp-2">{test.description}</CardDescription>
-                )}
-              </CardHeader>
-              <CardContent className="space-y-3 flex-grow">
-                <div className="flex items-center text-sm text-muted-foreground">
-                  <Clock className="w-4 h-4 mr-2" />
-                  Duration: {test.durationMinutes} minutes
-                </div>
-                <div className="flex items-center text-sm text-muted-foreground">
-                  <BarChart className="w-4 h-4 mr-2" />
-                   Questions: {test.questionsSnapshot.length}
-                </div>
-                <div className="flex items-center text-sm text-muted-foreground">
-                  <Percent className="w-4 h-4 mr-2" />
-                  Total Score: {test.totalScore}
-                </div>
-              </CardContent>
-              <CardFooter>
-                <Button className="w-full" disabled> {/* Placeholder for now */}
-                  Start Test (Coming Soon)
-                </Button>
-                {/* <Button asChild className="w-full"> 
-                  <Link href={`/student/tests/${test.id}/attempt`}>Start Test</Link>
-                </Button> */}
-              </CardFooter>
-            </Card>
-          ))}
+          {allTests.map((test) => {
+            const enrollmentInfo = getStudentEnrollmentStatus(test);
+            const facultyName = test.isFacultyCreated ? "Faculty Test" : "Admin Test"; // Placeholder
+            return (
+              <Card key={test.id} className="shadow-md hover:shadow-lg transition-shadow flex flex-col">
+                <CardHeader>
+                  <CardTitle className="text-xl font-semibold flex items-center">
+                    <FileText className="w-6 h-6 mr-2 text-primary" />{test.title}
+                  </CardTitle>
+                  <CardDescription className="text-xs mt-1">
+                    {test.isFacultyCreated ? `Created by Faculty` : `Created by Admin`}
+                  </CardDescription>
+                  {test.description && (<CardDescription className="text-sm mt-1 line-clamp-2">{test.description}</CardDescription>)}
+                </CardHeader>
+                <CardContent className="space-y-3 flex-grow">
+                  <div className="flex items-center text-sm text-muted-foreground"><Clock className="w-4 h-4 mr-2" />Duration: {test.durationMinutes} minutes</div>
+                  <div className="flex items-center text-sm text-muted-foreground"><BarChart className="w-4 h-4 mr-2" />Questions: {test.questionsSnapshot.length}</div>
+                  <div className="flex items-center text-sm text-muted-foreground"><Percent className="w-4 h-4 mr-2" />Total Score: {test.totalScore}</div>
+                </CardContent>
+                <CardFooter className="flex flex-col items-stretch gap-2">
+                   {test.isFacultyCreated && (
+                    <>
+                        {enrollmentInfo.status === 'not_enrolled' && (
+                            <Button className="w-full" onClick={() => handleRequestEnrollment(test)} disabled={isRequestingEnrollment[test.id]}>
+                                {isRequestingEnrollment[test.id] && <Loader2 className="mr-2 h-4 w-4 animate-spin"/>} <Send className="mr-2 h-4 w-4"/> Request Enrollment
+                            </Button>
+                        )}
+                        {enrollmentInfo.status === 'pending' && (
+                            <Button className="w-full" variant="secondary" disabled><Hourglass className="mr-2 h-4 w-4"/> Enrollment Pending</Button>
+                        )}
+                        {enrollmentInfo.status === 'approved' && (
+                             <Button className="w-full" disabled> <CheckCircle className="mr-2 h-4 w-4"/> Start Test (Coming Soon)</Button>
+                            // <Button asChild className="w-full"><Link href={`/student/tests/${test.id}/attempt`}>Start Test</Link></Button>
+                        )}
+                        {enrollmentInfo.status === 'rejected' && (
+                            <div className="w-full p-2 text-center text-sm bg-destructive/10 text-destructive rounded-md">
+                                <XCircle className="inline h-4 w-4 mr-1 mb-0.5"/> Enrollment Rejected.
+                                {enrollmentInfo.message && <p className="text-xs mt-0.5">{enrollmentInfo.message}</p>}
+                                {/* Consider adding a "Request Again" button with cooldown */}
+                            </div>
+                        )}
+                    </>
+                   )}
+                   {!test.isFacultyCreated && ( // Admin created tests are directly accessible (assuming)
+                       <Button className="w-full" disabled>Start Test (Coming Soon)</Button>
+                       // <Button asChild className="w-full"><Link href={`/student/tests/${test.id}/attempt`}>Start Test</Link></Button>
+                   )}
+                </CardFooter>
+              </Card>
+            );
+          })}
         </div>
       )}
     </div>

@@ -27,41 +27,40 @@ export interface UserProfile {
   email: string | null;
   fullName: string;
   role: UserRole;
-  collegeName?: string; // For admins, students (derived), faculty (derived)
-  registrationNumber?: string; // For students
-  collegeId?: string; // For students, admins, and faculty, linking to a college
+  collegeName?: string;
+  registrationNumber?: string;
+  collegeId?: string;
   phoneNumber?: string;
   isEmailVerified: boolean;
-  managedLanguageIds?: string[]; // For faculty: Array of language IDs they manage
+  managedLanguageIds?: string[];
 }
 
 export interface College {
   id: string;
   name: string;
   adminEmail: string;
+  hasUnreadFeedback?: boolean;
 }
 
 export interface ProgrammingLanguage {
   id: string;
   name: string;
   description?: string;
-  iconName?: string; // To store the name of a Lucide icon
+  iconName?: string;
   createdAt: Timestamp | FieldValue;
-  // isPlacementCourse?: boolean; // Future: more robust way to identify placement courses
 }
 
 export interface TestCase {
   input: string;
   expectedOutput: string;
-  // score?: number; // Future consideration
 }
 
 export type QuestionDifficulty = 'easy' | 'medium' | 'hard';
 
 export interface Question {
   id: string;
-  languageId: string; // The ID of the ProgrammingLanguage
-  languageName: string; // Name of the language, denormalized for easier display
+  languageId: string;
+  languageName: string;
   questionText: string;
   difficulty: QuestionDifficulty;
   maxScore: number;
@@ -75,6 +74,19 @@ export interface Question {
 
 export type OnlineTestStatus = 'draft' | 'published' | 'archived';
 
+export type EnrollmentRequestStatus = 'pending' | 'approved' | 'rejected';
+
+export interface EnrollmentRequest {
+  studentUid: string;
+  studentName: string;
+  studentEmail?: string; // Optional, can be fetched if needed
+  requestedAt: Timestamp | FieldValue;
+  status: EnrollmentRequestStatus;
+  rejectionReason?: string; // Optional reason if faculty rejects
+  processedBy?: string; // UID of faculty who processed
+  processedAt?: Timestamp | FieldValue;
+}
+
 export interface OnlineTest {
   id: string;
   languageId: string;
@@ -83,13 +95,17 @@ export interface OnlineTest {
   description?: string;
   durationMinutes: number;
   questionIds: string[];
-  questionsSnapshot: Pick<Question, 'id' | 'questionText' | 'difficulty' | 'maxScore'>[]; // Store a snapshot of key question details
+  questionsSnapshot: Pick<Question, 'id' | 'questionText' | 'difficulty' | 'maxScore'>[];
   totalScore: number;
   status: OnlineTestStatus;
-  scheduledAt?: Timestamp; // Optional: for future scheduling
+  scheduledAt?: Timestamp;
   createdAt: Timestamp | FieldValue;
   updatedAt: Timestamp | FieldValue;
-  createdBy: string; // UID of the admin who created it
+  createdBy: string; // UID of the admin or faculty who created it
+  isFacultyCreated?: boolean; // True if created by faculty
+  facultyId?: string; // UID of faculty if isFacultyCreated is true
+  enrollmentRequests?: EnrollmentRequest[]; // Array of enrollment requests
+  approvedStudentUids?: string[]; // Array of UIDs of students approved for this test
 }
 
 
@@ -103,8 +119,8 @@ export interface EnrolledLanguageProgress {
     [questionId: string]: {
       scoreAchieved: number;
       completedAt: Timestamp | FieldValue;
-      submittedCode: string; // Store the successfully submitted code
-      solvedWithLanguage?: string; // For placement questions, store the language used
+      submittedCode: string;
+      solvedWithLanguage?: string;
     };
   };
 }
@@ -115,12 +131,20 @@ export interface SavedProgram {
   title: string;
   code: string;
   languageName: string;
-  languageId: string; // Store ID of the language for consistency
-  iconName?: string; // Store icon for display in list
-  lastInput?: string; // Store last used sample input
-  createdAt: Timestamp | FieldValue | Date; // Date for client-side sorting
-  updatedAt: Timestamp | FieldValue | Date; // Date for client-side sorting
+  languageId: string;
+  iconName?: string;
+  lastInput?: string;
+  createdAt: Timestamp | FieldValue | Date;
+  updatedAt: Timestamp | FieldValue | Date;
 }
-    
 
-    
+export interface Feedback {
+  id: string;
+  studentUid: string;
+  studentName: string;
+  studentEmail: string;
+  collegeId: string;
+  feedbackText: string;
+  createdAt: Timestamp | FieldValue;
+  isRead: boolean;
+}

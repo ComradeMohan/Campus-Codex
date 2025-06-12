@@ -5,7 +5,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { UserCog, Mail, Building, Phone, KeyRound, Mailbox } from 'lucide-react';
+import { UserCog, Mail, Building, Phone, KeyRound, Mailbox, Users } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
@@ -57,16 +57,17 @@ export default function AdminProfilePage() {
             </div>
           </CardHeader>
           <CardContent className="space-y-4">
-            {[...Array(4)].map((_, i) => ( // Increased to 4 for new button placeholder
+            {[...Array(5)].map((_, i) => ( // Increased for new button placeholder
               <div key={i} className="flex items-center space-x-3">
                 <Skeleton className="h-5 w-5" />
                 <Skeleton className="h-4 w-2/3" />
               </div>
             ))}
           </CardContent>
-           <CardFooter>
+           <CardFooter className="flex flex-wrap gap-3">
             <Skeleton className="h-10 w-32" />
-            <Skeleton className="h-10 w-32 ml-2" />
+            <Skeleton className="h-10 w-32" />
+            <Skeleton className="h-10 w-32" />
           </CardFooter>
         </Card>
       </div>
@@ -101,7 +102,7 @@ export default function AdminProfilePage() {
         </Button>
       </div>
       <Card className="shadow-lg">
-        <CardHeader className="bg-muted/30">
+        <CardHeader className="bg-gradient-to-br from-primary/5 via-background to-accent/5 dark:from-primary/10 dark:via-background dark:to-accent/10">
           <div className="flex flex-col sm:flex-row items-center space-y-4 sm:space-y-0 sm:space-x-6">
             <Avatar className="h-24 w-24 text-3xl">
               <AvatarImage src={undefined} alt={userProfile.fullName} />
@@ -157,6 +158,14 @@ export default function AdminProfilePage() {
                       {unreadFeedbackCount}
                     </Badge>
                   )}
+                </Link>
+              </Button>
+            )}
+            {userProfile.role === 'admin' && (
+              <Button asChild variant="outline">
+                <Link href="/admin/users" className="flex items-center gap-2">
+                  <Users className="h-4 w-4" />
+                  Manage Users
                 </Link>
               </Button>
             )}

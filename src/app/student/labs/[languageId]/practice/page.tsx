@@ -1,7 +1,7 @@
 
 'use client';
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import Link from 'next/link';
 import { useParams, useRouter } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContext';
@@ -16,8 +16,11 @@ import { useToast } from '@/hooks/use-toast';
 import { Progress } from '@/components/ui/progress';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Label } from '@/components/ui/label';
-import { Loader2, ArrowLeft, Lightbulb, Terminal, ChevronLeft, ChevronRight, BookOpen, CheckCircle, XCircle, AlertTriangle, Tag, Star, Play, CheckSquare, Briefcase, PackageSearch } from 'lucide-react';
+import { Loader2, ArrowLeft, Lightbulb, Terminal, ChevronLeft, ChevronRight, BookOpen, CheckCircle, XCircle, AlertTriangle, Tag, Star, Play, CheckSquare, Briefcase, PackageSearch, MessageCircleQuestion, Sparkles } from 'lucide-react';
 import type { ProgrammingLanguage, Question as QuestionType, QuestionDifficulty, EnrolledLanguageProgress } from '@/types';
+import { LabAIChatAssistant } from '@/components/student/LabAIChatAssistant';
+import { useIsMobile } from '@/hooks/use-mobile';
+
 
 interface TestCaseResult {
   testCaseNumber: number | string;
@@ -28,32 +31,36 @@ interface TestCaseResult {
   error?: string;
 }
 
-const PLACEMENTS_COURSE_NAME = "Placements"; // Define a constant for "Placements"
+const PLACEMENTS_COURSE_NAME = "Placements";
 
 export default function StudentPracticePage() {
   const { userProfile, loading: authLoading } = useAuth();
   const params = useParams();
   const router = useRouter();
   const { toast } = useToast();
+  const isMobile = useIsMobile();
 
   const languageId = params.languageId as string;
 
-  const [language, setLanguage] = useState<ProgrammingLanguage | null>(null); // The current lab/course (could be "Placements")
+  const [language, setLanguage] = useState<ProgrammingLanguage | null>(null);
   const [questions, setQuestions] = useState<QuestionType[]>([]);
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
-  const [studentCode, setStudentCode] = useState('');
+  const studentCodeRef = useRef(''); // Use ref for editor content to pass to AI
+  const [editorDisplayCode, setEditorDisplayCode] = useState(''); // For editor controlled component
+
   const [output, setOutput] = useState('');
   const [testResults, setTestResults] = useState<TestCaseResult[]>([]);
   const [enrollmentProgress, setEnrollmentProgress] = useState<EnrolledLanguageProgress | null>(null);
   const [totalPossibleLanguageScore, setTotalPossibleLanguageScore] = useState(0);
 
-  const [allStudentEnrolledLanguages, setAllStudentEnrolledLanguages] = useState<ProgrammingLanguage[]>([]); // All languages student is enrolled in
-  const [selectedSolveLanguage, setSelectedSolveLanguage] = useState<ProgrammingLanguage | null>(null); // Language selected by student for solving placement Qs
+  const [allStudentEnrolledLanguages, setAllStudentEnrolledLanguages] = useState<ProgrammingLanguage[]>([]);
+  const [selectedSolveLanguage, setSelectedSolveLanguage] = useState<ProgrammingLanguage | null>(null);
 
   const [isLoadingPageData, setIsLoadingPageData] = useState(true);
   const [isExecutingCode, setIsExecutingCode] = useState(false);
   const [executionError, setExecutionError] = useState<string | null>(null);
   const [compileError, setCompileError] = useState<string | null>(null);
+  const [isAIChatOpen, setIsAIChatOpen] = useState(false);
 
 
   const fetchLanguageAndQuestions = useCallback(async () => {
@@ -110,14 +117,13 @@ export default function StudentPracticePage() {
         setEnrollmentProgress(null);
       }
 
-      // If this is the Placements course, fetch all other enrolled languages for the dropdown
       if (langData.name === PLACEMENTS_COURSE_NAME) {
         const enrolledLangsRef = collection(db, 'users', userProfile.uid, 'enrolledLanguages');
         const enrolledLangsSnap = await getDocs(enrolledLangsRef);
         const studentLangs: ProgrammingLanguage[] = [];
         
         for (const elDoc of enrolledLangsSnap.docs) {
-          if (elDoc.id === languageId) continue; // Skip "Placements" itself
+          if (elDoc.id === languageId) continue; 
 
           const actualLangDocRef = doc(db, 'colleges', userProfile.collegeId, 'languages', elDoc.id);
           const actualLangSnap = await getDoc(actualLangDocRef);
@@ -127,13 +133,11 @@ export default function StudentPracticePage() {
         }
         setAllStudentEnrolledLanguages(studentLangs.sort((a,b) => a.name.localeCompare(b.name)));
         if (studentLangs.length > 0) {
-          setSelectedSolveLanguage(studentLangs[0]); // Default to first enrolled language
+          setSelectedSolveLanguage(studentLangs[0]); 
         } else {
           setSelectedSolveLanguage(null);
         }
       }
-
-
     } catch (error) {
       console.error("Error fetching course/questions/progress:", error);
       toast({ title: "Error", description: "Failed to load course data or your progress.", variant: "destructive" });
@@ -148,7 +152,6 @@ export default function StudentPracticePage() {
     }
   }, [authLoading, userProfile, fetchLanguageAndQuestions]);
 
-  // Determine the language to use for the editor and execution
   const languageForEditorAndExecution = language?.name === PLACEMENTS_COURSE_NAME 
                                         ? selectedSolveLanguage 
                                         : language;
@@ -163,11 +166,9 @@ export default function StudentPracticePage() {
       const completedQuestionData = enrollmentProgress?.completedQuestions?.[currentQ.id];
       
       let savedCode = completedQuestionData?.submittedCode;
-      // For placements, if the saved code was for a different language, don't use it.
       if (isPlacementCourse && completedQuestionData && completedQuestionData.solvedWithLanguage !== selectedSolveLanguage?.name) {
-          savedCode = undefined; // Reset if different language selected now
+          savedCode = undefined;
       }
-
 
       if (savedCode) {
         initialCode = savedCode;
@@ -182,13 +183,16 @@ export default function StudentPracticePage() {
              initialCode += `// Code for ${languageForEditorAndExecution.name}\n`;
         }
       }
-      setStudentCode(initialCode);
+      studentCodeRef.current = initialCode;
+      setEditorDisplayCode(initialCode);
       setOutput('');
       setTestResults([]);
       setExecutionError(null);
       setCompileError(null);
     } else if (language && questions.length === 0 && !isLoadingPageData) {
-      setStudentCode(`// No questions available for ${language.name} yet.\n`);
+      const defaultNoQCode = `// No questions available for ${language.name} yet.\n`;
+      studentCodeRef.current = defaultNoQCode;
+      setEditorDisplayCode(defaultNoQCode);
       setOutput('');
       setTestResults([]);
       setExecutionError(null);
@@ -196,6 +200,11 @@ export default function StudentPracticePage() {
     }
   }, [currentQuestionIndex, questions, language, languageForEditorAndExecution, isLoadingPageData, enrollmentProgress, selectedSolveLanguage]);
 
+  const handleEditorChange = (code: string | undefined) => {
+    studentCodeRef.current = code || '';
+    setEditorDisplayCode(code || '');
+  };
+  const getCurrentCodeForAI = () => studentCodeRef.current;
 
   const currentQuestion = questions[currentQuestionIndex];
 
@@ -212,8 +221,8 @@ export default function StudentPracticePage() {
 
     try {
         const payload: any = {
-            language: languageForEditorAndExecution.name, // Use the selected/current language
-            code: studentCode,
+            language: languageForEditorAndExecution.name,
+            code: studentCodeRef.current,
             executionType: executionType,
         };
 
@@ -253,11 +262,10 @@ export default function StudentPracticePage() {
           }
         }
 
-
         if (executionType === 'submit' && !result.compileError && !result.executionError) {
             const allPassed = result.testCaseResults?.every((tc: TestCaseResult) => tc.passed);
             if (result.testCaseResults?.length > 0) {
-                const enrollmentRef = doc(db, 'users', userProfile.uid, 'enrolledLanguages', languageId); // Score is for the "Placements" course itself
+                const enrollmentRef = doc(db, 'users', userProfile.uid, 'enrolledLanguages', languageId);
                 const enrollmentSnap = await getDoc(enrollmentRef);
 
                 if (enrollmentSnap.exists()) {
@@ -272,7 +280,7 @@ export default function StudentPracticePage() {
 
                     if (allPassed) {
                         const updates: { [key: string]: any } = {
-                             [`completedQuestions.${currentQuestion.id}.submittedCode`]: studentCode,
+                             [`completedQuestions.${currentQuestion.id}.submittedCode`]: studentCodeRef.current,
                              [`completedQuestions.${currentQuestion.id}.completedAt`]: serverTimestamp(),
                         };
                         if (language?.name === PLACEMENTS_COURSE_NAME && selectedSolveLanguage) {
@@ -292,7 +300,7 @@ export default function StudentPracticePage() {
                             const newCompletedQuestionsData: any = {
                                 scoreAchieved: updates[`completedQuestions.${currentQuestion.id}.scoreAchieved`],
                                 completedAt: serverTimestamp() as FieldValue, 
-                                submittedCode: studentCode,
+                                submittedCode: studentCodeRef.current,
                             };
                             if (language?.name === PLACEMENTS_COURSE_NAME && selectedSolveLanguage) {
                                 newCompletedQuestionsData.solvedWithLanguage = selectedSolveLanguage.name;
@@ -310,7 +318,6 @@ export default function StudentPracticePage() {
                             };
                             return newProgress;
                         });
-
 
                         if (isNewCompletion) {
                             toast({
@@ -347,7 +354,6 @@ export default function StudentPracticePage() {
                 });
             }
         }
-
     } catch (error: any) {
         console.error(`Error ${executionType}ing code:`, error);
         const errorMessage = error.message || `Failed to ${executionType} code.`;
@@ -391,6 +397,14 @@ export default function StudentPracticePage() {
     }
   };
 
+  const toggleAIChat = () => {
+    if (isMobile) {
+        toast({title: "AI Assistant", description: "AI Assistant is best viewed on larger screens.", variant: "default"});
+        return;
+    }
+    setIsAIChatOpen(prev => !prev);
+  };
+
   if (authLoading || (isLoadingPageData && !language)) {
     return (
       <div className="container mx-auto py-8 flex flex-col items-center justify-center min-h-[calc(100vh-10rem)]">
@@ -419,16 +433,23 @@ export default function StudentPracticePage() {
 
   return (
     <div className="container mx-auto py-4 md:py-8 space-y-6">
-      <div className="flex justify-between items-center">
+      <div className="flex justify-between items-center flex-wrap gap-2">
         <h1 className="text-2xl md:text-3xl font-headline flex items-center">
           {isPlacementCourse ? <Briefcase className="w-7 h-7 md:w-8 md:h-8 mr-2 md:mr-3 text-primary" /> : <BookOpen className="w-7 h-7 md:w-8 md:h-8 mr-2 md:mr-3 text-primary" />}
           Practice: {language?.name || 'Course'}
         </h1>
-        <Button asChild variant="outline" size="sm">
-          <Link href="/student/labs" className="flex items-center gap-2">
-            <ArrowLeft className="h-4 w-4" /> Back to Labs
-          </Link>
-        </Button>
+        <div className="flex items-center gap-2">
+            {!isMobile && currentQuestion && languageForEditorAndExecution && (
+                <Button variant="outline" size="sm" onClick={toggleAIChat} className="text-xs h-8">
+                   <Sparkles className="h-3.5 w-3.5 md:h-4 md:w-4 mr-1.5" /> AI Assistant
+                </Button>
+            )}
+            <Button asChild variant="outline" size="sm">
+            <Link href="/student/labs" className="flex items-center gap-2">
+                <ArrowLeft className="h-4 w-4" /> Back to Labs
+            </Link>
+            </Button>
+        </div>
       </div>
 
       {language && enrollmentProgress && totalPossibleLanguageScore > 0 && (
@@ -560,8 +581,8 @@ export default function StudentPracticePage() {
               <CardContent className="py-0 px-0 md:p-0 h-[40vh] md:h-[50vh] lg:h-[500px]">
                 <MonacoCodeEditor
                   language={languageForEditorAndExecution.name}
-                  value={studentCode}
-                  onChange={(code) => setStudentCode(code || '')}
+                  value={editorDisplayCode}
+                  onChange={handleEditorChange}
                   height="100%"
                   options={{ readOnly: isExecutingCode || (isPlacementCourse && allStudentEnrolledLanguages.length === 0), minimap: { enabled: false } }}
                 />
@@ -616,12 +637,12 @@ export default function StudentPracticePage() {
                   </div>
                 )}
                  <div className="mt-4 flex flex-col sm:flex-row gap-2">
-                    <Button onClick={handleRunSample} disabled={isExecutingCode || !studentCode.trim() || (isPlacementCourse && allStudentEnrolledLanguages.length === 0)} className="flex-1 text-xs md:text-sm h-9 md:h-10" variant="outline">
+                    <Button onClick={handleRunSample} disabled={isExecutingCode || !editorDisplayCode.trim() || (isPlacementCourse && allStudentEnrolledLanguages.length === 0)} className="flex-1 text-xs md:text-sm h-9 md:h-10" variant="outline">
                     {isExecutingCode && <Loader2 className="mr-2 h-3.5 w-3.5 md:h-4 md:w-4 animate-spin" />}
                     <Play className="mr-2 h-3.5 w-3.5 md:h-4 md:w-4" />
                     Run with Sample
                     </Button>
-                    <Button onClick={handleSubmitTestCases} disabled={isExecutingCode || !studentCode.trim() || (isPlacementCourse && allStudentEnrolledLanguages.length === 0)} className="flex-1 text-xs md:text-sm h-9 md:h-10">
+                    <Button onClick={handleSubmitTestCases} disabled={isExecutingCode || !editorDisplayCode.trim() || (isPlacementCourse && allStudentEnrolledLanguages.length === 0)} className="flex-1 text-xs md:text-sm h-9 md:h-10">
                     {isExecutingCode && <Loader2 className="mr-2 h-3.5 w-3.5 md:h-4 md:w-4 animate-spin" />}
                     <CheckSquare className="mr-2 h-3.5 w-3.5 md:h-4 md:w-4" />
                     Submit & Test All
@@ -630,15 +651,22 @@ export default function StudentPracticePage() {
               </CardContent>
             </Card>
           </div>
+            {languageForEditorAndExecution && currentQuestion && !isMobile && (
+                <LabAIChatAssistant
+                isOpen={isAIChatOpen}
+                onToggle={toggleAIChat}
+                currentLanguageName={languageForEditorAndExecution.name}
+                currentQuestionText={currentQuestion.questionText}
+                getCurrentCodeSnippet={getCurrentCodeForAI}
+                />
+            )}
         </>
       ) : (
         <div className="text-center py-10">
-            <Loader2 className="h-10 w-10 md:h-12 md:w-12 animate-spin text-primary mx-auto mb-4" />
+            <Loader2 className="h-10 w-10 md:h-12 md:h-12 animate-spin text-primary mx-auto mb-4" />
             <p className="text-muted-foreground">Loading question content...</p>
         </div>
       )}
     </div>
   );
 }
-
-    
