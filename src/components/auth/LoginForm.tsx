@@ -133,58 +133,58 @@ export function LoginForm() {
       const userDocRef = doc(db, 'users', user.uid);
       const userDocSnap = await getDoc(userDocRef);
 
+      // Priority check for faculty: if Firestore profile exists and role is faculty, log them in.
+      // This relies on admin setting `isEmailVerified: true` in Firestore for faculty.
       if (userDocSnap.exists()) {
-        const userProfile = userDocSnap.data() as UserProfile;
-
-        // Faculty can log in even if Firebase Auth emailVerified is false,
-        // because admin sets isEmailVerified: true in their Firestore profile.
-        if (userProfile.role === 'faculty') {
+        const userProfileData = userDocSnap.data() as UserProfile;
+        if (userProfileData.role === 'faculty') {
           await refreshUserProfile();
           router.push('/faculty/dashboard');
-          toast({ title: 'Login Successful', description: 'Welcome back!' });
+          toast({ title: 'Login Successful', description: 'Welcome to your faculty dashboard!' });
           setIsLoading(false);
           return;
         }
-        
-        // For other roles (e.g., student), check Firebase Auth emailVerified status
-        if (!user.emailVerified) {
-          try {
-            await sendEmailVerification(user);
-            toast({
-              title: 'Email Not Verified',
-              description: 'Your email is not verified. A new verification link has been sent. Please check your email and verify to log in.',
-              variant: 'destructive',
-              duration: 7000,
-            });
-          } catch (verificationError) {
-             console.error('Error resending verification email:', verificationError);
-             toast({
-              title: 'Email Not Verified',
-              description: 'Please verify your email to log in. Could not resend verification email at this time.',
-              variant: 'destructive',
-              duration: 7000,
-            });
-          }
-          setIsLoading(false);
-          return; // Stop login process
+      }
+
+      // If not faculty (or Firestore profile doesn't exist yet), check Firebase Auth emailVerified status.
+      if (!user.emailVerified) {
+        try {
+          await sendEmailVerification(user);
+          toast({
+            title: 'Email Not Verified',
+            description: 'Your email is not yet verified. A new verification link has been sent. Please check your email and verify to log in.',
+            variant: 'destructive',
+            duration: 7000,
+          });
+        } catch (verificationError) {
+           console.error('Error resending verification email:', verificationError);
+           toast({
+            title: 'Email Not Verified',
+            description: 'Please verify your email to log in. Could not resend verification email at this time.',
+            variant: 'destructive',
+            duration: 7000,
+          });
         }
-        
-        // If email is verified (for non-faculty) or if faculty (already handled)
+        setIsLoading(false);
+        return; // Stop login process for unverified non-faculty
+      }
+      
+      // If email is verified by Firebase Auth, and user is not faculty:
+      if (userDocSnap.exists()) {
+        const userProfile = userDocSnap.data() as UserProfile; // role will not be 'faculty' here
         await refreshUserProfile(); 
         if (userProfile.role === 'admin') {
           router.push('/admin/dashboard');
         } else if (userProfile.role === 'student') {
           router.push('/student/labs');
-        }
-         else {
-          // Fallback for any other roles, though faculty already handled
+        } else {
+          // Fallback for any other roles (should not happen if roles are well-defined)
           router.push('/'); 
         }
         toast({ title: 'Login Successful', description: 'Welcome back!' });
-
       } else {
-        // This case should ideally not happen if registration is done correctly
-        // where a Firestore profile is always created.
+        // Email is verified by Firebase Auth, but no Firestore profile exists.
+        // This is an edge case, e.g., registration process was interrupted.
         toast({
           title: 'Login Error',
           description: 'User profile not found in our records. Please ensure you have completed registration or contact support.',
