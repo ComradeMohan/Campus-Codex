@@ -11,31 +11,26 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
-import { Loader2, ArrowLeft, BookOpen, AlertTriangle, FileText, ClipboardList, Tag, Star, Users2, PlayCircle, LinkIcon, ExternalLink, Eye, EyeOff, XCircle } from 'lucide-react';
-import type { ProgrammingLanguage, Course, Question as QuestionType, QuestionDifficulty } from '@/types';
+import { Loader2, ArrowLeft, BookOpen, AlertTriangle, FileText, ClipboardList, Tag, Star, Users2, PlayCircle, LinkIcon, ExternalLink, Eye, XCircle, FileText as FileTextIcon } from 'lucide-react';
+import type { ProgrammingLanguage, Course, Question as QuestionType, QuestionDifficulty, CourseMaterial } from '@/types';
 
 // Helper function to transform Google Drive links
 const transformGoogleDriveLink = (url: string): string | null => {
     if (!url) return null;
 
-    // Common Google Drive file link: drive.google.com/file/d/FILE_ID/view?usp=sharing or /edit?usp=sharing etc.
     const fileIdMatch = url.match(/drive\.google\.com\/file\/d\/([a-zA-Z0-9_-]+)/);
     if (fileIdMatch && fileIdMatch[1]) {
       return `https://drive.google.com/file/d/${fileIdMatch[1]}/preview#toolbar=0&navpanes=0`;
     }
 
-    // Common Google Drive open link: drive.google.com/open?id=FILE_ID
     const openIdMatch = url.match(/drive\.google\.com\/open\?id=([a-zA-Z0-9_-]+)/);
     if (openIdMatch && openIdMatch[1]) {
       return `https://drive.google.com/file/d/${openIdMatch[1]}/preview#toolbar=0&navpanes=0`;
     }
     
-    // Direct PDF link
     if (url.toLowerCase().endsWith('.pdf')) {
-        return url; // For direct PDF links, we can't easily control toolbar.
+        return url; 
     }
-
-    // If not a recognized Google Drive file link or direct PDF, might not be embeddable reliably
     return null; 
 };
 
@@ -55,7 +50,10 @@ export default function StudentCourseViewPage() {
   const [assignedQuestions, setAssignedQuestions] = useState<QuestionType[]>([]);
   const [isLoadingPageData, setIsLoadingPageData] = useState(true);
   const [isEnrolledInCourse, setIsEnrolledInCourse] = useState(false);
-  const [showPdfViewer, setShowPdfViewer] = useState(false);
+  
+  const [currentViewingMaterial, setCurrentViewingMaterial] = useState<CourseMaterial | null>(null);
+  const [embeddableMaterialUrl, setEmbeddableMaterialUrl] = useState<string | null>(null);
+
 
   const fetchCourseDetails = useCallback(async () => {
     if (!userProfile?.collegeId || !courseId || !languageId) {
@@ -94,12 +92,10 @@ export default function StudentCourseViewPage() {
 
       if (courseData.assignedQuestionIds && courseData.assignedQuestionIds.length > 0) {
         const questionsRef = collection(db, 'colleges', userProfile.collegeId, 'languages', languageId, 'questions');
-        // Ensure courseData.assignedQuestionIds is not empty before using 'in' query
         if (courseData.assignedQuestionIds.length > 0) {
           const questionsQuery = query(questionsRef, where(documentId(), 'in', courseData.assignedQuestionIds));
           const questionsSnapshot = await getDocs(questionsQuery);
           const fetchedQuestions = questionsSnapshot.docs.map(qDoc => ({ id: qDoc.id, ...qDoc.data() } as QuestionType));
-          
           const orderedQuestions = courseData.assignedQuestionIds.map(id => fetchedQuestions.find(q => q.id === id)).filter(Boolean) as QuestionType[];
           setAssignedQuestions(orderedQuestions);
         } else {
@@ -130,6 +126,17 @@ export default function StudentCourseViewPage() {
       router.push('/login');
     }
   }, [authLoading, userProfile, fetchCourseDetails, router, languageId, toast]);
+
+  const handleViewMaterial = (material: CourseMaterial) => {
+    const transformedUrl = transformGoogleDriveLink(material.url);
+    setEmbeddableMaterialUrl(transformedUrl);
+    setCurrentViewingMaterial(material);
+  };
+
+  const handleClosePdfViewer = () => {
+    setCurrentViewingMaterial(null);
+    setEmbeddableMaterialUrl(null);
+  };
 
   const getDifficultyBadgeVariant = (difficulty?: QuestionDifficulty) => {
     const effDifficulty = difficulty || 'easy';
@@ -169,9 +176,6 @@ export default function StudentCourseViewPage() {
       );
   }
   
-  const embeddableMaterialLink = course.courseMaterialLink ? transformGoogleDriveLink(course.courseMaterialLink) : null;
-
-
   return (
     <div className="space-y-8">
       <div className="flex justify-between items-start flex-wrap gap-4">
@@ -199,45 +203,60 @@ export default function StudentCourseViewPage() {
             <Users2 className="w-4 h-4 mr-2"/> Capacity: {course.enrolledStudentUids?.length || 0} / {course.strength} students
           </div>
           
-          {course.courseMaterialLink && (
+          {course.courseMaterials && course.courseMaterials.length > 0 && (
             <div className="mt-4">
                 <h3 className="text-md font-semibold mb-2 flex items-center">
-                    <LinkIcon className="w-5 h-5 mr-2 text-primary"/> Course Material
+                    <LinkIcon className="w-5 h-5 mr-2 text-primary"/> Course Materials
                 </h3>
-                {!showPdfViewer && embeddableMaterialLink && (
-                    <Button onClick={() => setShowPdfViewer(true)} variant="secondary">
-                        <Eye className="mr-2 h-4 w-4" /> View Course Material
-                    </Button>
-                )}
-                {!embeddableMaterialLink && course.courseMaterialLink && (
-                     <Button asChild variant="outline">
-                        <a href={course.courseMaterialLink} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1">
-                           <ExternalLink className="h-4 w-4"/> Open Material (New Tab)
-                        </a>
-                    </Button>
-                )}
+                <ul className="space-y-2">
+                    {course.courseMaterials.map(material => (
+                        <li key={material.id}>
+                            <Button 
+                                variant="link" 
+                                className="p-0 h-auto text-base text-primary hover:underline"
+                                onClick={() => handleViewMaterial(material)}
+                            >
+                                <FileTextIcon className="w-4 h-4 mr-2"/> {material.name}
+                            </Button>
+                        </li>
+                    ))}
+                </ul>
             </div>
           )}
-           {!course.courseMaterialLink && (
-             <p className="text-sm text-muted-foreground">No course material link provided by faculty.</p>
+           {(!course.courseMaterials || course.courseMaterials.length === 0) && (
+             <p className="text-sm text-muted-foreground">No course materials provided by faculty.</p>
            )}
 
-            {showPdfViewer && embeddableMaterialLink && (
-                <div className="mt-3">
-                    <div className="flex justify-end mb-2">
-                        <Button onClick={() => setShowPdfViewer(false)} variant="outline" size="sm">
+            {currentViewingMaterial && (
+                <div className="mt-3 pt-3 border-t">
+                    <div className="flex justify-between items-center mb-2">
+                        <h4 className="font-semibold">Viewing: {currentViewingMaterial.name}</h4>
+                        <Button onClick={handleClosePdfViewer} variant="outline" size="sm">
                            <XCircle className="mr-2 h-4 w-4"/> Close PDF Viewer
                         </Button>
                     </div>
-                    <div className="aspect-video md:aspect-[16/10] lg:aspect-[2/1] w-full max-w-4xl mx-auto border-0 rounded-md overflow-hidden bg-gray-100 dark:bg-gray-800">
-                        <iframe
-                            src={embeddableMaterialLink}
-                            className="w-full h-full border-0"
-                            title="Course Material PDF"
-                            allow="fullscreen"
-                        ></iframe>
-                    </div>
-                    <p className="text-xs text-muted-foreground mt-1 text-center">If the material doesn&apos;t load correctly, try opening the <a href={course.courseMaterialLink} target="_blank" rel="noopener noreferrer" className="underline">original link <ExternalLink className="inline h-3 w-3"/></a>.</p>
+                    {embeddableMaterialUrl ? (
+                        <>
+                            <div className="aspect-video md:aspect-[16/10] lg:aspect-[2/1] w-full max-w-4xl mx-auto border-0 rounded-md overflow-hidden bg-gray-100 dark:bg-gray-800">
+                                <iframe
+                                    src={embeddableMaterialUrl}
+                                    className="w-full h-full border-0"
+                                    title={currentViewingMaterial.name}
+                                    allow="fullscreen"
+                                ></iframe>
+                            </div>
+                            <p className="text-xs text-muted-foreground mt-1 text-center">If the material doesn&apos;t load correctly, try opening the <a href={currentViewingMaterial.url} target="_blank" rel="noopener noreferrer" className="underline">original link <ExternalLink className="inline h-3 w-3"/></a>.</p>
+                        </>
+                    ) : (
+                        <div className="p-3 bg-muted rounded-md text-center">
+                            <p className="text-sm text-muted-foreground">This material could not be embedded directly. Please use the original link:</p>
+                            <Button asChild variant="link" className="mt-1">
+                                <a href={currentViewingMaterial.url} target="_blank" rel="noopener noreferrer">
+                                    Open Material: {currentViewingMaterial.name} <ExternalLink className="ml-1.5 h-4 w-4"/>
+                                </a>
+                            </Button>
+                        </div>
+                    )}
                 </div>
             )}
         </CardContent>
@@ -281,3 +300,4 @@ export default function StudentCourseViewPage() {
     </div>
   );
 }
+

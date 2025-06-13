@@ -148,6 +148,13 @@ export interface Feedback {
   isRead: boolean;
 }
 
+export interface CourseMaterial {
+  id: string; // Unique ID for this material item
+  name: string;
+  url: string;
+  addedAt: Timestamp | FieldValue;
+}
+
 export interface Course {
   id: string;
   name: string;
@@ -161,7 +168,7 @@ export interface Course {
   enrolledStudentUids?: string[];
   enrollmentRequests?: EnrollmentRequest[];
   assignedQuestionIds?: string[];
-  courseMaterialLink?: string; // Changed from PdfUrl and PdfName
+  courseMaterials?: CourseMaterial[];
   createdAt: Timestamp | FieldValue;
   updatedAt: Timestamp | FieldValue;
 }

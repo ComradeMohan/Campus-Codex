@@ -6,7 +6,7 @@ import Link from 'next/link';
 import { useParams, useRouter, useSearchParams as useNextSearchParams } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContext';
 import { db } from '@/lib/firebase';
-import { doc, getDoc, updateDoc, collection, query, orderBy, getDocs, serverTimestamp } from 'firebase/firestore';
+import { doc, getDoc, updateDoc, collection, query, orderBy, getDocs, serverTimestamp, arrayUnion, arrayRemove, Timestamp } from 'firebase/firestore';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -15,8 +15,22 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
-import { Loader2, ArrowLeft, BookOpen, AlertTriangle, ListChecks, Tag, Star, Save, LinkIcon, Trash2, Info, Globe } from 'lucide-react';
-import type { ProgrammingLanguage, Course, Question as QuestionType, QuestionDifficulty } from '@/types';
+import { Loader2, ArrowLeft, BookOpen, AlertTriangle, ListChecks, Tag, Star, Save, LinkIcon, Trash2, Info, Globe, PlusCircle, FileText as FileTextIcon } from 'lucide-react';
+import type { ProgrammingLanguage, Course, Question as QuestionType, QuestionDifficulty, CourseMaterial } from '@/types';
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger, DialogClose } from '@/components/ui/dialog';
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import * as z from 'zod';
+
+const addMaterialFormSchema = z.object({
+  materialName: z.string().min(3, { message: "Material name must be at least 3 characters." }).max(100, { message: "Material name cannot exceed 100 characters." }),
+  materialUrl: z.string().url({ message: "Please enter a valid URL." }).refine(url => url.startsWith('http://') || url.startsWith('https://'), {
+    message: "URL must start with http:// or https://",
+  }),
+});
+type AddMaterialFormData = z.infer<typeof addMaterialFormSchema>;
+
 
 export default function FacultyManageCourseContentPage() {
   const { userProfile, loading: authLoading } = useAuth();
@@ -32,12 +46,17 @@ export default function FacultyManageCourseContentPage() {
   const [language, setLanguage] = useState<ProgrammingLanguage | null>(null);
   const [allLanguageQuestions, setAllLanguageQuestions] = useState<QuestionType[]>([]);
   const [selectedQuestionIds, setSelectedQuestionIds] = useState<Set<string>>(new Set());
-  const [materialLink, setMaterialLink] = useState('');
   
   const [isLoading, setIsLoading] = useState(true);
   const [isAuthorized, setIsAuthorized] = useState(false);
-  const [isSaving, setIsSaving] = useState(false);
-  const [isSavingLink, setIsSavingLink] = useState(false);
+  const [isSavingQuestions, setIsSavingQuestions] = useState(false);
+  const [isProcessingMaterial, setIsProcessingMaterial] = useState(false);
+  const [isAddMaterialDialogOpen, setIsAddMaterialDialogOpen] = useState(false);
+
+  const materialForm = useForm<AddMaterialFormData>({
+    resolver: zodResolver(addMaterialFormSchema),
+    defaultValues: { materialName: '', materialUrl: '' },
+  });
 
 
   const fetchCourseAndLanguageData = useCallback(async () => {
@@ -65,7 +84,6 @@ export default function FacultyManageCourseContentPage() {
       }
       setCourse(courseData);
       setSelectedQuestionIds(new Set(courseData.assignedQuestionIds || []));
-      setMaterialLink(courseData.courseMaterialLink || '');
       setIsAuthorized(true);
 
       const questionsRef = collection(db, 'colleges', userProfile.collegeId, 'languages', languageId, 'questions');
@@ -107,7 +125,7 @@ export default function FacultyManageCourseContentPage() {
 
   const handleSaveAssignedQuestions = async () => {
     if (!course || !userProfile?.collegeId || !languageId) return;
-    setIsSaving(true);
+    setIsSavingQuestions(true);
     try {
       const courseDocRef = doc(db, 'colleges', userProfile.collegeId, 'languages', languageId, 'courses', courseId);
       await updateDoc(courseDocRef, {
@@ -120,55 +138,64 @@ export default function FacultyManageCourseContentPage() {
       console.error("Error saving content:", error);
       toast({ title: "Error", description: "Failed to save assigned questions.", variant: "destructive" });
     } finally {
-      setIsSaving(false);
+      setIsSavingQuestions(false);
+    }
+  };
+
+  const handleAddMaterial = async (data: AddMaterialFormData) => {
+    if (!course || !userProfile?.collegeId || !languageId) return;
+    setIsProcessingMaterial(true);
+    const newMaterial: CourseMaterial = {
+      id: Date.now().toString() + Math.random().toString(36).substring(2, 9), // Simple unique ID
+      name: data.materialName,
+      url: data.materialUrl,
+      addedAt: Timestamp.now(),
+    };
+    try {
+      const courseDocRef = doc(db, 'colleges', userProfile.collegeId, 'languages', languageId, 'courses', courseId);
+      await updateDoc(courseDocRef, {
+        courseMaterials: arrayUnion(newMaterial),
+        updatedAt: serverTimestamp(),
+      });
+      setCourse(prev => prev ? ({...prev, courseMaterials: [...(prev.courseMaterials || []), newMaterial]}) : null);
+      toast({ title: "Material Added", description: `"${data.materialName}" has been added.` });
+      materialForm.reset();
+      setIsAddMaterialDialogOpen(false);
+    } catch (error) {
+      console.error("Error adding material:", error);
+      toast({ title: "Error", description: "Failed to add material.", variant: "destructive" });
+    } finally {
+      setIsProcessingMaterial(false);
     }
   };
   
-  const handleSaveMaterialLink = async () => {
-    if (!course || !userProfile?.collegeId || !languageId) return;
-    
-    // Basic URL validation (can be improved)
-    if (materialLink.trim() && !materialLink.startsWith('http://') && !materialLink.startsWith('https://')) {
-        toast({title: "Invalid URL", description: "Please enter a valid URL starting with http:// or https://", variant: "destructive"});
-        return;
-    }
-
-    setIsSavingLink(true);
+  const handleRemoveMaterial = async (materialIdToRemove: string) => {
+    if (!course || !userProfile?.collegeId || !languageId || !course.courseMaterials) return;
+    setIsProcessingMaterial(true);
     try {
-        const courseDocRef = doc(db, 'colleges', userProfile.collegeId, 'languages', languageId, 'courses', courseId);
+      const courseDocRef = doc(db, 'colleges', userProfile.collegeId, 'languages', languageId, 'courses', courseId);
+      const materialToRemove = course.courseMaterials.find(m => m.id === materialIdToRemove);
+      if (materialToRemove) {
         await updateDoc(courseDocRef, {
-            courseMaterialLink: materialLink.trim() || null, // Store null if empty
-            updatedAt: serverTimestamp()
+          courseMaterials: arrayRemove(materialToRemove), // arrayRemove requires the exact object
+          updatedAt: serverTimestamp(),
         });
-        setCourse(prev => prev ? ({...prev, courseMaterialLink: materialLink.trim() || undefined }) : null);
-        toast({ title: "Material Link Saved", description: `Course material link has been ${materialLink.trim() ? 'updated' : 'cleared'}.` });
+        setCourse(prev => prev ? ({
+          ...prev, 
+          courseMaterials: prev.courseMaterials?.filter(m => m.id !== materialIdToRemove) || []
+        }) : null);
+        toast({ title: "Material Removed", description: "The course material has been removed." });
+      } else {
+        toast({ title: "Error", description: "Material not found for removal.", variant: "destructive" });
+      }
     } catch (error) {
-        console.error("Error saving material link:", error);
-        toast({ title: "Error", description: "Failed to save material link.", variant: "destructive" });
+      console.error("Error removing material:", error);
+      toast({ title: "Error", description: "Failed to remove material.", variant: "destructive" });
     } finally {
-        setIsSavingLink(false);
+      setIsProcessingMaterial(false);
     }
   };
 
-  const handleRemoveMaterialLink = async () => {
-      if (!course || !userProfile?.collegeId || !languageId) return;
-      setIsSavingLink(true); // Use same state for busy indicator
-      try {
-          const courseDocRef = doc(db, 'colleges', userProfile.collegeId, 'languages', languageId, 'courses', courseId);
-          await updateDoc(courseDocRef, {
-              courseMaterialLink: null,
-              updatedAt: serverTimestamp()
-          });
-          setCourse(prev => prev ? ({...prev, courseMaterialLink: undefined }) : null);
-          setMaterialLink('');
-          toast({ title: "Material Link Removed", description: "The course material link has been removed." });
-      } catch (error) {
-          console.error("Error removing material link:", error);
-          toast({ title: "Error", description: "Failed to remove material link.", variant: "destructive" });
-      } finally {
-          setIsSavingLink(false);
-      }
-  };
 
   const getDifficultyBadgeVariant = (difficulty?: QuestionDifficulty) => {
     const effDifficulty = difficulty || 'easy';
@@ -213,39 +240,56 @@ export default function FacultyManageCourseContentPage() {
       </div>
 
       <Card className="shadow-lg">
-        <CardHeader><CardTitle className="text-xl font-headline flex items-center"><LinkIcon className="w-6 h-6 mr-2 text-primary" />Course Material Link (e.g., PDF on Google Drive)</CardTitle></CardHeader>
+        <CardHeader className="flex flex-row justify-between items-center">
+            <CardTitle className="text-xl font-headline flex items-center"><LinkIcon className="w-6 h-6 mr-2 text-primary" />Course Materials (PDF Links)</CardTitle>
+            <Dialog open={isAddMaterialDialogOpen} onOpenChange={setIsAddMaterialDialogOpen}>
+                <DialogTrigger asChild>
+                    <Button variant="outline" size="sm"><PlusCircle className="mr-2 h-4 w-4"/> Add New Material</Button>
+                </DialogTrigger>
+                <DialogContent>
+                    <DialogHeader>
+                        <DialogTitle>Add New Course Material</DialogTitle>
+                        <DialogDescription>Enter a name and a public URL for the PDF material.</DialogDescription>
+                    </DialogHeader>
+                    <Form {...materialForm}>
+                        <form onSubmit={materialForm.handleSubmit(handleAddMaterial)} className="space-y-4 py-2">
+                            <FormField control={materialForm.control} name="materialName" render={({ field }) => (
+                                <FormItem><FormLabel>Material Name</FormLabel><FormControl><Input placeholder="e.g., Chapter 1 Slides" {...field} /></FormControl><FormMessage /></FormItem>
+                            )}/>
+                            <FormField control={materialForm.control} name="materialUrl" render={({ field }) => (
+                                <FormItem><FormLabel>Material URL</FormLabel><FormControl><Input type="url" placeholder="https://example.com/document.pdf" {...field} /></FormControl><FormMessage /></FormItem>
+                            )}/>
+                            <DialogFooter><DialogClose asChild><Button type="button" variant="outline">Cancel</Button></DialogClose>
+                                <Button type="submit" disabled={isProcessingMaterial}>{isProcessingMaterial && <Loader2 className="mr-2 h-4 w-4 animate-spin" />} Add Material</Button>
+                            </DialogFooter>
+                        </form>
+                    </Form>
+                </DialogContent>
+            </Dialog>
+        </CardHeader>
         <CardContent className="space-y-3">
-            <div>
-                <Label htmlFor="material-link">Publicly Accessible PDF Link</Label>
-                <div className="flex items-center gap-2 mt-1">
-                    <Input 
-                        id="material-link" 
-                        type="url" 
-                        placeholder="https://drive.google.com/... or other public PDF URL" 
-                        value={materialLink}
-                        onChange={(e) => setMaterialLink(e.target.value)}
-                        disabled={isSavingLink}
-                        className="flex-grow"
-                    />
-                    <Button onClick={handleSaveMaterialLink} disabled={isSavingLink}>
-                        {isSavingLink ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
-                        Save Link
-                    </Button>
-                </div>
-                 <p className="text-xs text-muted-foreground mt-1">Ensure the link is publicly accessible (e.g., "Anyone with the link can view" on Google Drive).</p>
-            </div>
-            {course.courseMaterialLink && !isSavingLink && (
-                <div className="flex items-center justify-between p-3 border rounded-md bg-muted/50">
-                    <div className="flex items-center gap-2">
-                        <Globe className="h-5 w-5 text-primary"/>
-                        <a href={course.courseMaterialLink} target="_blank" rel="noopener noreferrer" className="text-sm font-medium hover:underline truncate" title={course.courseMaterialLink}>
-                            Current Link: {course.courseMaterialLink.length > 50 ? `${course.courseMaterialLink.substring(0,47)}...` : course.courseMaterialLink}
-                        </a>
-                    </div>
-                    <Button variant="ghost" size="icon" onClick={handleRemoveMaterialLink} disabled={isSavingLink} title="Remove Link">
-                        <Trash2 className="h-4 w-4 text-destructive"/>
-                    </Button>
-                </div>
+            {(!course.courseMaterials || course.courseMaterials.length === 0) && (
+                 <p className="text-sm text-muted-foreground">No course materials added yet.</p>
+            )}
+            {course.courseMaterials && course.courseMaterials.length > 0 && (
+                <ul className="space-y-2">
+                    {course.courseMaterials.map(material => (
+                        <li key={material.id} className="flex items-center justify-between p-3 border rounded-md bg-muted/30 hover:bg-muted/50 transition-colors">
+                            <div className="flex items-center gap-2">
+                                <FileTextIcon className="h-5 w-5 text-primary"/>
+                                <div>
+                                    <p className="text-sm font-medium">{material.name}</p>
+                                    <a href={material.url} target="_blank" rel="noopener noreferrer" className="text-xs text-muted-foreground hover:underline truncate" title={material.url}>
+                                       {material.url.length > 50 ? `${material.url.substring(0,47)}...` : material.url}
+                                    </a>
+                                </div>
+                            </div>
+                            <Button variant="ghost" size="icon" onClick={() => handleRemoveMaterial(material.id)} disabled={isProcessingMaterial} title="Remove Material">
+                                <Trash2 className="h-4 w-4 text-destructive"/>
+                            </Button>
+                        </li>
+                    ))}
+                </ul>
             )}
         </CardContent>
       </Card>
@@ -286,9 +330,10 @@ export default function FacultyManageCourseContentPage() {
           )}
         </CardContent>
         <CardFooter className="flex justify-end">
-            <Button onClick={handleSaveAssignedQuestions} disabled={isSaving || isSavingLink}><Save className="mr-2 h-4 w-4"/> Save Assigned Questions</Button>
+            <Button onClick={handleSaveAssignedQuestions} disabled={isSavingQuestions || isProcessingMaterial}><Save className="mr-2 h-4 w-4"/> Save Assigned Questions</Button>
         </CardFooter>
       </Card>
     </div>
   );
 }
+
