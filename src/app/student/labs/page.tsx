@@ -15,6 +15,7 @@ import Image from 'next/image';
 import * as LucideIcons from 'lucide-react';
 import { Separator } from '@/components/ui/separator';
 import { Badge } from '@/components/ui/badge';
+import { AICodeAssistant } from '@/components/AICodeAssistant'; // Ensure this import is correct
 
 interface LanguageWithCourses extends ProgrammingLanguage {
   courses: Course[];
@@ -324,7 +325,7 @@ export default function StudentCodingLabsPage() {
                                                 </div>
                                                 <div className="mt-2.5">
                                                     {enrollmentStatusInfo.status === 'enrolled' ? (
-                                                        <Button size="sm" variant="success" className="w-full text-xs h-8" disabled>
+                                                        <Button size="sm" variant="secondary" className="w-full text-xs h-8" disabled>
                                                             <UserCheck className="mr-2 h-4 w-4"/> Enrolled
                                                         </Button>
                                                     ) : enrollmentStatusInfo.status === 'pending' ? (
