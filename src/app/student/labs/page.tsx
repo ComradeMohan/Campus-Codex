@@ -5,7 +5,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import Link from 'next/link';
 import { useAuth } from '@/contexts/AuthContext';
 import { db } from '@/lib/firebase';
-import { collection, getDocs, query, orderBy, where, doc, setDoc, updateDoc, arrayUnion, serverTimestamp, Timestamp, FieldValue, limit } from 'firebase/firestore';
+import { collection, getDocs, query, orderBy, where, doc, setDoc, updateDoc, arrayUnion, serverTimestamp, Timestamp, FieldValue, limit, runTransaction } from 'firebase/firestore';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Loader2, BookOpen, AlertTriangle, CheckCircle, TerminalSquare, Zap, PlayCircle, ListChecks, Users, GraduationCap, UserCheck, UserX, Hourglass, Send, Users2 } from 'lucide-react';
@@ -15,7 +15,7 @@ import Image from 'next/image';
 import * as LucideIcons from 'lucide-react';
 import { Separator } from '@/components/ui/separator';
 import { Badge } from '@/components/ui/badge';
-import { AICodeAssistant } from '@/components/AICodeAssistant'; // Ensure this import is correct
+import { AICodeAssistant } from '@/components/AICodeAssistant';
 
 interface LanguageWithCourses extends ProgrammingLanguage {
   courses: Course[];
@@ -149,26 +149,63 @@ export default function StudentCodingLabsPage() {
     setIsProcessingCourseEnrollment(prev => ({ ...prev, [course.id]: true }));
     try {
       const courseDocRef = doc(db, 'colleges', userProfile.collegeId, 'languages', course.languageId, 'courses', course.id);
-      const newRequest: EnrollmentRequest = {
-        studentUid: userProfile.uid,
-        studentName: userProfile.fullName,
-        studentEmail: userProfile.email || undefined,
-        requestedAt: serverTimestamp() as FieldValue,
-        status: 'pending',
-      };
-      await updateDoc(courseDocRef, {
-        enrollmentRequests: arrayUnion(newRequest),
-        updatedAt: serverTimestamp()
+      
+      await runTransaction(db, async (transaction) => {
+        const courseDocSnap = await transaction.get(courseDocRef);
+        if (!courseDocSnap.exists()) {
+          throw new Error("Course document does not exist!");
+        }
+        const currentCourseData = courseDocSnap.data() as Course;
+        const existingRequests = currentCourseData.enrollmentRequests || [];
+
+        // Check if student already has a pending or approved request
+        const hasExistingActiveRequest = existingRequests.some(
+          req => req.studentUid === userProfile.uid && (req.status === 'pending' || req.status === 'approved')
+        );
+        if (hasExistingActiveRequest) {
+          // No toast here as the UI should already reflect this
+          console.log("Student already has an active or pending request for this course.");
+          return; // Exit transaction
+        }
+        
+        const newRequestObject: EnrollmentRequest = {
+          studentUid: userProfile.uid,
+          studentName: userProfile.fullName,
+          studentEmail: userProfile.email || undefined,
+          requestedAt: serverTimestamp() as FieldValue, // This is now part of a direct update
+          status: 'pending',
+        };
+        
+        const updatedRequests = [...existingRequests, newRequestObject];
+        
+        transaction.update(courseDocRef, {
+          enrollmentRequests: updatedRequests,
+          updatedAt: serverTimestamp()
+        });
       });
       
       // Optimistically update local state for immediate UI feedback
+      // For the UI, we'll use a client-side timestamp for the new request
+      const newRequestForUI: EnrollmentRequest = {
+        studentUid: userProfile.uid,
+        studentName: userProfile.fullName,
+        studentEmail: userProfile.email || undefined,
+        requestedAt: Timestamp.now(), // Client-side timestamp for UI
+        status: 'pending',
+      };
+
       setDetailedCollegeLanguages(prevLangs => prevLangs.map(lang => {
         if (lang.id === course.languageId) {
           return {
             ...lang,
             courses: lang.courses.map(c => {
               if (c.id === course.id) {
-                return { ...c, enrollmentRequests: [...(c.enrollmentRequests || []), newRequest] };
+                const existingRequests = c.enrollmentRequests || [];
+                // Avoid adding duplicate if optimistic update runs multiple times before Firestore sync
+                if (!existingRequests.some(req => req.studentUid === newRequestForUI.studentUid && req.status === 'pending')) {
+                    return { ...c, enrollmentRequests: [...existingRequests, newRequestForUI] };
+                }
+                return c;
               }
               return c;
             })
@@ -178,9 +215,14 @@ export default function StudentCodingLabsPage() {
       }));
 
       toast({ title: "Enrollment Requested", description: `Your request to enroll in "${course.name}" has been sent to the faculty.` });
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error requesting course enrollment:", error);
-      toast({ title: "Error", description: `Failed to request enrollment in "${course.name}".`, variant: "destructive" });
+      // Check if it's our custom error from the transaction
+      if (error.message === "Course document does not exist!") {
+        toast({ title: "Error", description: "Could not find the course to enroll. It might have been removed.", variant: "destructive" });
+      } else {
+        toast({ title: "Error", description: `Failed to request enrollment in "${course.name}". Please try again.`, variant: "destructive" });
+      }
     } finally {
       setIsProcessingCourseEnrollment(prev => ({ ...prev, [course.id]: false }));
     }
