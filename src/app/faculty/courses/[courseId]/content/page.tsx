@@ -5,18 +5,18 @@ import React, { useState, useEffect, useCallback, useRef } from 'react';
 import Link from 'next/link';
 import { useParams, useRouter, useSearchParams as useNextSearchParams } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContext';
-import { db, storage } from '@/lib/firebase'; // Added storage
+import { db, storage } from '@/lib/firebase';
 import { doc, getDoc, updateDoc, collection, query, orderBy, getDocs, serverTimestamp } from 'firebase/firestore';
-import { ref as storageRef, uploadBytesResumable, getDownloadURL, deleteObject } from 'firebase/storage'; // Firebase storage imports
+import { ref as storageRef, uploadBytesResumable, getDownloadURL, deleteObject } from 'firebase/storage';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
-import { Input } from '@/components/ui/input'; // For file input styling
-import { Label } from '@/components/ui/label'; // For file input styling
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
-import { Loader2, ArrowLeft, BookOpen, AlertTriangle, ListChecks, Tag, Star, Save, UploadCloud, FileText, Trash2, PlusCircle } from 'lucide-react';
+import { Loader2, ArrowLeft, BookOpen, AlertTriangle, ListChecks, Tag, Star, Save, UploadCloud, FileText, Trash2, PlusCircle, Info } from 'lucide-react';
 import type { ProgrammingLanguage, Course, Question as QuestionType, QuestionDifficulty } from '@/types';
 
 export default function FacultyManageCourseContentPage() {
@@ -38,6 +38,7 @@ export default function FacultyManageCourseContentPage() {
   const [isAuthorized, setIsAuthorized] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [isUploadingPdf, setIsUploadingPdf] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState(0);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
 
@@ -138,51 +139,70 @@ export default function FacultyManageCourseContentPage() {
     }
 
     setIsUploadingPdf(true);
+    setUploadProgress(0);
     try {
-        // Delete existing PDF if one exists
         if (course.courseMaterialPdfUrl) {
             try {
                 const oldFileRef = storageRef(storage, course.courseMaterialPdfUrl);
                 await deleteObject(oldFileRef);
             } catch (deleteError: any) {
-                // If old file doesn't exist or other error, log it but proceed with upload
                 if (deleteError.code !== 'storage/object-not-found') {
                     console.warn("Could not delete old PDF, it might have been already removed:", deleteError);
                 }
             }
         }
 
-        const pdfFileName = `${Date.now()}-${file.name}`;
+        const pdfFileName = `${Date.now()}-${file.name.replace(/[^a-zA-Z0-9.]/g, '_')}`; // Sanitize filename
         const pdfPath = `colleges/${userProfile.collegeId}/languages/${languageId}/courses/${courseId}/materials/${pdfFileName}`;
         const pdfStorageRef = storageRef(storage, pdfPath);
         
         const uploadTask = uploadBytesResumable(pdfStorageRef, file);
 
         uploadTask.on('state_changed',
-            (snapshot) => { /* Can be used for progress indication */ },
+            (snapshot) => {
+                const progress = (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
+                setUploadProgress(progress);
+            },
             (error) => {
                 console.error("PDF Upload error:", error);
-                toast({ title: "Upload Failed", description: "Could not upload PDF. " + error.message, variant: "destructive" });
+                let errorMessage = "Could not upload PDF. Please try again.";
+                if (error.code === 'storage/unauthorized') {
+                    errorMessage = "Upload failed: You are not authorized to upload to this location. Check Firebase Storage rules.";
+                } else if (error.code === 'storage/canceled') {
+                    errorMessage = "Upload canceled.";
+                }
+                toast({ title: "Upload Failed", description: errorMessage, variant: "destructive" });
                 setIsUploadingPdf(false);
+                setUploadProgress(0);
+                if(fileInputRef.current) fileInputRef.current.value = "";
             },
             async () => {
-                const downloadURL = await getDownloadURL(uploadTask.snapshot.ref);
-                const courseDocRef = doc(db, 'colleges', userProfile.collegeId!, 'languages', languageId, 'courses', courseId);
-                await updateDoc(courseDocRef, {
-                    courseMaterialPdfUrl: downloadURL,
-                    courseMaterialPdfName: file.name,
-                    updatedAt: serverTimestamp()
-                });
-                setCourse(prev => prev ? ({...prev, courseMaterialPdfUrl: downloadURL, courseMaterialPdfName: file.name}) : null);
-                toast({ title: "PDF Uploaded", description: `${file.name} has been successfully uploaded.` });
-                setIsUploadingPdf(false);
-                if(fileInputRef.current) fileInputRef.current.value = ""; // Clear file input
+                try {
+                    const downloadURL = await getDownloadURL(uploadTask.snapshot.ref);
+                    const courseDocRef = doc(db, 'colleges', userProfile.collegeId!, 'languages', languageId, 'courses', courseId);
+                    await updateDoc(courseDocRef, {
+                        courseMaterialPdfUrl: downloadURL,
+                        courseMaterialPdfName: file.name,
+                        updatedAt: serverTimestamp()
+                    });
+                    setCourse(prev => prev ? ({...prev, courseMaterialPdfUrl: downloadURL, courseMaterialPdfName: file.name}) : null);
+                    toast({ title: "PDF Uploaded", description: `${file.name} has been successfully uploaded.` });
+                } catch (dbError) {
+                    console.error("Error updating Firestore after upload:", dbError);
+                    toast({ title: "Upload Incomplete", description: "PDF uploaded, but failed to save reference. Please try again or contact support.", variant: "destructive" });
+                } finally {
+                    setIsUploadingPdf(false);
+                    setUploadProgress(0);
+                    if(fileInputRef.current) fileInputRef.current.value = "";
+                }
             }
         );
     } catch (error) {
         console.error("Error preparing PDF upload:", error);
         toast({ title: "Upload Error", description: "Failed to initiate PDF upload.", variant: "destructive" });
         setIsUploadingPdf(false);
+        setUploadProgress(0);
+        if(fileInputRef.current) fileInputRef.current.value = "";
     }
   };
 
@@ -204,7 +224,6 @@ export default function FacultyManageCourseContentPage() {
     } catch (error: any) {
         console.error("Error removing PDF:", error);
         if (error.code === 'storage/object-not-found') {
-             // If file not found in storage, just clear DB fields
             const courseDocRef = doc(db, 'colleges', userProfile.collegeId, 'languages', languageId, 'courses', courseId);
             await updateDoc(courseDocRef, {
                 courseMaterialPdfUrl: null,
@@ -270,7 +289,12 @@ export default function FacultyManageCourseContentPage() {
                 <Label htmlFor="pdf-upload">Upload PDF Material (Max 5MB)</Label>
                 <Input id="pdf-upload" type="file" accept=".pdf" onChange={handlePdfUpload} disabled={isUploadingPdf} ref={fileInputRef} className="mt-1"/>
             </div>
-            {isUploadingPdf && <div className="flex items-center text-sm text-primary"><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Uploading...</div>}
+            {isUploadingPdf && (
+                <div className="flex items-center text-sm text-primary">
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" /> 
+                    Uploading... ({uploadProgress.toFixed(0)}%)
+                </div>
+            )}
             {course.courseMaterialPdfUrl && course.courseMaterialPdfName && !isUploadingPdf && (
                 <div className="flex items-center justify-between p-3 border rounded-md bg-muted/50">
                     <div className="flex items-center gap-2">
@@ -290,21 +314,21 @@ export default function FacultyManageCourseContentPage() {
       
       <Card className="shadow-lg">
         <CardHeader>
-            <div className="flex justify-between items-center">
+            <div className="flex justify-between items-center flex-wrap gap-2">
                 <div>
                     <CardTitle className="text-xl font-headline flex items-center"><ListChecks className="w-6 h-6 mr-2 text-primary" />Assign Questions</CardTitle>
                     <CardDescription>Select questions from the {language.name} question bank to include in this course.</CardDescription>
                 </div>
-                <Button asChild variant="outline">
-                    <Link href={`/admin/courses/${languageId}/questions`} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2">
-                        <PlusCircle className="h-4 w-4" /> Add New Questions to Bank
-                    </Link>
-                </Button>
+                {/* Removed button to admin page. Faculty question creation would be a new feature. */}
+                 <div className="p-2 bg-blue-50 border border-blue-200 rounded-md text-blue-700 flex items-start gap-2 text-xs">
+                    <Info className="h-4 w-4 shrink-0 mt-0.5"/>
+                    <span>To add new questions to the language bank for assignment, please coordinate with your college administrator.</span>
+                </div>
             </div>
         </CardHeader>
         <CardContent>
           {allLanguageQuestions.length === 0 ? (
-            <p className="text-muted-foreground text-center py-4">No questions available in the {language.name} question bank. Use the button above to add some.</p>
+            <p className="text-muted-foreground text-center py-4">No questions available in the {language.name} question bank. An administrator needs to add them.</p>
           ) : (
             <div className="space-y-2">
                <div className="border rounded-md overflow-hidden max-h-[500px] overflow-y-auto">

@@ -11,7 +11,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
-import { Loader2, ArrowLeft, BookOpen, AlertTriangle, FileText, ClipboardList, Tag, Star, Users2 } from 'lucide-react';
+import { Loader2, ArrowLeft, BookOpen, AlertTriangle, FileText, ClipboardList, Tag, Star, Users2, PlayCircle } from 'lucide-react';
 import type { ProgrammingLanguage, Course, Question as QuestionType, QuestionDifficulty } from '@/types';
 
 export default function StudentCourseViewPage() {
@@ -22,7 +22,7 @@ export default function StudentCourseViewPage() {
   const { toast } = useToast();
 
   const courseId = params.courseId as string;
-  const languageId = nextSearchParams.get('languageId'); // Expect languageId from query params
+  const languageId = nextSearchParams.get('languageId');
 
   const [course, setCourse] = useState<Course | null>(null);
   const [language, setLanguage] = useState<ProgrammingLanguage | null>(null);
@@ -40,7 +40,6 @@ export default function StudentCourseViewPage() {
     }
     setIsLoadingPageData(true);
     try {
-      // Fetch Language details (for context)
       const langDocRef = doc(db, 'colleges', userProfile.collegeId, 'languages', languageId);
       const langSnap = await getDoc(langDocRef);
       if (langSnap.exists()) {
@@ -49,7 +48,6 @@ export default function StudentCourseViewPage() {
         throw new Error("Parent language not found.");
       }
 
-      // Fetch Course details
       const courseDocRef = doc(db, 'colleges', userProfile.collegeId, 'languages', languageId, 'courses', courseId);
       const courseSnap = await getDoc(courseDocRef);
       if (!courseSnap.exists()) {
@@ -58,24 +56,21 @@ export default function StudentCourseViewPage() {
       const courseData = courseSnap.data() as Course;
       setCourse(courseData);
 
-      // Check if student is enrolled
       if (courseData.enrolledStudentUids?.includes(userProfile.uid)) {
         setIsEnrolledInCourse(true);
       } else {
         setIsEnrolledInCourse(false);
         toast({ title: "Not Enrolled", description: "You are not enrolled in this course. Redirecting...", variant: "default" });
-        router.push('/student/labs'); // Or a dedicated "access denied" page for courses
+        router.push('/student/labs');
         return;
       }
 
-      // Fetch assigned questions
       if (courseData.assignedQuestionIds && courseData.assignedQuestionIds.length > 0) {
         const questionsRef = collection(db, 'colleges', userProfile.collegeId, 'languages', languageId, 'questions');
         const questionsQuery = query(questionsRef, where(documentId(), 'in', courseData.assignedQuestionIds));
         const questionsSnapshot = await getDocs(questionsQuery);
         const fetchedQuestions = questionsSnapshot.docs.map(qDoc => ({ id: qDoc.id, ...qDoc.data() } as QuestionType));
         
-        // Order questions based on the order in assignedQuestionIds
         const orderedQuestions = courseData.assignedQuestionIds.map(id => fetchedQuestions.find(q => q.id === id)).filter(Boolean) as QuestionType[];
         setAssignedQuestions(orderedQuestions);
       } else {
@@ -132,7 +127,6 @@ export default function StudentCourseViewPage() {
     );
   }
   
-  // If student is not enrolled and page hasn't redirected yet (e.g., due to async nature)
   if (!isEnrolledInCourse) {
       return (
          <div className="container mx-auto py-8 text-center">
@@ -197,17 +191,21 @@ export default function StudentCourseViewPage() {
               {assignedQuestions.map((q, index) => (
                 <Card key={q.id} className="bg-card border">
                   <CardHeader className="pb-2">
-                    <div className="flex justify-between items-center flex-wrap gap-1">
-                        <CardTitle className="text-lg font-semibold">Question {index + 1}</CardTitle>
-                        <div className="flex items-center gap-2">
+                    <div className="flex justify-between items-start flex-wrap gap-1">
+                        <CardTitle className="text-lg font-semibold">Question {index + 1}: {q.questionText.substring(0, 70)}{q.questionText.length > 70 ? "..." : ""}</CardTitle>
+                        <div className="flex items-center gap-2 shrink-0">
                             <Badge variant={getDifficultyBadgeVariant(q.difficulty)} className="capitalize text-xs"><Tag className="w-3 h-3 mr-1" />{q.difficulty || 'easy'}</Badge>
                             <Badge variant="outline" className="text-xs"><Star className="w-3 h-3 mr-1" />Score: {q.maxScore || 100}</Badge>
                         </div>
                     </div>
                   </CardHeader>
                   <CardContent className="pt-1">
-                    <p className="text-sm text-muted-foreground whitespace-pre-wrap line-clamp-3">{q.questionText}</p>
-                    {/* Future: Add a "Practice Question" button here linking to a scoped practice page */}
+                    <p className="text-sm text-muted-foreground whitespace-pre-wrap line-clamp-2 mb-2">{q.questionText}</p>
+                     <Button asChild size="sm" variant="secondary">
+                        <Link href={`/student/labs/${languageId}/practice?questionId=${q.id}&courseId=${courseId}`}>
+                           <PlayCircle className="mr-2 h-4 w-4"/> Attempt Question
+                        </Link>
+                    </Button>
                   </CardContent>
                 </Card>
               ))}

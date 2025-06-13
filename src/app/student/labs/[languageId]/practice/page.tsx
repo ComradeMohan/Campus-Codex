@@ -3,10 +3,10 @@
 
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import Link from 'next/link';
-import { useParams, useRouter } from 'next/navigation';
+import { useParams, useRouter, useSearchParams as useNextSearchParams } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContext';
 import { db } from '@/lib/firebase';
-import { doc, getDoc, collection, query, getDocs, orderBy, updateDoc, increment, serverTimestamp, FieldValue } from 'firebase/firestore';
+import { doc, getDoc, collection, query, getDocs, orderBy, updateDoc, increment, serverTimestamp, FieldValue, where } from 'firebase/firestore';
 
 import { Button } from '@/components/ui/button';
 import { MonacoCodeEditor } from '@/components/editor/MonacoCodeEditor';
@@ -37,16 +37,19 @@ export default function StudentPracticePage() {
   const { userProfile, loading: authLoading } = useAuth();
   const params = useParams();
   const router = useRouter();
+  const nextSearchParams = useNextSearchParams();
   const { toast } = useToast();
   const isMobile = useIsMobile();
 
   const languageId = params.languageId as string;
+  const questionIdFromQuery = nextSearchParams.get('questionId');
+  const courseIdFromQuery = nextSearchParams.get('courseId'); // For "back to course" link
 
   const [language, setLanguage] = useState<ProgrammingLanguage | null>(null);
   const [questions, setQuestions] = useState<QuestionType[]>([]);
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
-  const studentCodeRef = useRef(''); // Use ref for editor content to pass to AI
-  const [editorDisplayCode, setEditorDisplayCode] = useState(''); // For editor controlled component
+  const studentCodeRef = useRef('');
+  const [editorDisplayCode, setEditorDisplayCode] = useState('');
 
   const [output, setOutput] = useState('');
   const [testResults, setTestResults] = useState<TestCaseResult[]>([]);
@@ -83,38 +86,67 @@ export default function StudentPracticePage() {
       const langDocRef = doc(db, 'colleges', userProfile.collegeId, 'languages', languageId);
       const langSnap = await getDoc(langDocRef);
       if (!langSnap.exists()) {
-        toast({ title: "Error", description: "Course not found.", variant: "destructive" });
+        toast({ title: "Error", description: "Course/Subject not found.", variant: "destructive" });
         router.push('/student/labs');
         return;
       }
       const langData = { id: langSnap.id, ...langSnap.data() } as ProgrammingLanguage;
       setLanguage(langData);
 
-      const questionsRef = collection(db, 'colleges', userProfile.collegeId, 'languages', languageId, 'questions');
-      const qQuery = query(questionsRef, orderBy('createdAt', 'asc'));
-      const questionsSnap = await getDocs(qQuery);
-      const fetchedQuestions = questionsSnap.docs.map(docSnap => ({ id: docSnap.id, ...docSnap.data() } as QuestionType));
-
-      if (fetchedQuestions.length === 0) {
-        toast({ title: "No Questions", description: `This ${langData.name} course doesn't have any questions yet. Check back later!`, variant: "default" });
-        setTotalPossibleLanguageScore(0);
+      let fetchedQuestions: QuestionType[] = [];
+      if (questionIdFromQuery) {
+        const questionDocRef = doc(db, 'colleges', userProfile.collegeId, 'languages', languageId, 'questions', questionIdFromQuery);
+        const questionSnap = await getDoc(questionDocRef);
+        if (questionSnap.exists()) {
+          fetchedQuestions = [{ id: questionSnap.id, ...questionSnap.data() } as QuestionType];
+        } else {
+          toast({ title: "Error", description: "Specific question not found.", variant: "destructive" });
+        }
       } else {
+        const questionsRef = collection(db, 'colleges', userProfile.collegeId, 'languages', languageId, 'questions');
+        const qQuery = query(questionsRef, orderBy('createdAt', 'asc'));
+        const questionsSnap = await getDocs(qQuery);
+        fetchedQuestions = questionsSnap.docs.map(docSnap => ({ id: docSnap.id, ...docSnap.data() } as QuestionType));
+      }
+
+      if (fetchedQuestions.length === 0 && !questionIdFromQuery) {
+        toast({ title: "No Questions", description: `This ${langData.name} subject doesn't have any questions yet. Check back later!`, variant: "default" });
+        setTotalPossibleLanguageScore(0);
+      } else if (fetchedQuestions.length === 0 && questionIdFromQuery) {
+         toast({ title: "Question Not Found", description: `The requested question could not be loaded for ${langData.name}.`, variant: "destructive" });
+      }else {
         let totalScoreCalc = 0;
-        for (const q of fetchedQuestions) {
-          totalScoreCalc += q.maxScore || 100;
+        // If it's single question mode, total score is just that question's score for progress bar context (or 0 if no progress bar needed)
+        // For multiple questions, sum them up.
+        if (!questionIdFromQuery) {
+            const allQuestionsForLanguageRef = collection(db, 'colleges', userProfile.collegeId, 'languages', languageId, 'questions');
+            const allQuestionsSnap = await getDocs(allQuestionsForLanguageRef);
+            allQuestionsSnap.forEach(qDoc => {
+                const question = qDoc.data() as QuestionType;
+                totalScoreCalc += question.maxScore || 100;
+            });
+        } else if (fetchedQuestions.length > 0) {
+             // If single question mode, total score for the language progress bar still refers to all questions in that language.
+            const allQuestionsForLanguageRef = collection(db, 'colleges', userProfile.collegeId, 'languages', languageId, 'questions');
+            const allQuestionsSnap = await getDocs(allQuestionsForLanguageRef);
+            allQuestionsSnap.forEach(qDoc => {
+                const question = qDoc.data() as QuestionType;
+                totalScoreCalc += question.maxScore || 100;
+            });
         }
         setTotalPossibleLanguageScore(totalScoreCalc);
       }
       setQuestions(fetchedQuestions);
-      setCurrentQuestionIndex(0);
+      setCurrentQuestionIndex(0); // Always start at the first (or only) question
 
+      // For now, progress is always tracked at the language level. Course-specific progress is a future enhancement.
       const enrollmentRef = doc(db, 'users', userProfile.uid, 'enrolledLanguages', languageId);
       const enrollmentSnap = await getDoc(enrollmentRef);
       if (enrollmentSnap.exists()) {
         setEnrollmentProgress(enrollmentSnap.data() as EnrolledLanguageProgress);
       } else {
         console.warn("Enrollment progress not found for this language.");
-        setEnrollmentProgress(null);
+        setEnrollmentProgress(null); 
       }
 
       if (langData.name === PLACEMENTS_COURSE_NAME) {
@@ -144,7 +176,7 @@ export default function StudentPracticePage() {
     } finally {
       setIsLoadingPageData(false);
     }
-  }, [userProfile?.collegeId, userProfile?.uid, languageId, toast, router, authLoading]);
+  }, [userProfile?.collegeId, userProfile?.uid, languageId, toast, router, authLoading, questionIdFromQuery]);
 
   useEffect(() => {
     if (!authLoading && userProfile) {
@@ -163,6 +195,7 @@ export default function StudentPracticePage() {
       initialCode += `/*\nSample Input:\n${currentQ.sampleInput || 'N/A'}\n\nSample Output:\n${currentQ.sampleOutput || 'N/A'}\n*/\n\n`;
 
       const isPlacementCourse = language?.name === PLACEMENTS_COURSE_NAME;
+      // Progress is currently tracked at the language level, not course level.
       const completedQuestionData = enrollmentProgress?.completedQuestions?.[currentQ.id];
       
       let savedCode = completedQuestionData?.submittedCode;
@@ -265,6 +298,7 @@ export default function StudentPracticePage() {
         if (executionType === 'submit' && !result.compileError && !result.executionError) {
             const allPassed = result.testCaseResults?.every((tc: TestCaseResult) => tc.passed);
             if (result.testCaseResults?.length > 0) {
+                // For now, all progress is language-level. Course-specific progress is future.
                 const enrollmentRef = doc(db, 'users', userProfile.uid, 'enrolledLanguages', languageId);
                 const enrollmentSnap = await getDoc(enrollmentRef);
 
@@ -322,7 +356,7 @@ export default function StudentPracticePage() {
                         if (isNewCompletion) {
                             toast({
                                 title: "All Tests Passed!",
-                                description: `Great job! You earned ${currentQuestion.maxScore || 100} points. Your solution passed all test cases and has been saved.`,
+                                description: `Great job! You earned ${currentQuestion.maxScore || 100} points for ${language?.name}. Your solution passed all test cases and has been saved.`,
                                 variant: "default",
                             });
                         } else {
@@ -342,7 +376,7 @@ export default function StudentPracticePage() {
                 } else {
                      toast({
                         title: "Enrollment Error",
-                        description: "Could not find your enrollment for this course to update score and save code.",
+                        description: "Could not find your enrollment for this subject to update score and save code.",
                         variant: "destructive",
                     });
                 }
@@ -417,7 +451,7 @@ export default function StudentPracticePage() {
   if (!language && !isLoadingPageData) {
     return (
       <div className="container mx-auto py-8 text-center">
-        <p className="text-lg text-muted-foreground">Could not load course details.</p>
+        <p className="text-lg text-muted-foreground">Could not load subject details.</p>
         <Button asChild variant="link" className="mt-4">
           <Link href="/student/labs">Back to Labs</Link>
         </Button>
@@ -430,13 +464,20 @@ export default function StudentPracticePage() {
     : 0;
   
   const isPlacementCourse = language?.name === PLACEMENTS_COURSE_NAME;
+  const isSingleQuestionMode = !!questionIdFromQuery;
+
+  const backLinkHref = courseIdFromQuery 
+    ? `/student/courses/${courseIdFromQuery}?languageId=${languageId}`
+    : "/student/labs";
+  const backLinkLabel = courseIdFromQuery ? "Back to Course" : "Back to Labs";
+
 
   return (
     <div className="container mx-auto py-4 md:py-8 space-y-6">
       <div className="flex justify-between items-center flex-wrap gap-2">
         <h1 className="text-2xl md:text-3xl font-headline flex items-center">
           {isPlacementCourse ? <Briefcase className="w-7 h-7 md:w-8 md:h-8 mr-2 md:mr-3 text-primary" /> : <BookOpen className="w-7 h-7 md:w-8 md:h-8 mr-2 md:mr-3 text-primary" />}
-          Practice: {language?.name || 'Course'}
+          Practice: {language?.name || 'Subject'} {isSingleQuestionMode && questions.length > 0 ? ` - Question ${currentQuestionIndex + 1}` : ''}
         </h1>
         <div className="flex items-center gap-2">
             {!isMobile && currentQuestion && languageForEditorAndExecution && (
@@ -445,14 +486,14 @@ export default function StudentPracticePage() {
                 </Button>
             )}
             <Button asChild variant="outline" size="sm">
-            <Link href="/student/labs" className="flex items-center gap-2">
-                <ArrowLeft className="h-4 w-4" /> Back to Labs
+            <Link href={backLinkHref} className="flex items-center gap-2">
+                <ArrowLeft className="h-4 w-4" /> {backLinkLabel}
             </Link>
             </Button>
         </div>
       </div>
 
-      {language && enrollmentProgress && totalPossibleLanguageScore > 0 && (
+      {language && enrollmentProgress && totalPossibleLanguageScore > 0 && !isSingleQuestionMode && (
         <Card className="shadow-md">
           <CardHeader className="py-3 px-4 md:p-6">
             <CardTitle className="text-md md:text-lg font-semibold">Overall {language.name} Progress</CardTitle>
@@ -511,7 +552,7 @@ export default function StudentPracticePage() {
             </CardTitle>
           </CardHeader>
           <CardContent className="py-3 px-4 md:p-6 text-xs md:text-sm">
-            <p className="text-muted-foreground">There are currently no questions available for this {language?.name} course. Please check back later, or inform your instructor.</p>
+            <p className="text-muted-foreground">There are currently no questions available for this {language?.name} subject. Please check back later, or inform your instructor.</p>
           </CardContent>
         </Card>
       ) : !currentQuestion && !isLoadingPageData ? (
@@ -525,7 +566,9 @@ export default function StudentPracticePage() {
             <CardHeader className="py-3 px-4 md:p-6">
               <div className="flex justify-between items-start flex-wrap gap-2">
                 <div>
-                    <CardTitle className="text-lg md:text-xl font-semibold mb-1">Question {currentQuestionIndex + 1} of {questions.length}</CardTitle>
+                    <CardTitle className="text-lg md:text-xl font-semibold mb-1">
+                      {isSingleQuestionMode ? `Question (from Course)` : `Question ${currentQuestionIndex + 1} of ${questions.length}`}
+                    </CardTitle>
                     <div className="flex items-center gap-2 flex-wrap mt-1">
                         <Badge variant={getDifficultyBadgeVariant(currentQuestion.difficulty)} className="capitalize text-xs px-1.5 py-0.5 md:px-2 md:py-0.5">
                            <Tag className="w-2.5 h-2.5 md:w-3 md:h-3 mr-1" /> {currentQuestion.difficulty || 'easy'}
@@ -545,14 +588,16 @@ export default function StudentPracticePage() {
                         )}
                     </div>
                 </div>
-                <div className="flex space-x-2 shrink-0">
-                  <Button onClick={handlePrevQuestion} disabled={currentQuestionIndex === 0 || isExecutingCode} variant="outline" size="sm" className="text-xs h-8">
-                    <ChevronLeft className="h-3.5 w-3.5 md:h-4 md:w-4 mr-1" /> Prev
-                  </Button>
-                  <Button onClick={handleNextQuestion} disabled={currentQuestionIndex === questions.length - 1 || isExecutingCode} variant="outline" size="sm" className="text-xs h-8">
-                    Next <ChevronRight className="h-3.5 w-3.5 md:h-4 md:w-4 ml-1" />
-                  </Button>
-                </div>
+                {!isSingleQuestionMode && (
+                  <div className="flex space-x-2 shrink-0">
+                    <Button onClick={handlePrevQuestion} disabled={currentQuestionIndex === 0 || isExecutingCode} variant="outline" size="sm" className="text-xs h-8">
+                      <ChevronLeft className="h-3.5 w-3.5 md:h-4 md:w-4 mr-1" /> Prev
+                    </Button>
+                    <Button onClick={handleNextQuestion} disabled={currentQuestionIndex === questions.length - 1 || isExecutingCode} variant="outline" size="sm" className="text-xs h-8">
+                      Next <ChevronRight className="h-3.5 w-3.5 md:h-4 md:w-4 ml-1" />
+                    </Button>
+                  </div>
+                )}
               </div>
               <CardDescription className="mt-3 text-xs md:text-sm">Read the problem statement carefully and write your solution below.</CardDescription>
             </CardHeader>
