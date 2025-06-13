@@ -87,14 +87,14 @@ export default function FacultyManageCourseEnrollmentsPage() {
   }, [authLoading, userProfile, fetchCourseAndLanguageDetails, router, languageId, toast]);
 
   const handleProcessRequest = async (studentUid: string, newStatus: EnrollmentRequestStatus) => {
-    if (!course || !userProfile?.collegeId || !languageId) return;
+    if (!course || !userProfile?.collegeId || !languageId || !userProfile.uid) return;
     setIsProcessing(prev => ({ ...prev, [studentUid]: true }));
 
     const courseDocRef = doc(db, 'colleges', userProfile.collegeId, 'languages', languageId, 'courses', courseId);
     
     const updatedEnrollmentRequests = (course.enrollmentRequests || []).map(req => 
       req.studentUid === studentUid 
-        ? { ...req, status: newStatus, processedBy: userProfile.uid, processedAt: serverTimestamp() as FieldValue }
+        ? { ...req, status: newStatus, processedBy: userProfile.uid, processedAt: Timestamp.now() as FieldValue } // Use Timestamp.now() here
         : req
     );
 
@@ -119,11 +119,16 @@ export default function FacultyManageCourseEnrollmentsPage() {
         updatedAt: serverTimestamp()
       });
       
+      // For optimistic UI update, ensure processedAt is correctly represented
+      const uiUpdatedEnrollmentRequests = (course.enrollmentRequests || []).map(req => 
+        req.studentUid === studentUid 
+          ? { ...req, status: newStatus, processedBy: userProfile.uid, processedAt: Timestamp.now() }
+          : req
+      );
+
       setCourse(prevCourse => prevCourse ? ({ 
         ...prevCourse, 
-        enrollmentRequests: updatedEnrollmentRequests.map(req => 
-            req.studentUid === studentUid && req.processedAt ? { ...req, processedAt: Timestamp.now() } : req
-        ),
+        enrollmentRequests: uiUpdatedEnrollmentRequests,
         enrolledStudentUids: updatedApprovedStudentUids,
       }) : null);
 
@@ -258,3 +263,4 @@ export default function FacultyManageCourseEnrollmentsPage() {
     </div>
   );
 }
+
