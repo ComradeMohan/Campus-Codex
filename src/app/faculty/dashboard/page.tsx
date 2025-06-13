@@ -9,7 +9,7 @@ import { collection, getDocs, query, where, doc, getDoc } from 'firebase/firesto
 import type { UserProfile, ProgrammingLanguage } from '@/types';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Loader2, BookUser, ClipboardList, BarChart3, ArrowRight, AlertTriangle, BookOpen, Settings } from 'lucide-react';
+import { Loader2, BookUser, ClipboardList, BarChart3, ArrowRight, AlertTriangle, BookOpen, Settings, PlusCircle } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import * as LucideIcons from 'lucide-react';
 
@@ -99,14 +99,14 @@ export default function FacultyDashboardPage() {
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <p>From here, you can create tests, manage student enrollments, and view analytics for the programming languages you oversee.</p>
+          <p>From here, you can create courses, add tests, and view analytics for the programming languages you oversee.</p>
         </CardContent>
       </Card>
 
       <Card>
         <CardHeader>
           <CardTitle className="text-xl font-headline">Your Managed Languages</CardTitle>
-          <CardDescription>Select a language to manage tests and view student progress.</CardDescription>
+          <CardDescription>Select a language to manage its courses, tests and view student progress.</CardDescription>
         </CardHeader>
         <CardContent>
           {managedLanguagesDetails.length === 0 ? (
@@ -131,20 +131,27 @@ export default function FacultyDashboardPage() {
                   </CardHeader>
                   <CardContent className="flex-grow">
                     <p className="text-sm text-muted-foreground h-12 line-clamp-2">
-                      {lang.description || `Manage tests and student progress for ${lang.name}.`}
+                      {lang.description || `Manage courses and tests for ${lang.name}.`}
                     </p>
                   </CardContent>
-                  <CardFooter className="flex flex-col sm:flex-row gap-2">
-                    <Button asChild className="w-full" variant="outline">
-                      <Link href={`/faculty/language/${lang.id}/tests`} className="flex items-center">
-                        <Settings className="w-4 h-4 mr-2" /> Manage Tests <ArrowRight className="w-4 h-4 ml-auto"/>
-                      </Link>
+                  <CardFooter className="flex flex-col gap-2">
+                     <Button asChild className="w-full" variant="default">
+                        <Link href={`/faculty/language/${lang.id}/courses/create`} className="flex items-center">
+                            <PlusCircle className="w-4 h-4 mr-2" /> Create New Course <ArrowRight className="w-4 h-4 ml-auto"/>
+                        </Link>
                     </Button>
-                    <Button asChild className="w-full">
-                      <Link href={`/faculty/analytics/${lang.id}`} className="flex items-center">
-                        <BarChart3 className="w-4 h-4 mr-2" /> View Analytics <ArrowRight className="w-4 h-4 ml-auto"/>
-                      </Link>
-                    </Button>
+                    <div className="w-full grid grid-cols-2 gap-2">
+                        <Button asChild className="w-full" variant="outline">
+                        <Link href={`/faculty/language/${lang.id}/tests`} className="flex items-center">
+                            <Settings className="w-4 h-4 mr-2" /> Manage Tests
+                        </Link>
+                        </Button>
+                        <Button asChild className="w-full" variant="outline">
+                        <Link href={`/faculty/analytics/${lang.id}`} className="flex items-center">
+                            <BarChart3 className="w-4 h-4 mr-2" /> View Analytics
+                        </Link>
+                        </Button>
+                    </div>
                   </CardFooter>
                 </Card>
               ))}

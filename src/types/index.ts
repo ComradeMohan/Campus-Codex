@@ -147,3 +147,17 @@ export interface Feedback {
   createdAt: Timestamp | FieldValue;
   isRead: boolean;
 }
+
+export interface Course {
+  id: string;
+  name: string; // e.g., "CS101 - Intro to Java Fall 2024"
+  languageId: string; 
+  languageName: string;
+  facultyId: string; 
+  collegeId: string;
+  strength: number; // Max number of students for this course instance
+  description?: string; 
+  enrolledStudentUids?: string[]; 
+  createdAt: Timestamp | FieldValue;
+  updatedAt: Timestamp | FieldValue;
+}
