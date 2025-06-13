@@ -160,7 +160,9 @@ export interface Course {
   description?: string;
   enrolledStudentUids?: string[];
   enrollmentRequests?: EnrollmentRequest[];
-  assignedQuestionIds?: string[]; // Added for assigning questions to course
+  assignedQuestionIds?: string[];
+  courseMaterialPdfUrl?: string;
+  courseMaterialPdfName?: string;
   createdAt: Timestamp | FieldValue;
   updatedAt: Timestamp | FieldValue;
 }
