@@ -161,8 +161,7 @@ export interface Course {
   enrolledStudentUids?: string[];
   enrollmentRequests?: EnrollmentRequest[];
   assignedQuestionIds?: string[];
-  courseMaterialPdfUrl?: string;
-  courseMaterialPdfName?: string;
+  courseMaterialLink?: string; // Changed from PdfUrl and PdfName
   createdAt: Timestamp | FieldValue;
   updatedAt: Timestamp | FieldValue;
 }

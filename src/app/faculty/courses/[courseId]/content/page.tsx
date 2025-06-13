@@ -1,13 +1,12 @@
 
 'use client';
 
-import React, { useState, useEffect, useCallback, useRef } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import Link from 'next/link';
 import { useParams, useRouter, useSearchParams as useNextSearchParams } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContext';
-import { db, storage } from '@/lib/firebase';
+import { db } from '@/lib/firebase';
 import { doc, getDoc, updateDoc, collection, query, orderBy, getDocs, serverTimestamp } from 'firebase/firestore';
-import { ref as storageRef, uploadBytesResumable, getDownloadURL, deleteObject } from 'firebase/storage';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -16,7 +15,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
-import { Loader2, ArrowLeft, BookOpen, AlertTriangle, ListChecks, Tag, Star, Save, UploadCloud, FileText, Trash2, PlusCircle, Info } from 'lucide-react';
+import { Loader2, ArrowLeft, BookOpen, AlertTriangle, ListChecks, Tag, Star, Save, LinkIcon, Trash2, Info, Globe } from 'lucide-react';
 import type { ProgrammingLanguage, Course, Question as QuestionType, QuestionDifficulty } from '@/types';
 
 export default function FacultyManageCourseContentPage() {
@@ -33,13 +32,12 @@ export default function FacultyManageCourseContentPage() {
   const [language, setLanguage] = useState<ProgrammingLanguage | null>(null);
   const [allLanguageQuestions, setAllLanguageQuestions] = useState<QuestionType[]>([]);
   const [selectedQuestionIds, setSelectedQuestionIds] = useState<Set<string>>(new Set());
+  const [materialLink, setMaterialLink] = useState('');
   
   const [isLoading, setIsLoading] = useState(true);
   const [isAuthorized, setIsAuthorized] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
-  const [isUploadingPdf, setIsUploadingPdf] = useState(false);
-  const [uploadProgress, setUploadProgress] = useState(0);
-  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [isSavingLink, setIsSavingLink] = useState(false);
 
 
   const fetchCourseAndLanguageData = useCallback(async () => {
@@ -67,6 +65,7 @@ export default function FacultyManageCourseContentPage() {
       }
       setCourse(courseData);
       setSelectedQuestionIds(new Set(courseData.assignedQuestionIds || []));
+      setMaterialLink(courseData.courseMaterialLink || '');
       setIsAuthorized(true);
 
       const questionsRef = collection(db, 'colleges', userProfile.collegeId, 'languages', languageId, 'questions');
@@ -106,7 +105,7 @@ export default function FacultyManageCourseContentPage() {
     });
   };
 
-  const handleSaveChanges = async () => {
+  const handleSaveAssignedQuestions = async () => {
     if (!course || !userProfile?.collegeId || !languageId) return;
     setIsSaving(true);
     try {
@@ -119,127 +118,58 @@ export default function FacultyManageCourseContentPage() {
       toast({ title: "Content Saved", description: "Assigned questions for the course have been updated." });
     } catch (error) {
       console.error("Error saving content:", error);
-      toast({ title: "Error", description: "Failed to save course content.", variant: "destructive" });
+      toast({ title: "Error", description: "Failed to save assigned questions.", variant: "destructive" });
     } finally {
       setIsSaving(false);
     }
   };
-
-  const handlePdfUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+  
+  const handleSaveMaterialLink = async () => {
     if (!course || !userProfile?.collegeId || !languageId) return;
-    const file = event.target.files?.[0];
-    if (!file) return;
-    if (file.type !== "application/pdf") {
-        toast({title: "Invalid File Type", description: "Please upload a PDF file.", variant: "destructive"});
-        return;
-    }
-    if (file.size > 5 * 1024 * 1024) { // 5MB limit
-        toast({title: "File Too Large", description: "PDF file size should not exceed 5MB.", variant: "destructive"});
+    
+    // Basic URL validation (can be improved)
+    if (materialLink.trim() && !materialLink.startsWith('http://') && !materialLink.startsWith('https://')) {
+        toast({title: "Invalid URL", description: "Please enter a valid URL starting with http:// or https://", variant: "destructive"});
         return;
     }
 
-    setIsUploadingPdf(true);
-    setUploadProgress(0);
+    setIsSavingLink(true);
     try {
-        if (course.courseMaterialPdfUrl) {
-            try {
-                const oldFileRef = storageRef(storage, course.courseMaterialPdfUrl);
-                await deleteObject(oldFileRef);
-            } catch (deleteError: any) {
-                if (deleteError.code !== 'storage/object-not-found') {
-                    console.warn("Could not delete old PDF, it might have been already removed:", deleteError);
-                }
-            }
-        }
-
-        const pdfFileName = `${Date.now()}-${file.name.replace(/[^a-zA-Z0-9.]/g, '_')}`; // Sanitize filename
-        const pdfPath = `colleges/${userProfile.collegeId}/languages/${languageId}/courses/${courseId}/materials/${pdfFileName}`;
-        const pdfStorageRef = storageRef(storage, pdfPath);
-        
-        const uploadTask = uploadBytesResumable(pdfStorageRef, file);
-
-        uploadTask.on('state_changed',
-            (snapshot) => {
-                const progress = (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
-                setUploadProgress(progress);
-            },
-            (error) => {
-                console.error("PDF Upload error:", error);
-                let errorMessage = "Could not upload PDF. Please try again.";
-                if (error.code === 'storage/unauthorized') {
-                    errorMessage = "Upload failed: You are not authorized to upload to this location. Check Firebase Storage rules.";
-                } else if (error.code === 'storage/canceled') {
-                    errorMessage = "Upload canceled.";
-                }
-                toast({ title: "Upload Failed", description: errorMessage, variant: "destructive" });
-                setIsUploadingPdf(false);
-                setUploadProgress(0);
-                if(fileInputRef.current) fileInputRef.current.value = "";
-            },
-            async () => {
-                try {
-                    const downloadURL = await getDownloadURL(uploadTask.snapshot.ref);
-                    const courseDocRef = doc(db, 'colleges', userProfile.collegeId!, 'languages', languageId, 'courses', courseId);
-                    await updateDoc(courseDocRef, {
-                        courseMaterialPdfUrl: downloadURL,
-                        courseMaterialPdfName: file.name,
-                        updatedAt: serverTimestamp()
-                    });
-                    setCourse(prev => prev ? ({...prev, courseMaterialPdfUrl: downloadURL, courseMaterialPdfName: file.name}) : null);
-                    toast({ title: "PDF Uploaded", description: `${file.name} has been successfully uploaded.` });
-                } catch (dbError) {
-                    console.error("Error updating Firestore after upload:", dbError);
-                    toast({ title: "Upload Incomplete", description: "PDF uploaded, but failed to save reference. Please try again or contact support.", variant: "destructive" });
-                } finally {
-                    setIsUploadingPdf(false);
-                    setUploadProgress(0);
-                    if(fileInputRef.current) fileInputRef.current.value = "";
-                }
-            }
-        );
-    } catch (error) {
-        console.error("Error preparing PDF upload:", error);
-        toast({ title: "Upload Error", description: "Failed to initiate PDF upload.", variant: "destructive" });
-        setIsUploadingPdf(false);
-        setUploadProgress(0);
-        if(fileInputRef.current) fileInputRef.current.value = "";
-    }
-  };
-
-  const handleRemovePdf = async () => {
-    if (!course || !userProfile?.collegeId || !languageId || !course.courseMaterialPdfUrl) return;
-    setIsUploadingPdf(true); // Use same state for busy indicator
-    try {
-        const fileRef = storageRef(storage, course.courseMaterialPdfUrl);
-        await deleteObject(fileRef);
-        
         const courseDocRef = doc(db, 'colleges', userProfile.collegeId, 'languages', languageId, 'courses', courseId);
         await updateDoc(courseDocRef, {
-            courseMaterialPdfUrl: null,
-            courseMaterialPdfName: null,
+            courseMaterialLink: materialLink.trim() || null, // Store null if empty
             updatedAt: serverTimestamp()
         });
-        setCourse(prev => prev ? ({...prev, courseMaterialPdfUrl: undefined, courseMaterialPdfName: undefined}) : null);
-        toast({ title: "PDF Removed", description: "The course material PDF has been removed." });
-    } catch (error: any) {
-        console.error("Error removing PDF:", error);
-        if (error.code === 'storage/object-not-found') {
-            const courseDocRef = doc(db, 'colleges', userProfile.collegeId, 'languages', languageId, 'courses', courseId);
-            await updateDoc(courseDocRef, {
-                courseMaterialPdfUrl: null,
-                courseMaterialPdfName: null,
-                updatedAt: serverTimestamp()
-            });
-            setCourse(prev => prev ? ({...prev, courseMaterialPdfUrl: undefined, courseMaterialPdfName: undefined}) : null);
-            toast({ title: "PDF Cleared", description: "PDF reference cleared, file was not found in storage." });
-        } else {
-            toast({ title: "Error", description: "Failed to remove PDF material.", variant: "destructive" });
-        }
+        setCourse(prev => prev ? ({...prev, courseMaterialLink: materialLink.trim() || undefined }) : null);
+        toast({ title: "Material Link Saved", description: `Course material link has been ${materialLink.trim() ? 'updated' : 'cleared'}.` });
+    } catch (error) {
+        console.error("Error saving material link:", error);
+        toast({ title: "Error", description: "Failed to save material link.", variant: "destructive" });
     } finally {
-        setIsUploadingPdf(false);
+        setIsSavingLink(false);
     }
   };
-  
+
+  const handleRemoveMaterialLink = async () => {
+      if (!course || !userProfile?.collegeId || !languageId) return;
+      setIsSavingLink(true); // Use same state for busy indicator
+      try {
+          const courseDocRef = doc(db, 'colleges', userProfile.collegeId, 'languages', languageId, 'courses', courseId);
+          await updateDoc(courseDocRef, {
+              courseMaterialLink: null,
+              updatedAt: serverTimestamp()
+          });
+          setCourse(prev => prev ? ({...prev, courseMaterialLink: undefined }) : null);
+          setMaterialLink('');
+          toast({ title: "Material Link Removed", description: "The course material link has been removed." });
+      } catch (error) {
+          console.error("Error removing material link:", error);
+          toast({ title: "Error", description: "Failed to remove material link.", variant: "destructive" });
+      } finally {
+          setIsSavingLink(false);
+      }
+  };
+
   const getDifficultyBadgeVariant = (difficulty?: QuestionDifficulty) => {
     const effDifficulty = difficulty || 'easy';
     switch (effDifficulty) {
@@ -283,32 +213,40 @@ export default function FacultyManageCourseContentPage() {
       </div>
 
       <Card className="shadow-lg">
-        <CardHeader><CardTitle className="text-xl font-headline flex items-center"><UploadCloud className="w-6 h-6 mr-2 text-primary" />Course Materials (PDF)</CardTitle></CardHeader>
-        <CardContent className="space-y-4">
+        <CardHeader><CardTitle className="text-xl font-headline flex items-center"><LinkIcon className="w-6 h-6 mr-2 text-primary" />Course Material Link (e.g., PDF on Google Drive)</CardTitle></CardHeader>
+        <CardContent className="space-y-3">
             <div>
-                <Label htmlFor="pdf-upload">Upload PDF Material (Max 5MB)</Label>
-                <Input id="pdf-upload" type="file" accept=".pdf" onChange={handlePdfUpload} disabled={isUploadingPdf} ref={fileInputRef} className="mt-1"/>
-            </div>
-            {isUploadingPdf && (
-                <div className="flex items-center text-sm text-primary">
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" /> 
-                    Uploading... ({uploadProgress.toFixed(0)}%)
+                <Label htmlFor="material-link">Publicly Accessible PDF Link</Label>
+                <div className="flex items-center gap-2 mt-1">
+                    <Input 
+                        id="material-link" 
+                        type="url" 
+                        placeholder="https://drive.google.com/... or other public PDF URL" 
+                        value={materialLink}
+                        onChange={(e) => setMaterialLink(e.target.value)}
+                        disabled={isSavingLink}
+                        className="flex-grow"
+                    />
+                    <Button onClick={handleSaveMaterialLink} disabled={isSavingLink}>
+                        {isSavingLink ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
+                        Save Link
+                    </Button>
                 </div>
-            )}
-            {course.courseMaterialPdfUrl && course.courseMaterialPdfName && !isUploadingPdf && (
+                 <p className="text-xs text-muted-foreground mt-1">Ensure the link is publicly accessible (e.g., "Anyone with the link can view" on Google Drive).</p>
+            </div>
+            {course.courseMaterialLink && !isSavingLink && (
                 <div className="flex items-center justify-between p-3 border rounded-md bg-muted/50">
                     <div className="flex items-center gap-2">
-                        <FileText className="h-5 w-5 text-primary"/>
-                        <a href={course.courseMaterialPdfUrl} target="_blank" rel="noopener noreferrer" className="text-sm font-medium hover:underline" title={course.courseMaterialPdfName}>
-                            {course.courseMaterialPdfName.length > 40 ? `${course.courseMaterialPdfName.substring(0,37)}...` : course.courseMaterialPdfName}
+                        <Globe className="h-5 w-5 text-primary"/>
+                        <a href={course.courseMaterialLink} target="_blank" rel="noopener noreferrer" className="text-sm font-medium hover:underline truncate" title={course.courseMaterialLink}>
+                            Current Link: {course.courseMaterialLink.length > 50 ? `${course.courseMaterialLink.substring(0,47)}...` : course.courseMaterialLink}
                         </a>
                     </div>
-                    <Button variant="ghost" size="icon" onClick={handleRemovePdf} disabled={isUploadingPdf} title="Remove PDF">
+                    <Button variant="ghost" size="icon" onClick={handleRemoveMaterialLink} disabled={isSavingLink} title="Remove Link">
                         <Trash2 className="h-4 w-4 text-destructive"/>
                     </Button>
                 </div>
             )}
-            {!course.courseMaterialPdfUrl && !isUploadingPdf && <p className="text-xs text-muted-foreground">No PDF material uploaded yet.</p>}
         </CardContent>
       </Card>
       
@@ -319,7 +257,6 @@ export default function FacultyManageCourseContentPage() {
                     <CardTitle className="text-xl font-headline flex items-center"><ListChecks className="w-6 h-6 mr-2 text-primary" />Assign Questions</CardTitle>
                     <CardDescription>Select questions from the {language.name} question bank to include in this course.</CardDescription>
                 </div>
-                {/* Removed button to admin page. Faculty question creation would be a new feature. */}
                  <div className="p-2 bg-blue-50 border border-blue-200 rounded-md text-blue-700 flex items-start gap-2 text-xs">
                     <Info className="h-4 w-4 shrink-0 mt-0.5"/>
                     <span>To add new questions to the language bank for assignment, please coordinate with your college administrator.</span>
@@ -349,7 +286,7 @@ export default function FacultyManageCourseContentPage() {
           )}
         </CardContent>
         <CardFooter className="flex justify-end">
-            <Button onClick={handleSaveChanges} disabled={isSaving || isUploadingPdf}><Save className="mr-2 h-4 w-4"/> Save Assigned Questions</Button>
+            <Button onClick={handleSaveAssignedQuestions} disabled={isSaving || isSavingLink}><Save className="mr-2 h-4 w-4"/> Save Assigned Questions</Button>
         </CardFooter>
       </Card>
     </div>

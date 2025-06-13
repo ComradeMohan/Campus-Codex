@@ -8,11 +8,20 @@ import { useAuth } from '@/contexts/AuthContext';
 import { db } from '@/lib/firebase';
 import { doc, getDoc, collection, query, where, documentId, getDocs } from 'firebase/firestore';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
-import { Loader2, ArrowLeft, BookOpen, AlertTriangle, FileText, ClipboardList, Tag, Star, Users2, PlayCircle } from 'lucide-react';
+import { Loader2, ArrowLeft, BookOpen, AlertTriangle, FileText, ClipboardList, Tag, Star, Users2, PlayCircle, LinkIcon, ExternalLink } from 'lucide-react';
 import type { ProgrammingLanguage, Course, Question as QuestionType, QuestionDifficulty } from '@/types';
+
+// Helper function to transform Google Drive links
+const transformGoogleDriveLink = (url: string): string => {
+    if (url.includes('drive.google.com/file/d/')) {
+      return url.replace('/view?usp=sharing', '/preview').replace('/view', '/preview');
+    }
+    return url; // Return as is if not a recognized GDrive file link
+};
+
 
 export default function StudentCourseViewPage() {
   const { userProfile, loading: authLoading } = useAuth();
@@ -136,6 +145,9 @@ export default function StudentCourseViewPage() {
         </div>
       );
   }
+  
+  const embeddableMaterialLink = course.courseMaterialLink ? transformGoogleDriveLink(course.courseMaterialLink) : null;
+
 
   return (
     <div className="space-y-8">
@@ -163,18 +175,33 @@ export default function StudentCourseViewPage() {
           <div className="text-sm text-muted-foreground flex items-center">
             <Users2 className="w-4 h-4 mr-2"/> Capacity: {course.enrolledStudentUids?.length || 0} / {course.strength} students
           </div>
-          {course.courseMaterialPdfUrl && course.courseMaterialPdfName && (
+          {course.courseMaterialLink && (
             <div>
                 <h3 className="text-md font-semibold mb-1 mt-3 flex items-center">
-                    <FileText className="w-5 h-5 mr-2 text-primary"/> Course Material (PDF)
+                    <LinkIcon className="w-5 h-5 mr-2 text-primary"/> Course Material
                 </h3>
-                <Button asChild variant="link" className="p-0 h-auto">
-                    <a href={course.courseMaterialPdfUrl} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1">
-                        {course.courseMaterialPdfName}
-                    </a>
-                </Button>
+                {embeddableMaterialLink ? (
+                     <div className="aspect-video md:aspect-[16/10] lg:aspect-[2/1] w-full max-w-4xl mx-auto mt-2 border rounded-md overflow-hidden">
+                        <iframe
+                            src={embeddableMaterialLink}
+                            className="w-full h-full"
+                            title="Course Material PDF"
+                            allow="autoplay"
+                        ></iframe>
+                    </div>
+                ) : (
+                    <p className="text-muted-foreground text-sm">
+                        <a href={course.courseMaterialLink} target="_blank" rel="noopener noreferrer" className="hover:underline flex items-center gap-1">
+                            View Material <ExternalLink className="h-3 w-3"/>
+                        </a> (Could not auto-embed link)
+                    </p>
+                )}
+                 <p className="text-xs text-muted-foreground mt-1">If the material doesn't load, try opening the <a href={course.courseMaterialLink} target="_blank" rel="noopener noreferrer" className="underline">original link <ExternalLink className="inline h-3 w-3"/></a> directly.</p>
             </div>
           )}
+           {!course.courseMaterialLink && (
+             <p className="text-sm text-muted-foreground">No course material link provided by faculty.</p>
+           )}
         </CardContent>
       </Card>
 
