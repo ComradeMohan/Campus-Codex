@@ -9,11 +9,17 @@ import { collection, getDocs, query, orderBy, where, doc, setDoc, serverTimestam
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { AICodeAssistant } from '@/components/AICodeAssistant';
-import { Loader2, BookOpen, AlertTriangle, CheckCircle, TerminalSquare, Zap, PlayCircle, ListChecks } from 'lucide-react';
-import type { ProgrammingLanguage } from '@/types';
+import { Loader2, BookOpen, AlertTriangle, CheckCircle, TerminalSquare, Zap, PlayCircle, ListChecks, Users, GraduationCap } from 'lucide-react';
+import type { ProgrammingLanguage, Course } from '@/types';
 import { useToast } from '@/hooks/use-toast';
 import Image from 'next/image';
 import * as LucideIcons from 'lucide-react';
+import { Separator } from '@/components/ui/separator';
+
+interface LanguageWithCourses extends ProgrammingLanguage {
+  courses: Course[];
+  iconComponent: React.FC<React.SVGProps<SVGSVGElement>>;
+}
 
 const getIconComponent = (iconName?: string): React.FC<React.SVGProps<SVGSVGElement>> => {
   if (iconName && LucideIcons[iconName as keyof typeof LucideIcons]) {
@@ -25,26 +31,49 @@ const getIconComponent = (iconName?: string): React.FC<React.SVGProps<SVGSVGElem
 export default function StudentCodingLabsPage() {
   const { userProfile, loading: authLoading } = useAuth();
   const { toast } = useToast();
-  const [collegeLanguages, setCollegeLanguages] = useState<ProgrammingLanguage[]>([]);
+  const [detailedCollegeLanguages, setDetailedCollegeLanguages] = useState<LanguageWithCourses[]>([]);
   const [isLoadingLanguages, setIsLoadingLanguages] = useState(true);
   const [enrolledLanguageIds, setEnrolledLanguageIds] = useState<Set<string>>(new Set());
-  const [isEnrolling, setIsEnrolling] = useState<Record<string, boolean>>({}); // Tracks enrollment loading state per language
+  const [isEnrolling, setIsEnrolling] = useState<Record<string, boolean>>({});
   const [languageHasPublishedTests, setLanguageHasPublishedTests] = useState<Map<string, boolean>>(new Map());
 
-
-  const fetchCollegeLanguages = useCallback(async (collegeId: string) => {
+  const fetchCollegeLanguagesAndCourses = useCallback(async (collegeId: string) => {
     setIsLoadingLanguages(true);
     try {
       const languagesRef = collection(db, 'colleges', collegeId, 'languages');
-      const q = query(languagesRef, orderBy('name', 'asc'));
-      const querySnapshot = await getDocs(q);
-      const fetchedLanguages = querySnapshot.docs.map(langDoc => ({
-        id: langDoc.id, ...langDoc.data(),
-        createdAt: langDoc.data().createdAt as Timestamp, // Ensure createdAt is a Timestamp
-      })) as ProgrammingLanguage[];
-      setCollegeLanguages(fetchedLanguages);
+      const langQuery = query(languagesRef, orderBy('name', 'asc'));
+      const languagesSnapshot = await getDocs(langQuery);
+
+      const languagesWithCoursesPromises = languagesSnapshot.docs.map(async (langDoc) => {
+        const langData = {
+          id: langDoc.id, ...langDoc.data(),
+          createdAt: langDoc.data().createdAt as Timestamp,
+        } as ProgrammingLanguage;
+
+        const coursesRef = collection(db, 'colleges', collegeId, 'languages', langDoc.id, 'courses');
+        // For now, fetch all courses. Add status filter if Course type gets a status field.
+        const courseQuery = query(coursesRef, orderBy('name', 'asc'));
+        const coursesSnapshot = await getDocs(courseQuery);
+        const courses = coursesSnapshot.docs.map(cDoc => ({ id: cDoc.id, ...cDoc.data() } as Course));
+
+        // Check for published tests for the main language
+        const testsRef = collection(db, 'colleges', collegeId, 'languages', langDoc.id, 'tests');
+        const publishedTestsQuery = query(testsRef, where('status', '==', 'published'), limit(1));
+        const testsSnap = await getDocs(publishedTestsQuery);
+        setLanguageHasPublishedTests(prevMap => new Map(prevMap).set(langDoc.id, !testsSnap.empty));
+
+        return {
+          ...langData,
+          iconComponent: getIconComponent(langData.iconName),
+          courses: courses,
+        } as LanguageWithCourses;
+      });
+
+      const fetchedDetailedLanguages = await Promise.all(languagesWithCoursesPromises);
+      setDetailedCollegeLanguages(fetchedDetailedLanguages);
+
     } catch (error) {
-      console.error('Error fetching college languages:', error);
+      console.error('Error fetching college languages and courses:', error);
       toast({ title: 'Error', description: 'Failed to fetch available courses.', variant: 'destructive' });
     } finally {
       setIsLoadingLanguages(false);
@@ -60,63 +89,29 @@ export default function StudentCodingLabsPage() {
       setEnrolledLanguageIds(ids);
     } catch (error) {
       console.error('Error fetching enrolled languages:', error);
-      toast({ title: 'Error', description: 'Failed to fetch your enrolled courses.', variant: 'destructive' });
+      toast({ title: 'Error', description: 'Failed to fetch your enrolled main subjects.', variant: 'destructive' });
     }
   }, [toast]);
 
   useEffect(() => {
     if (userProfile?.collegeId) {
-      fetchCollegeLanguages(userProfile.collegeId);
+      fetchCollegeLanguagesAndCourses(userProfile.collegeId);
     }
     if (userProfile?.uid) {
       fetchEnrolledLanguages(userProfile.uid);
     }
     if (!authLoading && !userProfile) {
-       setIsLoadingLanguages(false); // Stop loading if user is not logged in
+       setIsLoadingLanguages(false);
     }
-  }, [userProfile, authLoading, fetchCollegeLanguages, fetchEnrolledLanguages]);
+  }, [userProfile, authLoading, fetchCollegeLanguagesAndCourses, fetchEnrolledLanguages]);
 
-  useEffect(() => {
-    if (userProfile?.collegeId && collegeLanguages.length > 0) {
-      const currentAvailabilityMap = new Map(languageHasPublishedTests);
-      
-      collegeLanguages.forEach(async (lang) => {
-        // Avoid re-checking if already determined, unless some refresh logic is added later
-        if (currentAvailabilityMap.has(lang.id) && currentAvailabilityMap.get(lang.id) !== undefined) {
-          return;
-        }
 
-        try {
-          const testsRef = collection(db, 'colleges', userProfile.collegeId!, 'languages', lang.id, 'tests');
-          const q = query(testsRef, where('status', '==', 'published'), limit(1));
-          const testsSnap = await getDocs(q);
-          
-          setLanguageHasPublishedTests(prevMap => {
-            const updatedMap = new Map(prevMap);
-            updatedMap.set(lang.id, !testsSnap.empty);
-            return updatedMap;
-          });
-
-        } catch (error) {
-          console.error(`Error checking tests for ${lang.name}:`, error);
-          setLanguageHasPublishedTests(prevMap => {
-            const updatedMap = new Map(prevMap);
-            updatedMap.set(lang.id, false); // Assume no tests on error
-            return updatedMap;
-          });
-        }
-      });
-    }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [collegeLanguages, userProfile?.collegeId, db]); // db added as it's used in collection
-
-  const handleEnroll = async (language: ProgrammingLanguage) => {
+  const handleEnrollInLanguage = async (language: ProgrammingLanguage) => {
     if (!userProfile?.uid) {
       toast({ title: 'Error', description: 'You must be logged in to enroll.', variant: 'destructive' });
       return;
     }
     if (enrolledLanguageIds.has(language.id)) {
-      // This case should ideally not be reached if button changes to "Start Practice"
       toast({ title: 'Already Enrolled', description: `You are already enrolled in ${language.name}.`, variant: 'default' });
       return;
     }
@@ -127,13 +122,13 @@ export default function StudentCodingLabsPage() {
       await setDoc(enrollmentRef, {
         languageId: language.id,
         languageName: language.name,
+        iconName: language.iconName || 'BookOpen',
         enrolledAt: serverTimestamp(),
-        iconName: language.iconName || 'BookOpen', // Store icon for potential future use
         currentScore: 0,
         completedQuestions: {},
       });
       setEnrolledLanguageIds(prev => new Set(prev).add(language.id));
-      toast({ title: 'Enrollment Successful!', description: `You have enrolled in ${language.name}.` });
+      toast({ title: 'Enrollment Successful!', description: `You have enrolled in ${language.name}. You can now access its practice labs.` });
     } catch (error) {
       console.error('Error enrolling in language:', error);
       toast({ title: 'Enrollment Failed', description: `Could not enroll in ${language.name}. Please try again.`, variant: 'destructive' });
@@ -163,7 +158,7 @@ export default function StudentCodingLabsPage() {
       </div>
     );
   }
-  
+
   if (!userProfile) {
      return (
      <div className="container mx-auto py-8 text-center">
@@ -174,39 +169,34 @@ export default function StudentCodingLabsPage() {
      </div>);
   }
 
-
   return (
     <div className="space-y-8">
       <Card>
         <CardHeader>
           <CardTitle className="font-headline text-2xl flex items-center">
             <TerminalSquare className="w-7 h-7 mr-3 text-primary" />
-            Available Courses at {userProfile?.collegeName}
+            Available Subjects & Courses at {userProfile?.collegeName}
           </CardTitle>
           <CardDescription>
-            Welcome {userProfile?.fullName}! Enroll in a course to start learning and practicing, or view available tests.
+            Welcome {userProfile?.fullName}! Enroll in a subject to access practice labs, or explore specific courses offered by faculty.
           </CardDescription>
         </CardHeader>
         <CardContent>
-          {collegeLanguages.length === 0 && !isLoadingLanguages ? (
+          {detailedCollegeLanguages.length === 0 && !isLoadingLanguages ? (
             <div className="text-center py-10">
               <BookOpen className="mx-auto h-12 w-12 text-muted-foreground mb-4" />
-              <p className="text-lg font-semibold text-muted-foreground">No Courses Available Yet</p>
+              <p className="text-lg font-semibold text-muted-foreground">No Subjects Available Yet</p>
               <p className="text-sm text-muted-foreground">
-                Your college ({userProfile?.collegeName}) hasn't added any programming languages to the platform.
-                Please check back later or contact your college administrator.
-              </p>
-              <p className="text-sm text-muted-foreground mt-2">
-                In the meantime, feel free to use the AI Code Assistant below for general practice.
+                Your college ({userProfile?.collegeName}) hasn't added any programming languages or courses to the platform.
               </p>
             </div>
           ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {collegeLanguages.map((language) => {
-                const LanguageIcon = getIconComponent(language.iconName);
+            <div className="space-y-6">
+              {detailedCollegeLanguages.map((language) => {
+                const LanguageIcon = language.iconComponent;
                 const isCurrentlyEnrolling = isEnrolling[language.id];
-                const isAlreadyEnrolled = enrolledLanguageIds.has(language.id);
-                const hasPublishedTests = languageHasPublishedTests.get(language.id) === true;
+                const isAlreadyEnrolledInLanguage = enrolledLanguageIds.has(language.id);
+                const hasPublishedTestsForLanguage = languageHasPublishedTests.get(language.id) === true;
 
                 return (
                   <Card key={language.id} className="shadow-md hover:shadow-lg transition-shadow flex flex-col">
@@ -215,46 +205,67 @@ export default function StudentCodingLabsPage() {
                       <div>
                         <CardTitle className="text-xl font-semibold">{language.name}</CardTitle>
                         <CardDescription className="text-xs text-muted-foreground">
-                          Added on: {language.createdAt ? new Date(language.createdAt.seconds * 1000).toLocaleDateString() : 'N/A'}
+                          {language.description || 'Core programming subject.'}
                         </CardDescription>
                       </div>
                     </CardHeader>
-                    <CardContent className="flex-grow">
-                      <p className="text-sm text-muted-foreground min-h-[60px] line-clamp-3">
-                        {language.description || 'No detailed description available for this course.'}
-                      </p>
-                    </CardContent>
-                    <CardFooter className="flex flex-col sm:flex-row gap-2">
-                      {isAlreadyEnrolled ? (
-                        <>
-                          <Button asChild variant="secondary" className="w-full">
-                            <Link href={`/student/labs/${language.id}/practice`}>
-                              <PlayCircle className="mr-2 h-4 w-4" /> Start Practice
-                            </Link>
-                          </Button>
-                          {hasPublishedTests && (
-                            <Button asChild variant="outline" className="w-full">
-                              <Link href={`/student/labs/${language.id}/tests`}>
-                                <ListChecks className="mr-2 h-4 w-4" /> View Tests
-                              </Link>
+                    <CardContent className="flex-grow space-y-3">
+                        <div className="flex flex-col sm:flex-row gap-2">
+                          {isAlreadyEnrolledInLanguage ? (
+                            <>
+                              <Button asChild variant="secondary" className="w-full sm:flex-1">
+                                <Link href={`/student/labs/${language.id}/practice`}>
+                                  <PlayCircle className="mr-2 h-4 w-4" /> Practice Labs
+                                </Link>
+                              </Button>
+                              {hasPublishedTestsForLanguage && (
+                                <Button asChild variant="outline" className="w-full sm:flex-1">
+                                  <Link href={`/student/labs/${language.id}/tests`}>
+                                    <ListChecks className="mr-2 h-4 w-4" /> View Tests
+                                  </Link>
+                                </Button>
+                              )}
+                            </>
+                          ) : (
+                            <Button
+                              onClick={() => handleEnrollInLanguage(language)}
+                              disabled={isCurrentlyEnrolling || !userProfile?.uid}
+                              className="w-full"
+                              variant={"default"}
+                            >
+                              {isCurrentlyEnrolling ? (
+                                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                              ) : (
+                                `Enroll in ${language.name} Labs`
+                              )}
                             </Button>
                           )}
-                        </>
-                      ) : (
-                        <Button
-                          onClick={() => handleEnroll(language)}
-                          disabled={isCurrentlyEnrolling || !userProfile?.uid}
-                          className="w-full"
-                          variant={"default"}
-                        >
-                          {isCurrentlyEnrolling ? (
-                            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                          ) : (
-                            'Enroll Now'
-                          )}
-                        </Button>
-                      )}
-                    </CardFooter>
+                        </div>
+                        {language.courses.length > 0 && <Separator className="my-3"/>}
+                        {language.courses.length > 0 && (
+                            <div>
+                                <h4 className="text-sm font-semibold mb-2 text-muted-foreground">Specific Courses in {language.name}:</h4>
+                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                                    {language.courses.map(course => (
+                                        <Card key={course.id} className="p-3 bg-background hover:bg-muted/50 transition-colors">
+                                            <CardTitle className="text-md font-medium line-clamp-1">{course.name}</CardTitle>
+                                            <CardDescription className="text-xs mt-0.5">
+                                                By: {course.facultyName}
+                                            </CardDescription>
+                                            {course.description && <p className="text-xs text-muted-foreground mt-1 line-clamp-2">{course.description}</p>}
+                                            <div className="mt-2 flex justify-end">
+                                                {/* Future: Link to course details/enrollment */}
+                                                <Button size="xs" variant="link" className="p-0 h-auto" disabled>View Details (Soon)</Button>
+                                            </div>
+                                        </Card>
+                                    ))}
+                                </div>
+                            </div>
+                        )}
+                         {language.courses.length === 0 && isAlreadyEnrolledInLanguage && (
+                            <p className="text-xs text-muted-foreground text-center pt-2">No specific faculty-led courses listed for {language.name} yet. You can still access general practice labs.</p>
+                        )}
+                    </CardContent>
                   </Card>
                 );
               })}
@@ -262,9 +273,8 @@ export default function StudentCodingLabsPage() {
           )}
         </CardContent>
       </Card>
-      
+
       <AICodeAssistant />
     </div>
   );
 }
-

@@ -90,7 +90,7 @@ export default function FacultyCreateCoursePage() {
   }, [authLoading, userProfile, fetchLanguageDetails, router]);
 
   const onSubmit = async (data: CreateCourseFormData) => {
-    if (!userProfile?.collegeId || !languageId || !language || !userProfile.uid) {
+    if (!userProfile?.collegeId || !languageId || !language || !userProfile.uid || !userProfile.fullName) {
       toast({ title: "Error", description: "Missing critical information to create course.", variant: "destructive" });
       return;
     }
@@ -102,23 +102,21 @@ export default function FacultyCreateCoursePage() {
         languageId: languageId,
         languageName: language.name,
         facultyId: userProfile.uid,
+        facultyName: userProfile.fullName, // Save faculty name
         collegeId: userProfile.collegeId,
         strength: data.strength,
         description: data.description || '',
         enrolledStudentUids: [],
-        // Timestamps will be set by Firestore
-        createdAt: serverTimestamp() as any, 
+        createdAt: serverTimestamp() as any,
         updatedAt: serverTimestamp() as any,
       };
 
-      // Store under colleges -> collegeId -> languages -> languageId -> courses
       const coursesCollectionRef = collection(db, 'colleges', userProfile.collegeId, 'languages', languageId, 'courses');
       await addDoc(coursesCollectionRef, courseData);
 
       toast({ title: "Course Created!", description: `The course "${data.name}" for ${language.name} has been successfully created.` });
       form.reset();
-      // Potentially redirect to a page listing courses for this language, or back to faculty dashboard
-      router.push(`/faculty/dashboard`); 
+      router.push(`/faculty/dashboard`);
 
     } catch (error) {
       console.error("Error creating course:", error);
@@ -127,7 +125,7 @@ export default function FacultyCreateCoursePage() {
       setIsSubmitting(false);
     }
   };
-  
+
   if (authLoading || isLoadingPageData) {
     return (
       <div className="container mx-auto py-8 flex justify-center items-center min-h-[calc(100vh-10rem)]">
@@ -136,8 +134,8 @@ export default function FacultyCreateCoursePage() {
       </div>
     );
   }
-  
-  if (!isAuthorized && !authLoading) return null; 
+
+  if (!isAuthorized && !authLoading) return null;
 
   if (!language) {
     return (

@@ -78,11 +78,11 @@ export type EnrollmentRequestStatus = 'pending' | 'approved' | 'rejected';
 export interface EnrollmentRequest {
   studentUid: string;
   studentName: string;
-  studentEmail?: string; 
+  studentEmail?: string;
   requestedAt: Timestamp | FieldValue;
   status: EnrollmentRequestStatus;
-  rejectionReason?: string; 
-  processedBy?: string; 
+  rejectionReason?: string;
+  processedBy?: string;
   processedAt?: Timestamp | FieldValue;
 }
 
@@ -100,11 +100,11 @@ export interface OnlineTest {
   scheduledAt?: Timestamp;
   createdAt: Timestamp | FieldValue;
   updatedAt: Timestamp | FieldValue;
-  createdBy: string; 
-  isFacultyCreated?: boolean; 
-  facultyId?: string; 
-  enrollmentRequests?: EnrollmentRequest[]; 
-  approvedStudentUids?: string[]; 
+  createdBy: string;
+  isFacultyCreated?: boolean;
+  facultyId?: string;
+  enrollmentRequests?: EnrollmentRequest[];
+  approvedStudentUids?: string[];
 }
 
 
@@ -150,14 +150,15 @@ export interface Feedback {
 
 export interface Course {
   id: string;
-  name: string; // e.g., "CS101 - Intro to Java Fall 2024"
-  languageId: string; 
+  name: string;
+  languageId: string;
   languageName: string;
-  facultyId: string; 
+  facultyId: string;
+  facultyName: string; // Added
   collegeId: string;
-  strength: number; // Max number of students for this course instance
-  description?: string; 
-  enrolledStudentUids?: string[]; 
+  strength: number;
+  description?: string;
+  enrolledStudentUids?: string[];
   createdAt: Timestamp | FieldValue;
   updatedAt: Timestamp | FieldValue;
 }
