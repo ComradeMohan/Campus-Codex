@@ -5,16 +5,16 @@ import React, { useState, useEffect, useCallback } from 'react';
 import Link from 'next/link';
 import { useAuth } from '@/contexts/AuthContext';
 import { db } from '@/lib/firebase';
-import { collection, getDocs, query, orderBy, where, doc, setDoc, serverTimestamp, Timestamp, limit } from 'firebase/firestore';
+import { collection, getDocs, query, orderBy, where, doc, setDoc, updateDoc, arrayUnion, serverTimestamp, Timestamp, FieldValue, limit } from 'firebase/firestore';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
-import { AICodeAssistant } from '@/components/AICodeAssistant';
-import { Loader2, BookOpen, AlertTriangle, CheckCircle, TerminalSquare, Zap, PlayCircle, ListChecks, Users, GraduationCap } from 'lucide-react';
-import type { ProgrammingLanguage, Course } from '@/types';
+import { Loader2, BookOpen, AlertTriangle, CheckCircle, TerminalSquare, Zap, PlayCircle, ListChecks, Users, GraduationCap, UserCheck, UserX, Hourglass, Send, Users2 } from 'lucide-react';
+import type { ProgrammingLanguage, Course, EnrollmentRequest, EnrollmentRequestStatus } from '@/types';
 import { useToast } from '@/hooks/use-toast';
 import Image from 'next/image';
 import * as LucideIcons from 'lucide-react';
 import { Separator } from '@/components/ui/separator';
+import { Badge } from '@/components/ui/badge';
 
 interface LanguageWithCourses extends ProgrammingLanguage {
   courses: Course[];
@@ -34,7 +34,8 @@ export default function StudentCodingLabsPage() {
   const [detailedCollegeLanguages, setDetailedCollegeLanguages] = useState<LanguageWithCourses[]>([]);
   const [isLoadingLanguages, setIsLoadingLanguages] = useState(true);
   const [enrolledLanguageIds, setEnrolledLanguageIds] = useState<Set<string>>(new Set());
-  const [isEnrolling, setIsEnrolling] = useState<Record<string, boolean>>({});
+  const [isEnrolling, setIsEnrolling] = useState<Record<string, boolean>>({}); // languageId: boolean
+  const [isProcessingCourseEnrollment, setIsProcessingCourseEnrollment] = useState<Record<string, boolean>>({}); // courseId: boolean
   const [languageHasPublishedTests, setLanguageHasPublishedTests] = useState<Map<string, boolean>>(new Map());
 
   const fetchCollegeLanguagesAndCourses = useCallback(async (collegeId: string) => {
@@ -51,12 +52,10 @@ export default function StudentCodingLabsPage() {
         } as ProgrammingLanguage;
 
         const coursesRef = collection(db, 'colleges', collegeId, 'languages', langDoc.id, 'courses');
-        // For now, fetch all courses. Add status filter if Course type gets a status field.
         const courseQuery = query(coursesRef, orderBy('name', 'asc'));
         const coursesSnapshot = await getDocs(courseQuery);
         const courses = coursesSnapshot.docs.map(cDoc => ({ id: cDoc.id, ...cDoc.data() } as Course));
 
-        // Check for published tests for the main language
         const testsRef = collection(db, 'colleges', collegeId, 'languages', langDoc.id, 'tests');
         const publishedTestsQuery = query(testsRef, where('status', '==', 'published'), limit(1));
         const testsSnap = await getDocs(publishedTestsQuery);
@@ -136,6 +135,68 @@ export default function StudentCodingLabsPage() {
       setIsEnrolling(prev => ({ ...prev, [language.id]: false }));
     }
   };
+  
+  const handleCourseEnrollmentRequest = async (course: Course) => {
+    if (!userProfile?.uid || !userProfile.collegeId) {
+      toast({ title: "Error", description: "User or college information missing.", variant: "destructive" });
+      return;
+    }
+    if ((course.enrolledStudentUids?.length || 0) >= course.strength) {
+        toast({ title: "Course Full", description: `Sorry, "${course.name}" has reached its maximum capacity.`, variant: "default" });
+        return;
+    }
+    setIsProcessingCourseEnrollment(prev => ({ ...prev, [course.id]: true }));
+    try {
+      const courseDocRef = doc(db, 'colleges', userProfile.collegeId, 'languages', course.languageId, 'courses', course.id);
+      const newRequest: EnrollmentRequest = {
+        studentUid: userProfile.uid,
+        studentName: userProfile.fullName,
+        studentEmail: userProfile.email || undefined,
+        requestedAt: serverTimestamp() as FieldValue,
+        status: 'pending',
+      };
+      await updateDoc(courseDocRef, {
+        enrollmentRequests: arrayUnion(newRequest),
+        updatedAt: serverTimestamp()
+      });
+      
+      // Optimistically update local state for immediate UI feedback
+      setDetailedCollegeLanguages(prevLangs => prevLangs.map(lang => {
+        if (lang.id === course.languageId) {
+          return {
+            ...lang,
+            courses: lang.courses.map(c => {
+              if (c.id === course.id) {
+                return { ...c, enrollmentRequests: [...(c.enrollmentRequests || []), newRequest] };
+              }
+              return c;
+            })
+          };
+        }
+        return lang;
+      }));
+
+      toast({ title: "Enrollment Requested", description: `Your request to enroll in "${course.name}" has been sent to the faculty.` });
+    } catch (error) {
+      console.error("Error requesting course enrollment:", error);
+      toast({ title: "Error", description: `Failed to request enrollment in "${course.name}".`, variant: "destructive" });
+    } finally {
+      setIsProcessingCourseEnrollment(prev => ({ ...prev, [course.id]: false }));
+    }
+  };
+
+  const getStudentCourseEnrollmentStatus = (course: Course): { status: EnrollmentRequestStatus | 'enrolled' | 'full' | 'not_requested' ; message?: string } => {
+    if (!userProfile) return { status: 'not_requested' };
+    if (course.enrolledStudentUids?.includes(userProfile.uid)) return { status: 'enrolled' };
+    
+    const request = course.enrollmentRequests?.find(req => req.studentUid === userProfile.uid);
+    if (request) {
+      return { status: request.status, message: request.rejectionReason };
+    }
+    if ((course.enrolledStudentUids?.length || 0) >= course.strength) return { status: 'full' };
+    return { status: 'not_requested' };
+  };
+
 
   if (authLoading || (isLoadingLanguages && userProfile)) {
     return (
@@ -194,7 +255,7 @@ export default function StudentCodingLabsPage() {
             <div className="space-y-6">
               {detailedCollegeLanguages.map((language) => {
                 const LanguageIcon = language.iconComponent;
-                const isCurrentlyEnrolling = isEnrolling[language.id];
+                const isCurrentlyEnrollingInLanguage = isEnrolling[language.id];
                 const isAlreadyEnrolledInLanguage = enrolledLanguageIds.has(language.id);
                 const hasPublishedTestsForLanguage = languageHasPublishedTests.get(language.id) === true;
 
@@ -229,11 +290,11 @@ export default function StudentCodingLabsPage() {
                           ) : (
                             <Button
                               onClick={() => handleEnrollInLanguage(language)}
-                              disabled={isCurrentlyEnrolling || !userProfile?.uid}
+                              disabled={isCurrentlyEnrollingInLanguage || !userProfile?.uid}
                               className="w-full"
                               variant={"default"}
                             >
-                              {isCurrentlyEnrolling ? (
+                              {isCurrentlyEnrollingInLanguage ? (
                                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                               ) : (
                                 `Enroll in ${language.name} Labs`
@@ -245,20 +306,59 @@ export default function StudentCodingLabsPage() {
                         {language.courses.length > 0 && (
                             <div>
                                 <h4 className="text-sm font-semibold mb-2 text-muted-foreground">Specific Courses in {language.name}:</h4>
-                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                                    {language.courses.map(course => (
-                                        <Card key={course.id} className="p-3 bg-background hover:bg-muted/50 transition-colors">
-                                            <CardTitle className="text-md font-medium line-clamp-1">{course.name}</CardTitle>
-                                            <CardDescription className="text-xs mt-0.5">
-                                                By: {course.facultyName}
-                                            </CardDescription>
-                                            {course.description && <p className="text-xs text-muted-foreground mt-1 line-clamp-2">{course.description}</p>}
-                                            <div className="mt-2 flex justify-end">
-                                                {/* Future: Link to course details/enrollment */}
-                                                <Button size="xs" variant="link" className="p-0 h-auto" disabled>View Details (Soon)</Button>
-                                            </div>
-                                        </Card>
-                                    ))}
+                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                                    {language.courses.map(course => {
+                                        const enrollmentStatusInfo = getStudentCourseEnrollmentStatus(course);
+                                        const currentEnrollment = course.enrolledStudentUids?.length || 0;
+                                        const isCourseFullForNewEnrollment = currentEnrollment >= course.strength && enrollmentStatusInfo.status === 'not_requested';
+
+                                        return (
+                                            <Card key={course.id} className="p-3 bg-background hover:bg-muted/50 transition-colors flex flex-col">
+                                                <CardTitle className="text-md font-medium line-clamp-1">{course.name}</CardTitle>
+                                                <CardDescription className="text-xs mt-0.5">
+                                                    By: {course.facultyName}
+                                                </CardDescription>
+                                                {course.description && <p className="text-xs text-muted-foreground mt-1 line-clamp-2 flex-grow">{course.description}</p>}
+                                                <div className="text-xs text-muted-foreground mt-1.5 flex items-center">
+                                                  <Users2 className="w-3.5 h-3.5 mr-1.5"/> Capacity: {currentEnrollment} / {course.strength}
+                                                </div>
+                                                <div className="mt-2.5">
+                                                    {enrollmentStatusInfo.status === 'enrolled' ? (
+                                                        <Button size="sm" variant="success" className="w-full text-xs h-8" disabled>
+                                                            <UserCheck className="mr-2 h-4 w-4"/> Enrolled
+                                                        </Button>
+                                                    ) : enrollmentStatusInfo.status === 'pending' ? (
+                                                        <Button size="sm" variant="secondary" className="w-full text-xs h-8" disabled>
+                                                            <Hourglass className="mr-2 h-4 w-4"/> Enrollment Pending
+                                                        </Button>
+                                                    ) : enrollmentStatusInfo.status === 'rejected' ? (
+                                                        <div className="w-full p-1.5 text-center text-xs bg-destructive/10 text-destructive rounded-md">
+                                                            <UserX className="inline h-3.5 w-3.5 mr-1 mb-0.5"/> Enrollment Rejected.
+                                                             {enrollmentStatusInfo.message && <p className="text-xs mt-0.5">{enrollmentStatusInfo.message}</p>}
+                                                        </div>
+                                                    ) : enrollmentStatusInfo.status === 'full' || isCourseFullForNewEnrollment ? (
+                                                        <Button size="sm" variant="outline" className="w-full text-xs h-8" disabled>
+                                                            <UserX className="mr-2 h-4 w-4 text-muted-foreground"/> Course Full
+                                                        </Button>
+                                                    ) : (
+                                                        <Button 
+                                                            size="sm" 
+                                                            className="w-full text-xs h-8"
+                                                            onClick={() => handleCourseEnrollmentRequest(course)}
+                                                            disabled={isProcessingCourseEnrollment[course.id] || !isAlreadyEnrolledInLanguage}
+                                                            title={!isAlreadyEnrolledInLanguage ? `Enroll in ${language.name} labs first` : `Request enrollment for ${course.name}`}
+                                                        >
+                                                            {isProcessingCourseEnrollment[course.id] ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : <Send className="mr-2 h-4 w-4"/>} 
+                                                            Request to Enroll
+                                                        </Button>
+                                                    )}
+                                                     {!isAlreadyEnrolledInLanguage && enrollmentStatusInfo.status === 'not_requested' && !isCourseFullForNewEnrollment && (
+                                                        <p className="text-xs text-muted-foreground mt-1 text-center">Enroll in "{language.name}" labs first to request course enrollment.</p>
+                                                    )}
+                                                </div>
+                                            </Card>
+                                        );
+                                    })}
                                 </div>
                             </div>
                         )}

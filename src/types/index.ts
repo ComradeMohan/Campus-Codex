@@ -82,8 +82,11 @@ export interface EnrollmentRequest {
   requestedAt: Timestamp | FieldValue;
   status: EnrollmentRequestStatus;
   rejectionReason?: string;
-  processedBy?: string;
+  processedBy?: string; // UID of faculty or admin
   processedAt?: Timestamp | FieldValue;
+  // Optionally, add a type field if requests are for different things (test vs course)
+  // type?: 'test_enrollment' | 'course_enrollment'; 
+  // For now, it's implicitly handled by where it's stored.
 }
 
 export interface OnlineTest {
@@ -154,11 +157,13 @@ export interface Course {
   languageId: string;
   languageName: string;
   facultyId: string;
-  facultyName: string; // Added
+  facultyName: string;
   collegeId: string;
   strength: number;
   description?: string;
   enrolledStudentUids?: string[];
+  enrollmentRequests?: EnrollmentRequest[]; // Added for course-specific enrollment requests
   createdAt: Timestamp | FieldValue;
   updatedAt: Timestamp | FieldValue;
 }
+
