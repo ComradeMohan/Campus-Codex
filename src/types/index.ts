@@ -84,9 +84,6 @@ export interface EnrollmentRequest {
   rejectionReason?: string;
   processedBy?: string; // UID of faculty or admin
   processedAt?: Timestamp | FieldValue;
-  // Optionally, add a type field if requests are for different things (test vs course)
-  // type?: 'test_enrollment' | 'course_enrollment'; 
-  // For now, it's implicitly handled by where it's stored.
 }
 
 export interface OnlineTest {
@@ -162,7 +159,8 @@ export interface Course {
   strength: number;
   description?: string;
   enrolledStudentUids?: string[];
-  enrollmentRequests?: EnrollmentRequest[]; // Added for course-specific enrollment requests
+  enrollmentRequests?: EnrollmentRequest[];
+  assignedQuestionIds?: string[]; // Added for assigning questions to course
   createdAt: Timestamp | FieldValue;
   updatedAt: Timestamp | FieldValue;
 }

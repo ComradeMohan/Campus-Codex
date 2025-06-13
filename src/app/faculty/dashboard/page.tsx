@@ -9,7 +9,7 @@ import { collection, getDocs, query, where, doc, getDoc, orderBy } from 'firebas
 import type { UserProfile, ProgrammingLanguage, Course } from '@/types';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Loader2, BookUser, ClipboardList, BarChart3, Users, AlertTriangle, BookOpen, Settings, PlusCircle, Edit3, Users2, ExternalLink } from 'lucide-react';
+import { Loader2, BookUser, ClipboardList, BarChart3, Users, AlertTriangle, BookOpen, Settings, PlusCircle, Edit3, Users2, ExternalLink, MessageSquarePlus, ListChecks } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import * as LucideIcons from 'lucide-react';
 import { Separator } from '@/components/ui/separator';
@@ -167,14 +167,19 @@ export default function FacultyDashboardPage() {
                                     <CardTitle className="text-md font-medium line-clamp-1">{course.name}</CardTitle>
                                     <CardDescription className="text-xs line-clamp-2">{course.description || 'No description provided.'}</CardDescription>
                                     <div className="text-xs text-muted-foreground mt-1.5 flex items-center">
-                                        <Users2 className="w-3.5 h-3.5 mr-1.5"/> 
+                                        <Users2 className="w-3.5 h-3.5 mr-1.5"/>
                                         Enrollments: {course.enrolledStudentUids?.length || 0} / {course.strength}
                                         ({(course.enrollmentRequests?.filter(r => r.status === 'pending').length || 0)} pending)
                                     </div>
-                                    <div className="mt-2 flex justify-end">
-                                        <Button size="xs" variant="ghost" asChild>
+                                    <div className="mt-2 flex flex-wrap gap-1.5 justify-end">
+                                        <Button size="xs" variant="ghost" asChild className="text-xs">
+                                            <Link href={`/faculty/courses/${course.id}/content?languageId=${lang.id}`}>
+                                                <ListChecks className="w-3 h-3 mr-1"/> Manage Content
+                                            </Link>
+                                        </Button>
+                                        <Button size="xs" variant="ghost" asChild className="text-xs">
                                             <Link href={`/faculty/courses/${course.id}/enrollments?languageId=${lang.id}`}>
-                                                <ExternalLink className="w-3 h-3 mr-1"/> Manage Enrollments
+                                                <Users className="w-3 h-3 mr-1"/> Manage Enrollments
                                             </Link>
                                         </Button>
                                     </div>
