@@ -11,15 +11,32 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
-import { Loader2, ArrowLeft, BookOpen, AlertTriangle, FileText, ClipboardList, Tag, Star, Users2, PlayCircle, LinkIcon, ExternalLink } from 'lucide-react';
+import { Loader2, ArrowLeft, BookOpen, AlertTriangle, FileText, ClipboardList, Tag, Star, Users2, PlayCircle, LinkIcon, ExternalLink, Eye, EyeOff, XCircle } from 'lucide-react';
 import type { ProgrammingLanguage, Course, Question as QuestionType, QuestionDifficulty } from '@/types';
 
 // Helper function to transform Google Drive links
-const transformGoogleDriveLink = (url: string): string => {
-    if (url.includes('drive.google.com/file/d/')) {
-      return url.replace('/view?usp=sharing', '/preview').replace('/view', '/preview');
+const transformGoogleDriveLink = (url: string): string | null => {
+    if (!url) return null;
+
+    // Common Google Drive file link: drive.google.com/file/d/FILE_ID/view?usp=sharing or /edit?usp=sharing etc.
+    const fileIdMatch = url.match(/drive\.google\.com\/file\/d\/([a-zA-Z0-9_-]+)/);
+    if (fileIdMatch && fileIdMatch[1]) {
+      return `https://drive.google.com/file/d/${fileIdMatch[1]}/preview#toolbar=0&navpanes=0`;
     }
-    return url; // Return as is if not a recognized GDrive file link
+
+    // Common Google Drive open link: drive.google.com/open?id=FILE_ID
+    const openIdMatch = url.match(/drive\.google\.com\/open\?id=([a-zA-Z0-9_-]+)/);
+    if (openIdMatch && openIdMatch[1]) {
+      return `https://drive.google.com/file/d/${openIdMatch[1]}/preview#toolbar=0&navpanes=0`;
+    }
+    
+    // Direct PDF link
+    if (url.toLowerCase().endsWith('.pdf')) {
+        return url; // For direct PDF links, we can't easily control toolbar.
+    }
+
+    // If not a recognized Google Drive file link or direct PDF, might not be embeddable reliably
+    return null; 
 };
 
 
@@ -38,6 +55,7 @@ export default function StudentCourseViewPage() {
   const [assignedQuestions, setAssignedQuestions] = useState<QuestionType[]>([]);
   const [isLoadingPageData, setIsLoadingPageData] = useState(true);
   const [isEnrolledInCourse, setIsEnrolledInCourse] = useState(false);
+  const [showPdfViewer, setShowPdfViewer] = useState(false);
 
   const fetchCourseDetails = useCallback(async () => {
     if (!userProfile?.collegeId || !courseId || !languageId) {
@@ -76,12 +94,17 @@ export default function StudentCourseViewPage() {
 
       if (courseData.assignedQuestionIds && courseData.assignedQuestionIds.length > 0) {
         const questionsRef = collection(db, 'colleges', userProfile.collegeId, 'languages', languageId, 'questions');
-        const questionsQuery = query(questionsRef, where(documentId(), 'in', courseData.assignedQuestionIds));
-        const questionsSnapshot = await getDocs(questionsQuery);
-        const fetchedQuestions = questionsSnapshot.docs.map(qDoc => ({ id: qDoc.id, ...qDoc.data() } as QuestionType));
-        
-        const orderedQuestions = courseData.assignedQuestionIds.map(id => fetchedQuestions.find(q => q.id === id)).filter(Boolean) as QuestionType[];
-        setAssignedQuestions(orderedQuestions);
+        // Ensure courseData.assignedQuestionIds is not empty before using 'in' query
+        if (courseData.assignedQuestionIds.length > 0) {
+          const questionsQuery = query(questionsRef, where(documentId(), 'in', courseData.assignedQuestionIds));
+          const questionsSnapshot = await getDocs(questionsQuery);
+          const fetchedQuestions = questionsSnapshot.docs.map(qDoc => ({ id: qDoc.id, ...qDoc.data() } as QuestionType));
+          
+          const orderedQuestions = courseData.assignedQuestionIds.map(id => fetchedQuestions.find(q => q.id === id)).filter(Boolean) as QuestionType[];
+          setAssignedQuestions(orderedQuestions);
+        } else {
+          setAssignedQuestions([]);
+        }
       } else {
         setAssignedQuestions([]);
       }
@@ -175,33 +198,48 @@ export default function StudentCourseViewPage() {
           <div className="text-sm text-muted-foreground flex items-center">
             <Users2 className="w-4 h-4 mr-2"/> Capacity: {course.enrolledStudentUids?.length || 0} / {course.strength} students
           </div>
+          
           {course.courseMaterialLink && (
-            <div>
-                <h3 className="text-md font-semibold mb-1 mt-3 flex items-center">
+            <div className="mt-4">
+                <h3 className="text-md font-semibold mb-2 flex items-center">
                     <LinkIcon className="w-5 h-5 mr-2 text-primary"/> Course Material
                 </h3>
-                {embeddableMaterialLink ? (
-                     <div className="aspect-video md:aspect-[16/10] lg:aspect-[2/1] w-full max-w-4xl mx-auto mt-2 border rounded-md overflow-hidden">
-                        <iframe
-                            src={embeddableMaterialLink}
-                            className="w-full h-full"
-                            title="Course Material PDF"
-                            allow="autoplay"
-                        ></iframe>
-                    </div>
-                ) : (
-                    <p className="text-muted-foreground text-sm">
-                        <a href={course.courseMaterialLink} target="_blank" rel="noopener noreferrer" className="hover:underline flex items-center gap-1">
-                            View Material <ExternalLink className="h-3 w-3"/>
-                        </a> (Could not auto-embed link)
-                    </p>
+                {!showPdfViewer && embeddableMaterialLink && (
+                    <Button onClick={() => setShowPdfViewer(true)} variant="secondary">
+                        <Eye className="mr-2 h-4 w-4" /> View Course Material
+                    </Button>
                 )}
-                 <p className="text-xs text-muted-foreground mt-1">If the material doesn't load, try opening the <a href={course.courseMaterialLink} target="_blank" rel="noopener noreferrer" className="underline">original link <ExternalLink className="inline h-3 w-3"/></a> directly.</p>
+                {!embeddableMaterialLink && course.courseMaterialLink && (
+                     <Button asChild variant="outline">
+                        <a href={course.courseMaterialLink} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1">
+                           <ExternalLink className="h-4 w-4"/> Open Material (New Tab)
+                        </a>
+                    </Button>
+                )}
             </div>
           )}
            {!course.courseMaterialLink && (
              <p className="text-sm text-muted-foreground">No course material link provided by faculty.</p>
            )}
+
+            {showPdfViewer && embeddableMaterialLink && (
+                <div className="mt-3">
+                    <div className="flex justify-end mb-2">
+                        <Button onClick={() => setShowPdfViewer(false)} variant="outline" size="sm">
+                           <XCircle className="mr-2 h-4 w-4"/> Close PDF Viewer
+                        </Button>
+                    </div>
+                    <div className="aspect-video md:aspect-[16/10] lg:aspect-[2/1] w-full max-w-4xl mx-auto border-0 rounded-md overflow-hidden bg-gray-100 dark:bg-gray-800">
+                        <iframe
+                            src={embeddableMaterialLink}
+                            className="w-full h-full border-0"
+                            title="Course Material PDF"
+                            allow="fullscreen"
+                        ></iframe>
+                    </div>
+                    <p className="text-xs text-muted-foreground mt-1 text-center">If the material doesn&apos;t load correctly, try opening the <a href={course.courseMaterialLink} target="_blank" rel="noopener noreferrer" className="underline">original link <ExternalLink className="inline h-3 w-3"/></a>.</p>
+                </div>
+            )}
         </CardContent>
       </Card>
 
