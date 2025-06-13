@@ -8,7 +8,7 @@ import { db } from '@/lib/firebase';
 import { collection, getDocs, query, orderBy, where, doc, setDoc, updateDoc, arrayUnion, serverTimestamp, Timestamp, FieldValue, limit, runTransaction } from 'firebase/firestore';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
-import { Loader2, BookOpen, AlertTriangle, CheckCircle, TerminalSquare, Zap, PlayCircle, ListChecks, Users, GraduationCap, UserCheck, UserX, Hourglass, Send, Users2 } from 'lucide-react';
+import { Loader2, BookOpen, AlertTriangle, CheckCircle, TerminalSquare, Zap, PlayCircle, ListChecks, Users, GraduationCap, UserCheck, UserX, Hourglass, Send, Users2, Info } from 'lucide-react';
 import type { ProgrammingLanguage, Course, EnrollmentRequest, EnrollmentRequestStatus } from '@/types';
 import { useToast } from '@/hooks/use-toast';
 import Image from 'next/image';
@@ -156,13 +156,14 @@ export default function StudentCodingLabsPage() {
           throw new Error("Course document does not exist!");
         }
         const currentCourseData = courseDocSnap.data() as Course;
-        let existingRequests = currentCourseData.enrollmentRequests || []; // Ensure it's an array
+        let existingRequests = currentCourseData.enrollmentRequests || [];
 
-        const hasExistingActiveRequest = existingRequests.some(
-          req => req.studentUid === userProfile.uid && (req.status === 'pending' || req.status === 'approved')
+        const hasExistingPendingRequest = existingRequests.some(
+          req => req.studentUid === userProfile.uid && req.status === 'pending'
         );
-        if (hasExistingActiveRequest) {
-          console.log("Student already has an active or pending request for this course.");
+        if (hasExistingPendingRequest) {
+          console.log("Student already has a pending request for this course.");
+          // Do not throw error, just return, as toast will be shown by UI logic
           return; 
         }
         
@@ -170,7 +171,7 @@ export default function StudentCodingLabsPage() {
           studentUid: userProfile.uid,
           studentName: userProfile.fullName,
           studentEmail: userProfile.email || undefined,
-          requestedAt: Timestamp.now(), // Use client-side timestamp for array elements
+          requestedAt: Timestamp.now(), 
           status: 'pending',
         };
         
@@ -178,7 +179,7 @@ export default function StudentCodingLabsPage() {
         
         transaction.update(courseDocRef, {
           enrollmentRequests: updatedRequests,
-          updatedAt: serverTimestamp() // Top-level serverTimestamp for the course doc
+          updatedAt: serverTimestamp()
         });
       });
       
@@ -197,6 +198,7 @@ export default function StudentCodingLabsPage() {
             courses: lang.courses.map(c => {
               if (c.id === course.id) {
                 const existingRequests = c.enrollmentRequests || [];
+                 // Avoid adding duplicate if already handled by optimistic check before transaction
                 if (!existingRequests.some(req => req.studentUid === newRequestForUI.studentUid && req.status === 'pending')) {
                     return { ...c, enrollmentRequests: [...existingRequests, newRequestForUI] };
                 }
@@ -214,7 +216,11 @@ export default function StudentCodingLabsPage() {
       console.error("Error requesting course enrollment:", error);
       if (error.message === "Course document does not exist!") {
         toast({ title: "Error", description: "Could not find the course to enroll. It might have been removed.", variant: "destructive" });
-      } else {
+      } else if (error.message?.includes("Student already has a pending request")) {
+        // This specific error message isn't thrown, but it's a good place for this kind of check
+        toast({ title: "Request Pending", description: `You already have a pending request for "${course.name}".`, variant: "default" });
+      }
+      else {
         toast({ title: "Error", description: `Failed to request enrollment in "${course.name}". Please try again.`, variant: "destructive" });
       }
     } finally {
@@ -222,15 +228,44 @@ export default function StudentCodingLabsPage() {
     }
   };
 
-  const getStudentCourseEnrollmentStatus = (course: Course): { status: EnrollmentRequestStatus | 'enrolled' | 'full' | 'not_requested' ; message?: string } => {
+  const getStudentCourseEnrollmentStatus = (course: Course): { 
+    status: 'enrolled' | 'pending' | 'rejected_can_request_again' | 'full' | 'not_requested'; 
+    message?: string 
+  } => {
     if (!userProfile) return { status: 'not_requested' };
     if (course.enrolledStudentUids?.includes(userProfile.uid)) return { status: 'enrolled' };
-    
-    const request = course.enrollmentRequests?.find(req => req.studentUid === userProfile.uid);
-    if (request) {
-      return { status: request.status, message: request.rejectionReason };
+  
+    const studentRequests = (course.enrollmentRequests || [])
+      .filter(req => req.studentUid === userProfile.uid)
+      .sort((a, b) => {
+        // Ensure robust timestamp comparison
+        const timeA = (a.requestedAt as Timestamp)?.toMillis?.() || 0;
+        const timeB = (b.requestedAt as Timestamp)?.toMillis?.() || 0;
+        return timeB - timeA; // Sort descending to get latest first
+      });
+  
+    if (studentRequests.length > 0) {
+      const latestRequest = studentRequests[0];
+      if (latestRequest.status === 'pending') {
+        return { status: 'pending' };
+      }
+      if (latestRequest.status === 'rejected') {
+        return { status: 'rejected_can_request_again', message: latestRequest.rejectionReason || "Your previous enrollment request was not approved." };
+      }
+      // If latest status is 'approved' but not in enrolledStudentUids, it's an inconsistent state.
+      // This shouldn't happen if faculty approval logic is correct.
+      if (latestRequest.status === 'approved' && !course.enrolledStudentUids?.includes(userProfile.uid)) {
+          console.warn(`Inconsistent state: Student ${userProfile.uid} has an approved request for course ${course.id} but is not in enrolledStudentUids.`);
+          // Could treat as 'pending' or display an error to the student. For now, let them re-request.
+          return { status: 'not_requested', message: "There was an issue with your previous approval. Please request again." };
+      }
     }
-    if ((course.enrolledStudentUids?.length || 0) >= course.strength) return { status: 'full' };
+  
+    // If no relevant request, check if course is full
+    if ((course.enrolledStudentUids?.length || 0) >= course.strength) {
+      return { status: 'full' };
+    }
+  
     return { status: 'not_requested' };
   };
 
@@ -347,7 +382,7 @@ export default function StudentCodingLabsPage() {
                                     {language.courses.map(course => {
                                         const enrollmentStatusInfo = getStudentCourseEnrollmentStatus(course);
                                         const currentEnrollment = course.enrolledStudentUids?.length || 0;
-                                        const isCourseFullForNewEnrollment = currentEnrollment >= course.strength && enrollmentStatusInfo.status === 'not_requested';
+                                        const isCourseFullForNewEnrollment = currentEnrollment >= course.strength && (enrollmentStatusInfo.status === 'not_requested' || enrollmentStatusInfo.status === 'rejected_can_request_again');
 
                                         return (
                                             <Card key={course.id} className="p-3 bg-background hover:bg-muted/50 transition-colors flex flex-col">
@@ -368,16 +403,27 @@ export default function StudentCodingLabsPage() {
                                                         <Button size="sm" variant="secondary" className="w-full text-xs h-8" disabled>
                                                             <Hourglass className="mr-2 h-4 w-4"/> Enrollment Pending
                                                         </Button>
-                                                    ) : enrollmentStatusInfo.status === 'rejected' ? (
-                                                        <div className="w-full p-1.5 text-center text-xs bg-destructive/10 text-destructive rounded-md">
-                                                            <UserX className="inline h-3.5 w-3.5 mr-1 mb-0.5"/> Enrollment Rejected.
-                                                             {enrollmentStatusInfo.message && <p className="text-xs mt-0.5">{enrollmentStatusInfo.message}</p>}
-                                                        </div>
+                                                    ) : enrollmentStatusInfo.status === 'rejected_can_request_again' ? (
+                                                        <>
+                                                            <div className="w-full p-1.5 mb-1.5 text-center text-xs bg-destructive/10 text-destructive rounded-md flex items-center justify-center gap-1">
+                                                                <Info className="h-3.5 w-3.5 shrink-0"/> {enrollmentStatusInfo.message}
+                                                            </div>
+                                                            <Button 
+                                                                size="sm" 
+                                                                className="w-full text-xs h-8"
+                                                                onClick={() => handleCourseEnrollmentRequest(course)}
+                                                                disabled={isProcessingCourseEnrollment[course.id] || !isAlreadyEnrolledInLanguage || isCourseFullForNewEnrollment}
+                                                                title={!isAlreadyEnrolledInLanguage ? `Enroll in ${language.name} labs first` : isCourseFullForNewEnrollment ? "Course is full" : `Request enrollment for ${course.name}`}
+                                                            >
+                                                                {isProcessingCourseEnrollment[course.id] ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : <Send className="mr-2 h-4 w-4"/>} 
+                                                                Request to Enroll Again
+                                                            </Button>
+                                                        </>
                                                     ) : enrollmentStatusInfo.status === 'full' || isCourseFullForNewEnrollment ? (
                                                         <Button size="sm" variant="outline" className="w-full text-xs h-8" disabled>
                                                             <UserX className="mr-2 h-4 w-4 text-muted-foreground"/> Course Full
                                                         </Button>
-                                                    ) : (
+                                                    ) : ( // status is 'not_requested'
                                                         <Button 
                                                             size="sm" 
                                                             className="w-full text-xs h-8"
@@ -389,7 +435,7 @@ export default function StudentCodingLabsPage() {
                                                             Request to Enroll
                                                         </Button>
                                                     )}
-                                                     {!isAlreadyEnrolledInLanguage && enrollmentStatusInfo.status === 'not_requested' && !isCourseFullForNewEnrollment && (
+                                                     {!isAlreadyEnrolledInLanguage && (enrollmentStatusInfo.status === 'not_requested' || enrollmentStatusInfo.status === 'rejected_can_request_again') && !isCourseFullForNewEnrollment && (
                                                         <p className="text-xs text-muted-foreground mt-1 text-center">Enroll in "{language.name}" labs first to request course enrollment.</p>
                                                     )}
                                                 </div>
