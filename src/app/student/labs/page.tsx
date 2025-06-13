@@ -156,23 +156,21 @@ export default function StudentCodingLabsPage() {
           throw new Error("Course document does not exist!");
         }
         const currentCourseData = courseDocSnap.data() as Course;
-        const existingRequests = currentCourseData.enrollmentRequests || [];
+        let existingRequests = currentCourseData.enrollmentRequests || []; // Ensure it's an array
 
-        // Check if student already has a pending or approved request
         const hasExistingActiveRequest = existingRequests.some(
           req => req.studentUid === userProfile.uid && (req.status === 'pending' || req.status === 'approved')
         );
         if (hasExistingActiveRequest) {
-          // No toast here as the UI should already reflect this
           console.log("Student already has an active or pending request for this course.");
-          return; // Exit transaction
+          return; 
         }
         
         const newRequestObject: EnrollmentRequest = {
           studentUid: userProfile.uid,
           studentName: userProfile.fullName,
           studentEmail: userProfile.email || undefined,
-          requestedAt: serverTimestamp() as FieldValue, // This is now part of a direct update
+          requestedAt: Timestamp.now(), // Use client-side timestamp for array elements
           status: 'pending',
         };
         
@@ -180,17 +178,15 @@ export default function StudentCodingLabsPage() {
         
         transaction.update(courseDocRef, {
           enrollmentRequests: updatedRequests,
-          updatedAt: serverTimestamp()
+          updatedAt: serverTimestamp() // Top-level serverTimestamp for the course doc
         });
       });
       
-      // Optimistically update local state for immediate UI feedback
-      // For the UI, we'll use a client-side timestamp for the new request
       const newRequestForUI: EnrollmentRequest = {
         studentUid: userProfile.uid,
         studentName: userProfile.fullName,
         studentEmail: userProfile.email || undefined,
-        requestedAt: Timestamp.now(), // Client-side timestamp for UI
+        requestedAt: Timestamp.now(), 
         status: 'pending',
       };
 
@@ -201,7 +197,6 @@ export default function StudentCodingLabsPage() {
             courses: lang.courses.map(c => {
               if (c.id === course.id) {
                 const existingRequests = c.enrollmentRequests || [];
-                // Avoid adding duplicate if optimistic update runs multiple times before Firestore sync
                 if (!existingRequests.some(req => req.studentUid === newRequestForUI.studentUid && req.status === 'pending')) {
                     return { ...c, enrollmentRequests: [...existingRequests, newRequestForUI] };
                 }
@@ -217,7 +212,6 @@ export default function StudentCodingLabsPage() {
       toast({ title: "Enrollment Requested", description: `Your request to enroll in "${course.name}" has been sent to the faculty.` });
     } catch (error: any) {
       console.error("Error requesting course enrollment:", error);
-      // Check if it's our custom error from the transaction
       if (error.message === "Course document does not exist!") {
         toast({ title: "Error", description: "Could not find the course to enroll. It might have been removed.", variant: "destructive" });
       } else {
