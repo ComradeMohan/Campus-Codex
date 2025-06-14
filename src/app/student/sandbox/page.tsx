@@ -15,22 +15,25 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 import { Sheet, SheetContent, SheetTrigger, SheetClose } from '@/components/ui/sheet';
 import { MonacoCodeEditor } from '@/components/editor/MonacoCodeEditor';
+import { LabAIChatAssistant } from '@/components/student/LabAIChatAssistant';
 import { useToast } from '@/hooks/use-toast';
-import { Loader2, Save, Play, Trash2, PlusCircle, FileCode, Terminal, AlertTriangle, ClipboardType, Share2, PanelLeftOpen, X, GripHorizontal } from 'lucide-react';
+import { Loader2, Save, Play, Trash2, PlusCircle, FileCode, Terminal, AlertTriangle, ClipboardType, Share2, PanelLeftOpen, X, GripHorizontal, Sparkles } from 'lucide-react';
 import type { ProgrammingLanguage, SavedProgram } from '@/types';
 import { cn } from '@/lib/utils';
 import * as LucideIcons from 'lucide-react';
 import { useRouter, useSearchParams } from 'next/navigation';
+import { useIsMobile } from '@/hooks/use-mobile';
+
 
 const PLACEMENTS_COURSE_NAME = "Placements";
-const MIN_BOTTOM_PANEL_HEIGHT = 100; // Minimum height for the bottom panel
-const DEFAULT_BOTTOM_PANEL_HEIGHT = 250; // Default height
+const MIN_BOTTOM_PANEL_HEIGHT = 100; 
+const DEFAULT_BOTTOM_PANEL_HEIGHT = 250; 
 
 const getIconComponent = (iconName?: string): React.FC<React.SVGProps<SVGSVGElement>> => {
   if (iconName && LucideIcons[iconName as keyof typeof LucideIcons]) {
     return LucideIcons[iconName as keyof typeof LucideIcons] as React.FC<React.SVGProps<SVGSVGElement>>;
   }
-  return FileCode; // Default icon
+  return FileCode; 
 };
 
 const getDefaultCodeForLanguage = (langName?: string): string => {
@@ -136,6 +139,7 @@ export default function StudentSandboxPage() {
   const { toast } = useToast();
   const router = useRouter();
   const searchParams = useSearchParams();
+  const isMobile = useIsMobile();
 
   const [allCollegeLanguages, setAllCollegeLanguages] = useState<ProgrammingLanguage[]>([]);
   const [programmingLanguages, setProgrammingLanguages] = useState<ProgrammingLanguage[]>([]);
@@ -151,6 +155,7 @@ export default function StudentSandboxPage() {
   const [errorOutput, setErrorOutput] = useState('');
   const [activeTab, setActiveTab] = useState("input"); 
   const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
+  const [isAIChatOpen, setIsAIChatOpen] = useState(false);
 
 
   const [isLoadingPageData, setIsLoadingPageData] = useState(true);
@@ -170,6 +175,7 @@ export default function StudentSandboxPage() {
     setCurrentProgramTitle(isShared ? `[Shared] ${programData.title || 'Untitled'}` : programData.title || '');
     setCurrentCode(programData.code || '');
     setSampleInput(programData.lastInput || '');
+    setIsAIChatOpen(false); // Close AI chat when loading new program
 
     let languageToLoad: ProgrammingLanguage | null = null;
     if(programData.languageId) {
@@ -214,6 +220,7 @@ export default function StudentSandboxPage() {
   const handleNewProgram = useCallback(() => {
     setActiveProgramId(null);
     const newProgramDefaults: Partial<SavedProgram> = { title: '', code: '', lastInput: '' };
+    setIsAIChatOpen(false); // Close AI chat for new program
     
     let langForNewProgram = selectedLanguage;
     if (!langForNewProgram && programmingLanguages.length > 0) {
@@ -471,7 +478,16 @@ export default function StudentSandboxPage() {
       });
   }, [toast]);
 
-  // --- Resizing Logic ---
+  const toggleAIChat = () => {
+    if (isMobile) {
+        toast({title: "AI Assistant", description: "AI Assistant is best viewed on larger screens.", variant: "default"});
+        return;
+    }
+    setIsAIChatOpen(prev => !prev);
+  };
+  const getCurrentCodeForAI = () => currentCode;
+
+
   const handleMouseDownOnResizer = (e: React.MouseEvent) => {
     e.preventDefault();
     setIsResizing(true);
@@ -483,10 +499,10 @@ export default function StudentSandboxPage() {
     const handleMouseMove = (e: MouseEvent) => {
       if (!isResizing || !sandboxContainerRef.current) return;
       const deltaY = e.clientY - startYRef.current;
-      let newHeight = initialHeightRef.current - deltaY; // Dragging up decreases height, down increases
+      let newHeight = initialHeightRef.current - deltaY; 
 
       const containerHeight = sandboxContainerRef.current.offsetHeight;
-      const maxPanelHeight = containerHeight * 0.8; // Max 80% of container
+      const maxPanelHeight = containerHeight * 0.8; 
 
       newHeight = Math.max(MIN_BOTTOM_PANEL_HEIGHT, Math.min(newHeight, maxPanelHeight));
       setBottomPanelHeight(newHeight);
@@ -506,7 +522,7 @@ export default function StudentSandboxPage() {
       document.removeEventListener('mouseup', handleMouseUp);
     };
   }, [isResizing]);
-  // --- End Resizing Logic ---
+
 
   const sidebarContent = (isMobileContext = false) => (
     <>
@@ -545,7 +561,7 @@ export default function StudentSandboxPage() {
                     >
                       <div
                         className={cn(
-                            "flex flex-1 items-center gap-1.5 p-1.5 cursor-pointer truncate text-xs",
+                            "flex flex-1 items-center gap-1.5 p-1.5 cursor-pointer text-xs min-w-0", 
                             activeProgramId === program.id && "text-primary font-medium"
                         )}
                         onClick={() => !(isSaving || isExecuting) && handleLoadProgram(program, allCollegeLanguages)}
@@ -638,7 +654,6 @@ export default function StudentSandboxPage() {
 
   return (
     <div className="flex flex-col h-[calc(100vh-theme(spacing.16))] overflow-hidden" ref={sandboxContainerRef}>
-      {/* Top Control Bar */}
       <div className="flex items-center flex-wrap gap-2 p-2 border-b bg-muted/30 shrink-0">
         <Sheet open={isMobileSidebarOpen} onOpenChange={setIsMobileSidebarOpen}>
           <SheetTrigger asChild>
@@ -682,17 +697,19 @@ export default function StudentSandboxPage() {
           <span className="hidden sm:inline">Run</span>
            <span className="sm:hidden">Run</span>
         </Button>
+         {!isMobile && selectedLanguage && (
+            <Button variant="outline" size="sm" onClick={toggleAIChat} className="h-9 text-xs md:text-sm">
+               <Sparkles className="h-4 w-4 mr-1.5" /> AI Assistant
+            </Button>
+        )}
       </div>
 
-      <div className="flex flex-1 overflow-hidden">
-        {/* Desktop Sidebar */}
+      <div className="flex flex-1 overflow-hidden relative"> {/* Added relative for AI Assistant positioning */}
         <Card className="w-[240px] md:w-[280px] hidden md:flex flex-col border-r rounded-none shrink-0">
           {sidebarContent()}
         </Card>
 
-        {/* Main Editor and Output Area */}
         <div className="flex-1 flex flex-col overflow-hidden">
-          {/* Editor Area */}
           <div className="flex-grow relative overflow-hidden">
             <MonacoCodeEditor
               language={selectedLanguage?.name || 'plaintext'}
@@ -720,7 +737,6 @@ export default function StudentSandboxPage() {
             )}
           </div>
           
-          {/* Draggable Resizer */}
           <div
             onMouseDown={handleMouseDownOnResizer}
             className="h-2.5 bg-muted hover:bg-accent cursor-row-resize w-full flex items-center justify-center shrink-0"
@@ -729,8 +745,6 @@ export default function StudentSandboxPage() {
             <GripHorizontal className="w-4 h-4 text-muted-foreground group-hover:text-accent-foreground" />
           </div>
 
-
-          {/* Bottom Tabs for Input/Output/Errors */}
           <div
             className="border-t flex flex-col bg-muted/20 shrink-0 overflow-hidden"
             style={{ height: `${bottomPanelHeight}px` }}
@@ -777,6 +791,15 @@ export default function StudentSandboxPage() {
             </Tabs>
           </div>
         </div>
+        {selectedLanguage && (
+            <LabAIChatAssistant
+                isOpen={isAIChatOpen}
+                onToggle={toggleAIChat}
+                currentLanguageName={selectedLanguage.name}
+                currentQuestionText={"Assistance for your code in the sandbox."} // Generic context for sandbox
+                getCurrentCodeSnippet={getCurrentCodeForAI}
+            />
+        )}
       </div>
     </div>
   );
