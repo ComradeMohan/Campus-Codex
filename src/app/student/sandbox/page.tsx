@@ -555,11 +555,11 @@ export default function StudentSandboxPage() {
                    <li 
                       key={program.id} 
                       className={cn(
-                        "group flex items-center justify-between rounded-sm hover:bg-muted/50",
+                        "group flex items-center rounded-sm hover:bg-muted/50", // Removed justify-between
                         activeProgramId === program.id && "bg-primary/10"
                       )}
                     >
-                      <div
+                      <div // Clickable area for title and icon
                         className={cn(
                             "flex flex-1 items-center gap-1.5 p-1.5 cursor-pointer text-xs min-w-0", 
                             activeProgramId === program.id && "text-primary font-medium"
@@ -568,12 +568,12 @@ export default function StudentSandboxPage() {
                         role="button"
                         tabIndex={isSaving || isExecuting ? -1 : 0}
                         onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { if (!(isSaving || isExecuting)) handleLoadProgram(program, allCollegeLanguages); } }}
-                        title={`Load program: ${program.title}`}
+                        title={program.title} // Tooltip for full title
                       >
                         <ProgramIcon className="h-4 w-4 shrink-0" />
-                        <span className="flex-1 truncate" title={program.title}>{program.title}</span>
+                        <span className="truncate" title={program.title}>{program.title}</span> {/* Title with truncate */}
                       </div>
-                      <div className="flex shrink-0 items-center"> {/* Ensure buttons container doesn't shrink */}
+                      <div className="flex shrink-0 items-center pr-1"> {/* Button container with right padding */}
                         <Button
                             variant="ghost"
                             size="icon"
@@ -791,7 +791,7 @@ export default function StudentSandboxPage() {
             </Tabs>
           </div>
         </div>
-        {selectedLanguage && !isMobile && ( /* Added !isMobile condition for AI Chat Assistant */
+        {selectedLanguage && !isMobile && (
             <LabAIChatAssistant
                 isOpen={isAIChatOpen}
                 onToggle={toggleAIChat}
