@@ -2,7 +2,7 @@
 'use client';
 
 import Link from 'next/link';
-import { CodeXml, Menu, X, Sun, Moon, User, BookUser, Code2, BarChartHorizontalBig } from 'lucide-react';
+import { CodeXml, Menu, X, Sun, Moon, User, BookUser, Code2, BarChartHorizontalBig, LayoutDashboard } from 'lucide-react';
 import { siteConfig } from '@/config/site';
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/contexts/AuthContext';
@@ -18,12 +18,12 @@ export function Navbar() {
   const router = useRouter();
   const [isSheetOpen, setIsSheetOpen] = useState(false);
   const [isMounted, setIsMounted] = useState(false);
-  const [theme, setTheme] = useState('dark'); // Default to dark
+  const [theme, setTheme] = useState('dark'); 
 
   useEffect(() => {
     setIsMounted(true);
     const storedTheme = localStorage.getItem('theme');
-    const initialTheme = storedTheme ? storedTheme : 'dark'; // Default to dark if nothing in localStorage
+    const initialTheme = storedTheme ? storedTheme : 'dark'; 
     setTheme(initialTheme);
     if (initialTheme === 'dark') {
       document.documentElement.classList.add('dark');
@@ -65,10 +65,8 @@ export function Navbar() {
 
     const navItemsToDisplay = siteConfig.navItems.filter(item => {
       if (currentUser) {
-        // If user is logged in, don't show "Login", "Register", "Home", or "Features"
         return !["Login", "Register", "Home", "Features"].includes(item.label);
       }
-      // If user is not logged in, show all items
       return true;
     });
 
@@ -128,6 +126,11 @@ export function Navbar() {
         }
       }
       if (userProfile?.role === 'student') {
+        const studentDashboardLink = (
+          <Button variant="ghost" asChild className={commonLinkClasses}>
+            <Link href="/student/dashboard" className="flex items-center gap-1.5"><LayoutDashboard className="h-4 w-4"/> Dashboard</Link>
+          </Button>
+        );
         const studentLabsLink = (
           <Button variant="ghost" asChild className={commonLinkClasses}>
             <Link href="/student/labs">Labs</Link>
@@ -138,13 +141,16 @@ export function Navbar() {
             <Link href="/student/sandbox" className="flex items-center gap-1.5"><Code2 className="h-4 w-4"/> Sandbox</Link>
           </Button>
         );
-        const studentProfileLink = (
+           const studentProfileLink = (
            <Button variant="ghost" asChild className={commonLinkClasses}>
             <Link href="/student/profile" className="flex items-center gap-1.5"> <User className="h-4 w-4"/> Profile</Link>
           </Button>
         );
 
         if (isSheetItem) {
+           authConditionalLinks.push(
+            <SheetClose asChild key="student-dashboard">{studentDashboardLink}</SheetClose>
+          );
           authConditionalLinks.push(
             <SheetClose asChild key="student-labs">{studentLabsLink}</SheetClose>
           );
@@ -155,6 +161,11 @@ export function Navbar() {
             <SheetClose asChild key="student-profile">{studentProfileLink}</SheetClose>
           );
         } else {
+           authConditionalLinks.push(
+            <Button variant="ghost" asChild className={commonLinkClasses} key="student-dashboard">
+                <Link href="/student/dashboard" className="flex items-center gap-1.5"><LayoutDashboard className="h-4 w-4"/> Dashboard</Link>
+            </Button>
+          );
           authConditionalLinks.push(
             <Button variant="ghost" asChild className={commonLinkClasses} key="student-labs">
                 <Link href="/student/labs">Labs</Link>
@@ -227,7 +238,7 @@ export function Navbar() {
   return (
     <header className="sticky top-0 z-50 w-full border-b border-border/40 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
       <div className="container flex h-16 items-center justify-between">
-        <Link href={currentUser && userProfile ? (userProfile.role === 'admin' ? '/admin/dashboard' : userProfile.role === 'student' ? '/student/labs' : userProfile.role === 'faculty' ? '/faculty/dashboard' : userProfile.role === 'super-admin' ? '/main-admin/dashboard' : '/') : '/'} className="flex items-center space-x-2">
+        <Link href={currentUser && userProfile ? (userProfile.role === 'admin' ? '/admin/dashboard' : userProfile.role === 'student' ? '/student/dashboard' : userProfile.role === 'faculty' ? '/faculty/dashboard' : userProfile.role === 'super-admin' ? '/main-admin/dashboard' : '/') : '/'} className="flex items-center space-x-2">
           <CodeXml className="h-8 w-8 text-primary" />
           <span className="font-bold text-xl font-headline">{siteConfig.name}</span>
         </Link>
@@ -254,9 +265,9 @@ export function Navbar() {
             </SheetTrigger>
             <SheetContent side="right" className="w-[300px] sm:w-[400px] bg-background p-6">
               {/* Header Section for the Sheet */}
-              <div className="flex justify-between items-center mb-6"> {/* Added mb-6 for spacing below header */}
+              <div className="flex justify-between items-center mb-6"> 
                 <SheetTitle asChild>
-                  <Link href={currentUser && userProfile ? (userProfile.role === 'admin' ? '/admin/dashboard' : userProfile.role === 'student' ? '/student/labs' : userProfile.role === 'faculty' ? '/faculty/dashboard' : userProfile.role === 'super-admin' ? '/main-admin/dashboard' : '/') : '/'} className="flex items-center space-x-2" onClick={() => setIsSheetOpen(false)}>
+                  <Link href={currentUser && userProfile ? (userProfile.role === 'admin' ? '/admin/dashboard' : userProfile.role === 'student' ? '/student/dashboard' : userProfile.role === 'faculty' ? '/faculty/dashboard' : userProfile.role === 'super-admin' ? '/main-admin/dashboard' : '/') : '/'} className="flex items-center space-x-2" onClick={() => setIsSheetOpen(false)}>
                     <CodeXml className="h-8 w-8 text-primary" />
                     <span className="font-bold text-xl font-headline">{siteConfig.name}</span>
                   </Link>

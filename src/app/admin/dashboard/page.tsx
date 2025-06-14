@@ -2,7 +2,7 @@
 'use client';
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { BarChart3, Users, Settings, BookOpen, UserCog, Loader2, SlidersHorizontal } from "lucide-react";
+import { BarChart3, Users, Settings, BookOpen, UserCog, Loader2, SlidersHorizontal, ExternalLink } from "lucide-react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/contexts/AuthContext";
@@ -21,6 +21,7 @@ export default function AdminDashboardPage() {
   const dashboardItems = [
     { title: "User Management", description: "View and manage student and faculty accounts.", icon: Users, href: "/admin/users" },
     { title: "Course Management", description: "Create, edit, and organize courses and labs.", icon: BookOpen, href: "/admin/courses" },
+    { title: "College Resources", description: "Manage external resources and links for your students.", icon: ExternalLink, href: "/admin/resources" },
     { title: "Platform Analytics", description: "Track usage statistics and platform performance.", icon: BarChart3, href: "/admin/analytics" },
     { title: "Admin Profile", description: "View and manage your profile details.", icon: UserCog, href: "/admin/profile" },
     { title: "System Settings", description: "Configure platform settings and integrations.", icon: SlidersHorizontal, href: "/admin/settings" },
@@ -37,7 +38,7 @@ export default function AdminDashboardPage() {
           const studentSnapshot = await getDocs(studentQuery);
           setStudentCount(studentSnapshot.size);
 
-          // Fetch active courses count
+          // Fetch active courses count (programming languages in the college)
           const languagesRef = collection(db, 'colleges', userProfile.collegeId, 'languages');
           const languagesSnapshot = await getDocs(languagesRef);
           setActiveCoursesCount(languagesSnapshot.size);
@@ -74,7 +75,7 @@ export default function AdminDashboardPage() {
         </CardContent>
       </Card>
 
-      <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
+      <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
         {dashboardItems.map((item) => (
           <Card key={item.title} className="shadow-md hover:shadow-lg transition-shadow">
             <CardHeader className="flex flex-row items-center space-x-3 pb-2">
@@ -114,7 +115,7 @@ export default function AdminDashboardPage() {
             ) : (
               <>
                 <div className="flex justify-between"><span>Total Students:</span> <span className="font-semibold">{studentCount ?? 'N/A'}</span></div>
-                <div className="flex justify-between"><span>Active Courses/Languages:</span> <span className="font-semibold">{activeCoursesCount ?? 'N/A'}</span></div>
+                <div className="flex justify-between"><span>Active Main Subjects/Languages:</span> <span className="font-semibold">{activeCoursesCount ?? 'N/A'}</span></div>
               </>
             )}
           </CardContent>

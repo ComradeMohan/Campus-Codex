@@ -149,7 +149,7 @@ export interface Feedback {
 }
 
 export interface CourseMaterial {
-  id: string; // Unique ID for this material item
+  id: string; 
   name: string;
   url: string;
   addedAt: Timestamp | FieldValue;
@@ -171,5 +171,16 @@ export interface Course {
   courseMaterials?: CourseMaterial[];
   createdAt: Timestamp | FieldValue;
   updatedAt: Timestamp | FieldValue;
+}
+
+export interface CollegeResource {
+  id: string;
+  title: string;
+  description: string;
+  url: string;
+  category: string; 
+  collegeId: string; 
+  createdAt: Timestamp | FieldValue;
+  addedBy: string; 
 }
 
