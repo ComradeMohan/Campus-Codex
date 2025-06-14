@@ -2,7 +2,7 @@
 'use client';
 
 import Link from 'next/link';
-import { CodeXml, Menu, X, Sun, Moon, User, BookUser, Code2 } from 'lucide-react';
+import { CodeXml, Menu, X, Sun, Moon, User, BookUser, Code2, BarChartHorizontalBig } from 'lucide-react';
 import { siteConfig } from '@/config/site';
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/contexts/AuthContext';
@@ -87,10 +87,24 @@ export function Navbar() {
 
     const authConditionalLinks: JSX.Element[] = [];
     if (isMounted && currentUser) {
+      if (userProfile?.role === 'super-admin') {
+        const superAdminLink = (
+          <Button variant="ghost" asChild className={commonLinkClasses}>
+             <Link href="/main-admin/dashboard" className="flex items-center gap-1.5"><BarChartHorizontalBig className="h-4 w-4"/> Platform Dashboard</Link>
+          </Button>
+        );
+         if (isSheetItem) {
+          authConditionalLinks.push(
+            <SheetClose asChild key="super-admin-dashboard">{superAdminLink}</SheetClose>
+          );
+        } else {
+          authConditionalLinks.push(superAdminLink);
+        }
+      }
       if (userProfile?.role === 'admin') {
         const adminLink = (
           <Button variant="ghost" asChild className={commonLinkClasses}>
-            <Link href="/admin/dashboard">Dashboard</Link>
+            <Link href="/admin/dashboard">College Dashboard</Link>
           </Button>
         );
         if (isSheetItem) {
@@ -100,7 +114,7 @@ export function Navbar() {
         } else {
           authConditionalLinks.push(
              <Button variant="ghost" asChild className={commonLinkClasses} key="admin-dashboard">
-                <Link href="/admin/dashboard">Dashboard</Link>
+                <Link href="/admin/dashboard">College Dashboard</Link>
             </Button>
           );
         }
@@ -153,7 +167,7 @@ export function Navbar() {
       if (userProfile?.role === 'faculty') {
         const facultyDashboardLink = (
           <Button variant="ghost" asChild className={commonLinkClasses}>
-            <Link href="/faculty/dashboard" className="flex items-center gap-1.5"><BookUser className="h-4 w-4"/> Dashboard</Link>
+            <Link href="/faculty/dashboard" className="flex items-center gap-1.5"><BookUser className="h-4 w-4"/> My Dashboard</Link>
           </Button>
         );
         if (isSheetItem) {
@@ -163,7 +177,7 @@ export function Navbar() {
         } else {
           authConditionalLinks.push(
             <Button variant="ghost" asChild className={commonLinkClasses} key="faculty-dashboard">
-               <Link href="/faculty/dashboard" className="flex items-center gap-1.5"><BookUser className="h-4 w-4"/> Dashboard</Link>
+               <Link href="/faculty/dashboard" className="flex items-center gap-1.5"><BookUser className="h-4 w-4"/> My Dashboard</Link>
             </Button>
           );
         }

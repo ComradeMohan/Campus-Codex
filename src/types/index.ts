@@ -20,7 +20,7 @@ export type SocialLink = {
   name: string;
 };
 
-export type UserRole = 'student' | 'admin' | 'faculty';
+export type UserRole = 'student' | 'admin' | 'faculty' | 'super-admin';
 
 export interface UserProfile {
   uid: string;
