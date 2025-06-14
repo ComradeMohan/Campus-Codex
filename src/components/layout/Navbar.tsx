@@ -65,10 +65,10 @@ export function Navbar() {
 
     const navItemsToDisplay = siteConfig.navItems.filter(item => {
       if (currentUser) {
-        // If user is logged in, don't show "Login", "Register", or "Home"
-        return !["Login", "Register", "Home"].includes(item.label);
+        // If user is logged in, don't show "Login", "Register", "Home", or "Features"
+        return !["Login", "Register", "Home", "Features"].includes(item.label);
       }
-      // If user is not logged in, show all items (which includes Home, Login, Register, Features)
+      // If user is not logged in, show all items
       return true;
     });
 
@@ -227,7 +227,7 @@ export function Navbar() {
   return (
     <header className="sticky top-0 z-50 w-full border-b border-border/40 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
       <div className="container flex h-16 items-center justify-between">
-        <Link href="/" className="flex items-center space-x-2">
+        <Link href={currentUser && userProfile ? (userProfile.role === 'admin' ? '/admin/dashboard' : userProfile.role === 'student' ? '/student/labs' : userProfile.role === 'faculty' ? '/faculty/dashboard' : userProfile.role === 'super-admin' ? '/main-admin/dashboard' : '/') : '/'} className="flex items-center space-x-2">
           <CodeXml className="h-8 w-8 text-primary" />
           <span className="font-bold text-xl font-headline">{siteConfig.name}</span>
         </Link>
@@ -256,7 +256,7 @@ export function Navbar() {
               {/* Header Section for the Sheet */}
               <div className="flex justify-between items-center mb-6"> {/* Added mb-6 for spacing below header */}
                 <SheetTitle asChild>
-                  <Link href="/" className="flex items-center space-x-2" onClick={() => setIsSheetOpen(false)}>
+                  <Link href={currentUser && userProfile ? (userProfile.role === 'admin' ? '/admin/dashboard' : userProfile.role === 'student' ? '/student/labs' : userProfile.role === 'faculty' ? '/faculty/dashboard' : userProfile.role === 'super-admin' ? '/main-admin/dashboard' : '/') : '/'} className="flex items-center space-x-2" onClick={() => setIsSheetOpen(false)}>
                     <CodeXml className="h-8 w-8 text-primary" />
                     <span className="font-bold text-xl font-headline">{siteConfig.name}</span>
                   </Link>
