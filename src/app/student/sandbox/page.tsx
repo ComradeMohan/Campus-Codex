@@ -1,7 +1,7 @@
 
 'use client';
 
-import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { db } from '@/lib/firebase';
 import { collection, addDoc, getDocs, query, orderBy, serverTimestamp, doc, updateDoc, deleteDoc, FieldValue, getDoc } from 'firebase/firestore';
@@ -16,13 +16,15 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { Sheet, SheetContent, SheetTrigger, SheetClose } from '@/components/ui/sheet';
 import { MonacoCodeEditor } from '@/components/editor/MonacoCodeEditor';
 import { useToast } from '@/hooks/use-toast';
-import { Loader2, Save, Play, Trash2, PlusCircle, FileCode, Terminal, AlertTriangle, ClipboardType, Share2, PanelLeftOpen, X } from 'lucide-react';
+import { Loader2, Save, Play, Trash2, PlusCircle, FileCode, Terminal, AlertTriangle, ClipboardType, Share2, PanelLeftOpen, X, GripHorizontal } from 'lucide-react';
 import type { ProgrammingLanguage, SavedProgram } from '@/types';
 import { cn } from '@/lib/utils';
 import * as LucideIcons from 'lucide-react';
 import { useRouter, useSearchParams } from 'next/navigation';
 
 const PLACEMENTS_COURSE_NAME = "Placements";
+const MIN_BOTTOM_PANEL_HEIGHT = 100; // Minimum height for the bottom panel
+const DEFAULT_BOTTOM_PANEL_HEIGHT = 250; // Default height
 
 const getIconComponent = (iconName?: string): React.FC<React.SVGProps<SVGSVGElement>> => {
   if (iconName && LucideIcons[iconName as keyof typeof LucideIcons]) {
@@ -157,6 +159,13 @@ export default function StudentSandboxPage() {
   const [isSaving, setIsSaving] = useState(false);
   const [programToDelete, setProgramToDelete] = useState<SavedProgram | null>(null);
 
+  const [bottomPanelHeight, setBottomPanelHeight] = useState(DEFAULT_BOTTOM_PANEL_HEIGHT);
+  const [isResizing, setIsResizing] = useState(false);
+  const startYRef = useRef(0);
+  const initialHeightRef = useRef(0);
+  const sandboxContainerRef = useRef<HTMLDivElement>(null);
+
+
   const loadProgramIntoEditor = useCallback((programData: Partial<SavedProgram>, availableLangs: ProgrammingLanguage[], isShared = false) => {
     setCurrentProgramTitle(isShared ? `[Shared] ${programData.title || 'Untitled'}` : programData.title || '');
     setCurrentCode(programData.code || '');
@@ -170,7 +179,7 @@ export default function StudentSandboxPage() {
         languageToLoad = availableLangs.find(lang => lang.name === programData.languageName) || null;
     }
     if(!languageToLoad && availableLangs.length > 0) {
-        languageToLoad = availableLangs[0];
+        languageToLoad = availableLangs.filter(lang => lang.name !== PLACEMENTS_COURSE_NAME)[0] || availableLangs[0];
     }
     
     setSelectedLanguage(languageToLoad);
@@ -189,17 +198,16 @@ export default function StudentSandboxPage() {
         });
     }
 
-
     setOutput('');
     setErrorOutput('');
     setActiveTab("input");
-  }, [toast, setCurrentCode, setSelectedLanguage, setCurrentProgramTitle, setSampleInput, setOutput, setErrorOutput, setActiveTab]);
+  }, [toast]);
 
 
   const handleLoadProgram = useCallback((program: SavedProgram, availableLangs: ProgrammingLanguage[]) => {
     setActiveProgramId(program.id);
     loadProgramIntoEditor(program, availableLangs);
-    setIsMobileSidebarOpen(false); // Close mobile sidebar if open
+    setIsMobileSidebarOpen(false);
   }, [loadProgramIntoEditor, setActiveProgramId, setIsMobileSidebarOpen]);
 
 
@@ -218,7 +226,7 @@ export default function StudentSandboxPage() {
     }
     
     loadProgramIntoEditor(newProgramDefaults, programmingLanguages);
-    setIsMobileSidebarOpen(false); // Close mobile sidebar if open
+    setIsMobileSidebarOpen(false);
     toast({ title: "New Program Ready", description: "Editor cleared. You can start coding." });
   }, [programmingLanguages, loadProgramIntoEditor, toast, selectedLanguage, setActiveProgramId, setIsMobileSidebarOpen]);
 
@@ -273,7 +281,7 @@ export default function StudentSandboxPage() {
     } else if (!authLoading && !userProfile) {
         setIsLoadingPageData(false); 
     }
-  }, [userProfile, authLoading, toast]);
+  }, [userProfile, authLoading, toast, searchParams, activeProgramId]);
 
 
   useEffect(() => {
@@ -431,7 +439,7 @@ export default function StudentSandboxPage() {
     } finally {
       setIsExecuting(false);
     }
-  }, [selectedLanguage, currentCode, sampleInput, toast, activeProgramId, userProfile, setActiveTab, setOutput, setErrorOutput, setSavedPrograms]);
+  }, [selectedLanguage, currentCode, sampleInput, toast, activeProgramId, userProfile]);
   
   const handleLanguageChange = useCallback((langId: string) => {
     const lang = programmingLanguages.find(l => l.id === langId);
@@ -445,7 +453,7 @@ export default function StudentSandboxPage() {
       setErrorOutput('');
       setActiveTab("input");
     }
-  }, [programmingLanguages, setSelectedLanguage, savedPrograms, activeProgramId, setCurrentCode, setOutput, setErrorOutput, setActiveTab]);
+  }, [programmingLanguages, savedPrograms, activeProgramId]);
 
   const handleShareProgram = useCallback((program: SavedProgram) => {
     if (!program.userId || !program.id) {
@@ -462,6 +470,43 @@ export default function StudentSandboxPage() {
         toast({title: "Error", description: "Could not copy link. Please try again.", variant: "destructive"});
       });
   }, [toast]);
+
+  // --- Resizing Logic ---
+  const handleMouseDownOnResizer = (e: React.MouseEvent) => {
+    e.preventDefault();
+    setIsResizing(true);
+    startYRef.current = e.clientY;
+    initialHeightRef.current = bottomPanelHeight;
+  };
+
+  useEffect(() => {
+    const handleMouseMove = (e: MouseEvent) => {
+      if (!isResizing || !sandboxContainerRef.current) return;
+      const deltaY = e.clientY - startYRef.current;
+      let newHeight = initialHeightRef.current - deltaY; // Dragging up decreases height, down increases
+
+      const containerHeight = sandboxContainerRef.current.offsetHeight;
+      const maxPanelHeight = containerHeight * 0.8; // Max 80% of container
+
+      newHeight = Math.max(MIN_BOTTOM_PANEL_HEIGHT, Math.min(newHeight, maxPanelHeight));
+      setBottomPanelHeight(newHeight);
+    };
+
+    const handleMouseUp = () => {
+      setIsResizing(false);
+    };
+
+    if (isResizing) {
+      document.addEventListener('mousemove', handleMouseMove);
+      document.addEventListener('mouseup', handleMouseUp);
+    }
+
+    return () => {
+      document.removeEventListener('mousemove', handleMouseMove);
+      document.removeEventListener('mouseup', handleMouseUp);
+    };
+  }, [isResizing]);
+  // --- End Resizing Logic ---
 
   const sidebarContent = (isMobileContext = false) => (
     <>
@@ -592,7 +637,7 @@ export default function StudentSandboxPage() {
 
 
   return (
-    <div className="flex flex-col h-[calc(100vh-theme(spacing.16))] overflow-hidden">
+    <div className="flex flex-col h-[calc(100vh-theme(spacing.16))] overflow-hidden" ref={sandboxContainerRef}>
       {/* Top Control Bar */}
       <div className="flex items-center flex-wrap gap-2 p-2 border-b bg-muted/30 shrink-0">
         <Sheet open={isMobileSidebarOpen} onOpenChange={setIsMobileSidebarOpen}>
@@ -647,7 +692,8 @@ export default function StudentSandboxPage() {
 
         {/* Main Editor and Output Area */}
         <div className="flex-1 flex flex-col overflow-hidden">
-          <div className="flex-grow relative">
+          {/* Editor Area */}
+          <div className="flex-grow relative overflow-hidden">
             <MonacoCodeEditor
               language={selectedLanguage?.name || 'plaintext'}
               value={currentCode}
@@ -657,7 +703,7 @@ export default function StudentSandboxPage() {
                 readOnly: isSaving || isExecuting || !selectedLanguage || (programmingLanguages.length === 0 && !selectedLanguage),
                 minimap: { enabled: true, scale: 1 },
                 wordWrap: 'on',
-                fontSize: 13, // Slightly smaller for mobile potentially
+                fontSize: 13,
                 scrollBeyondLastLine: false,
                 padding: { top: 8, bottom: 8 }
               }}
@@ -673,9 +719,22 @@ export default function StudentSandboxPage() {
                 </div>
             )}
           </div>
+          
+          {/* Draggable Resizer */}
+          <div
+            onMouseDown={handleMouseDownOnResizer}
+            className="h-2.5 bg-muted hover:bg-accent cursor-row-resize w-full flex items-center justify-center shrink-0"
+            title="Drag to resize panel"
+          >
+            <GripHorizontal className="w-4 h-4 text-muted-foreground group-hover:text-accent-foreground" />
+          </div>
+
 
           {/* Bottom Tabs for Input/Output/Errors */}
-          <div className="h-[200px] md:h-[250px] border-t flex flex-col bg-muted/20 shrink-0">
+          <div
+            className="border-t flex flex-col bg-muted/20 shrink-0 overflow-hidden"
+            style={{ height: `${bottomPanelHeight}px` }}
+          >
             <Tabs value={activeTab} onValueChange={setActiveTab} className="flex flex-col flex-1 overflow-hidden">
               <TabsList className="shrink-0 rounded-none border-b bg-muted/50 justify-start px-1 md:px-2 h-9 md:h-10">
                 <TabsTrigger value="input" className="text-xs px-2 py-1 md:px-3 md:py-1.5 h-auto data-[state=active]:bg-background">
