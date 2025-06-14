@@ -2,7 +2,7 @@
 'use client';
 
 import Link from 'next/link';
-import { CodeXml, Menu, X, Sun, Moon, User, BookUser, Code2, BarChartHorizontalBig, LayoutDashboard } from 'lucide-react';
+import { CodeXml, Menu, X, Sun, Moon, User, BookUser, Code2, BarChartHorizontalBig, LayoutDashboard, ExternalLink } from 'lucide-react';
 import { siteConfig } from '@/config/site';
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/contexts/AuthContext';
@@ -126,9 +126,9 @@ export function Navbar() {
         }
       }
       if (userProfile?.role === 'student') {
-        const studentDashboardLink = (
+        const studentResourcesLink = (
           <Button variant="ghost" asChild className={commonLinkClasses}>
-            <Link href="/student/dashboard" className="flex items-center gap-1.5"><LayoutDashboard className="h-4 w-4"/> Dashboard</Link>
+            <Link href="/student/dashboard" className="flex items-center gap-1.5"><ExternalLink className="h-4 w-4"/> Resources</Link>
           </Button>
         );
         const studentLabsLink = (
@@ -149,7 +149,7 @@ export function Navbar() {
 
         if (isSheetItem) {
            authConditionalLinks.push(
-            <SheetClose asChild key="student-dashboard">{studentDashboardLink}</SheetClose>
+            <SheetClose asChild key="student-resources">{studentResourcesLink}</SheetClose>
           );
           authConditionalLinks.push(
             <SheetClose asChild key="student-labs">{studentLabsLink}</SheetClose>
@@ -162,8 +162,8 @@ export function Navbar() {
           );
         } else {
            authConditionalLinks.push(
-            <Button variant="ghost" asChild className={commonLinkClasses} key="student-dashboard">
-                <Link href="/student/dashboard" className="flex items-center gap-1.5"><LayoutDashboard className="h-4 w-4"/> Dashboard</Link>
+            <Button variant="ghost" asChild className={commonLinkClasses} key="student-resources">
+                <Link href="/student/dashboard" className="flex items-center gap-1.5"><ExternalLink className="h-4 w-4"/> Resources</Link>
             </Button>
           );
           authConditionalLinks.push(
