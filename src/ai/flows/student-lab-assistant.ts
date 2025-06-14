@@ -20,7 +20,7 @@ const StudentLabAssistantInputSchema = z.object({
 export type StudentLabAssistantInput = z.infer<typeof StudentLabAssistantInputSchema>;
 
 const StudentLabAssistantOutputSchema = z.object({
-  aiResponse: z.string().describe('The AI-generated answer or guidance for the student.'),
+  aiResponse: z.string().describe('The AI-generated answer or guidance for the student. If providing pseudocode, it should be formatted as a code block using triple backticks (```pseudocode ... ```).'),
 });
 export type StudentLabAssistantOutput = z.infer<typeof StudentLabAssistantOutputSchema>;
 
@@ -58,8 +58,16 @@ Your tasks:
 2. Provide a clear, concise, and helpful explanation or guidance.
 3. If the student asks for how to do something, guide them towards the solution rather than giving the full code directly, unless they are asking for a specific syntax example or a small correction.
 4. If their code has an obvious error related to their doubt, gently point it out and explain why it's an error and how to think about fixing it.
-5. Be encouraging and supportive.
-6. Keep your response focused on the student's specific doubt.
+5. If you provide pseudocode, ensure it is formatted as a code block using triple backticks. For example:
+\`\`\`pseudocode
+function example(param):
+  if param is true:
+    print "Hello"
+  else:
+    print "World"
+\`\`\`
+6. Be encouraging and supportive.
+7. Keep your response focused on the student's specific doubt.
 
 AI Response:`,
 });
@@ -75,3 +83,4 @@ const studentLabAssistantFlow = ai.defineFlow(
     return output!;
   }
 );
+

@@ -573,7 +573,7 @@ export default function StudentSandboxPage() {
                         <ProgramIcon className="h-4 w-4 shrink-0" />
                         <span className="flex-1 truncate" title={program.title}>{program.title}</span>
                       </div>
-                      <div className="flex shrink-0">
+                      <div className="flex shrink-0 items-center"> {/* Ensure buttons container doesn't shrink */}
                         <Button
                             variant="ghost"
                             size="icon"
@@ -791,12 +791,12 @@ export default function StudentSandboxPage() {
             </Tabs>
           </div>
         </div>
-        {selectedLanguage && (
+        {selectedLanguage && !isMobile && ( /* Added !isMobile condition for AI Chat Assistant */
             <LabAIChatAssistant
                 isOpen={isAIChatOpen}
                 onToggle={toggleAIChat}
                 currentLanguageName={selectedLanguage.name}
-                currentQuestionText={"Assistance for your code in the sandbox."} // Generic context for sandbox
+                currentQuestionText={"Assistance for your code in the sandbox."} 
                 getCurrentCodeSnippet={getCurrentCodeForAI}
             />
         )}
@@ -804,5 +804,4 @@ export default function StudentSandboxPage() {
     </div>
   );
 }
-
     
