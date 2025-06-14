@@ -151,25 +151,29 @@ export default function MainAdminDashboardPage() {
 
   return (
     <div className="space-y-8">
-      <Card className="shadow-lg">
-        <CardHeader>
-          <CardTitle className="text-3xl font-headline flex items-center">
-            <BarChartHorizontalBig className="w-8 h-8 mr-3 text-primary" />
-            Main Admin Dashboard
-          </CardTitle>
-          <CardDescription>Global overview of the Campus Codex platform.</CardDescription>
+      <Card className="shadow-xl bg-gradient-to-br from-primary/5 via-background to-accent/5 dark:from-primary/10 dark:via-background dark:to-accent/10">
+        <CardHeader className="p-6 md:p-8">
+          <div className="flex items-center space-x-4">
+            <BarChartHorizontalBig className="w-12 h-12 text-primary" />
+            <div>
+              <CardTitle className="text-3xl md:text-4xl font-headline text-primary">Main Admin Dashboard</CardTitle>
+              <CardDescription className="text-lg md:text-xl text-muted-foreground mt-1">
+                Global platform overview and key metrics for Campus Codex.
+              </CardDescription>
+            </div>
+          </div>
         </CardHeader>
       </Card>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
         {statCards.map(stat => (
-            <Card key={stat.title} className="shadow-md hover:shadow-lg transition-shadow">
-                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                    <CardTitle className="text-sm font-medium">{stat.title}</CardTitle>
-                    <stat.icon className={`h-5 w-5 ${stat.color || 'text-muted-foreground'}`} />
+            <Card key={stat.title} className="shadow-lg hover:shadow-xl transition-shadow duration-300 ease-in-out transform hover:-translate-y-1">
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 pt-4 px-4">
+                    <CardTitle className="text-md font-semibold text-muted-foreground">{stat.title}</CardTitle>
+                    <stat.icon className={`h-6 w-6 ${stat.color || 'text-primary'}`} />
                 </CardHeader>
-                <CardContent>
-                    <div className="text-3xl font-bold">{stat.value}</div>
+                <CardContent className="pb-4 px-4">
+                    <div className="text-4xl font-bold text-foreground">{stat.value}</div>
                 </CardContent>
             </Card>
         ))}

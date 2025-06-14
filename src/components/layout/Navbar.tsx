@@ -63,9 +63,17 @@ export function Navbar() {
   const createNavLinks = (isSheetItem: boolean) => {
     const commonLinkClasses = "text-foreground hover:bg-primary/10";
 
-    const regularNavItems = siteConfig.navItems
-      .filter(item => !((item.label === "Login" || item.label === "Register") && currentUser))
-      .map((item) => {
+    const navItemsToDisplay = siteConfig.navItems.filter(item => {
+      if (currentUser) {
+        // If user is logged in, don't show "Login", "Register", or "Home"
+        return !["Login", "Register", "Home"].includes(item.label);
+      }
+      // If user is not logged in, show all items (which includes Home, Login, Register, Features)
+      return true;
+    });
+
+
+    const regularNavItems = navItemsToDisplay.map((item) => {
         const linkButtonContent = (
           <Button variant="ghost" asChild className={commonLinkClasses}>
             <Link href={item.href}>{item.label}</Link>
