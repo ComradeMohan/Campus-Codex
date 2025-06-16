@@ -150,22 +150,17 @@ export default function MainAdminDashboardPage() {
     }
   }, [toast, userProfile?.role]);
 
-  useEffect(() => {
-     if (authLoading) {
-      // Still waiting for auth context to determine user status
+ useEffect(() => {
+    if (authLoading) {
       setIsLoading(true);
     } else {
-      // Auth context has loaded
       if (userProfile?.role === 'super-admin') {
-        fetchPlatformData(); // This function will set isLoading to false in its finally block
+        fetchPlatformData();
       } else {
-        // Not a super-admin or no user profile, so stop page loading
         setIsLoading(false);
-        if (userProfile) { // User is logged in but not super-admin
+        if (userProfile) { 
           toast({ title: "Access Denied", description: "You do not have permission to view this page.", variant: "destructive" });
-          // Optionally redirect: router.push('/');
         }
-        // If !userProfile, ProtectedRoute should handle redirection to login
       }
     }
   }, [authLoading, userProfile, fetchPlatformData, toast]);
@@ -192,7 +187,6 @@ export default function MainAdminDashboardPage() {
         }
 
         const tempPassword = generateTemporaryPassword();
-        // Temporarily store current user to sign them back in if necessary
         const currentAuthUser = auth.currentUser;
 
         const userCredential = await createUserWithEmailAndPassword(auth, request.email, tempPassword);
@@ -204,7 +198,7 @@ export default function MainAdminDashboardPage() {
         await setDoc(newCollegeRef, {
           name: request.collegeName,
           adminEmail: request.email,
-          adminUid: newAdminUser.uid, // Set admin UID here
+          adminUid: newAdminUser.uid,
           createdAt: serverTimestamp(),
           status: 'active'
         });
@@ -217,7 +211,7 @@ export default function MainAdminDashboardPage() {
           collegeName: request.collegeName,
           collegeId: newCollegeRef.id,
           phoneNumber: request.phoneNumber || undefined,
-          isEmailVerified: true,
+          isEmailVerified: true, 
         };
         await setDoc(doc(db, 'users', newAdminUser.uid), {
           ...adminProfile,
@@ -231,15 +225,9 @@ export default function MainAdminDashboardPage() {
           adminUid: newAdminUser.uid,
         });
         
-        // If createUserWithEmailAndPassword signed in the new user, sign the super-admin back in
         if (currentAuthUser && auth.currentUser?.uid !== currentAuthUser.uid) {
-            // This is complex client-side. The ideal solution involves Admin SDK.
-            // For now, the super-admin might need to be aware their session could be interrupted here.
-            // Or, more likely, Firebase handles this gracefully without signing out the current user.
-            // We will proceed assuming Firebase handles it or the impact is minimal for this app's context.
              console.warn("Super-admin session might have been affected by new user creation. Re-login if issues occur.");
         }
-
 
         setTempPasswordInfo({ email: request.email, tempPass: tempPassword });
         setShowTempPasswordDialog(true);
@@ -284,7 +272,7 @@ export default function MainAdminDashboardPage() {
       console.error("Error sending password reset email:", error);
       toast({
         title: "Error",
-        description: error.message || `Failed to send password reset email to ${collegeAdminEmail}.`,
+        description: error.message || `Failed to send password reset email to ${collegeAdminEmail}. Please advise them to check their inbox and spam folder.`,
         variant: "destructive",
       });
     } finally {
@@ -312,7 +300,7 @@ export default function MainAdminDashboardPage() {
       console.error("Error sending access link:", error);
       toast({
         title: "Error",
-        description: error.message || `Failed to send access link to ${collegeAdminEmail}.`,
+        description: error.message || `Failed to send access link to ${collegeAdminEmail}. Please advise them to check their inbox and spam folder.`,
         variant: "destructive",
       });
     } finally {
@@ -321,7 +309,7 @@ export default function MainAdminDashboardPage() {
   };
 
 
-  if (isLoading) { // Simplified loading check
+  if (isLoading) {
     return (
       <div className="container mx-auto py-8 flex justify-center items-center min-h-[calc(100vh-10rem)]">
         <Loader2 className="h-12 w-12 animate-spin text-primary" />

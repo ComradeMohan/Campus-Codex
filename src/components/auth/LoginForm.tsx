@@ -18,7 +18,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { useToast } from '@/hooks/use-toast';
 import { signInWithEmailAndPassword, isSignInWithEmailLink, signInWithEmailLink, sendPasswordResetEmail, type Auth, sendEmailVerification } from 'firebase/auth';
 import { auth, db } from '@/lib/firebase';
-import { doc, getDoc, setDoc, serverTimestamp, collection, addDoc } from 'firebase/firestore';
+import { doc, getDoc, setDoc, serverTimestamp, collection, addDoc, updateDoc } from 'firebase/firestore'; // Added updateDoc
 import type { UserProfile } from '@/types';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
@@ -63,26 +63,21 @@ export function LoginForm() {
           const userDocSnap = await getDoc(userDocRef);
 
           if (!userDocSnap.exists()) {
+            // This branch is for the super-admin approved admin flow
             const role = searchParams.get('role');
             const fullName = searchParams.get('fullName');
-            const collegeName = searchParams.get('collegeName');
+            const collegeNameQuery = searchParams.get('collegeName');
             const phoneNumber = searchParams.get('phoneNumber');
+            const approvedCollegeId = searchParams.get('collegeId'); // Sent by super-admin approval logic
 
-            if (role === 'admin' && fullName && collegeName) {
-              const collegeRef = await addDoc(collection(db, 'colleges'), {
-                name: collegeName,
-                adminEmail: user.email,
-                adminUid: user.uid,
-                createdAt: serverTimestamp(),
-              });
-
+            if (role === 'admin' && fullName && collegeNameQuery && approvedCollegeId) {
               const adminProfile: UserProfile = {
                 uid: user.uid,
                 email: user.email,
                 fullName: fullName,
                 role: 'admin',
-                collegeName: collegeName,
-                collegeId: collegeRef.id,
+                collegeName: collegeNameQuery,
+                collegeId: approvedCollegeId,
                 phoneNumber: phoneNumber || undefined,
                 isEmailVerified: true, 
               };
@@ -90,17 +85,25 @@ export function LoginForm() {
                 ...adminProfile,
                 createdAt: serverTimestamp(),
               });
+              
+              // Also update the adminUid in the college document
+              const collegeDocRef = doc(db, 'colleges', approvedCollegeId);
+              await updateDoc(collegeDocRef, { adminUid: user.uid });
+
               await refreshUserProfile();
               router.push('/admin/dashboard');
             } else {
-               throw new Error("Missing admin details for magic link sign in.");
+               console.error("Missing admin details or collegeId for magic link sign in after approval.", {role, fullName, collegeNameQuery, approvedCollegeId});
+               throw new Error("Missing admin details or collegeId for magic link sign in after approval.");
             }
           } else {
+             // Existing user logging in via magic link (e.g., passwordless)
              const userProfile = userDocSnap.data() as UserProfile;
              await refreshUserProfile();
              if (userProfile.role === 'admin') router.push('/admin/dashboard');
              else if (userProfile.role === 'student') router.push('/student/labs');
              else if (userProfile.role === 'faculty') router.push('/faculty/dashboard');
+             else if (userProfile.role === 'super-admin') router.push('/main-admin/dashboard');
              else router.push('/'); 
           }
           toast({ title: 'Login Successful', description: 'Welcome back!' });
@@ -133,10 +136,11 @@ export function LoginForm() {
       const userDocRef = doc(db, 'users', user.uid);
       const userDocSnap = await getDoc(userDocRef);
 
-      // Priority check for faculty: if Firestore profile exists and role is faculty, log them in.
-      // This relies on admin setting `isEmailVerified: true` in Firestore for faculty.
       if (userDocSnap.exists()) {
         const userProfileData = userDocSnap.data() as UserProfile;
+        
+        // For faculty, allow login even if Firebase Auth emailVerified is false,
+        // as their isEmailVerified is set to true in Firestore by admin.
         if (userProfileData.role === 'faculty') {
           await refreshUserProfile();
           router.push('/faculty/dashboard');
@@ -144,52 +148,65 @@ export function LoginForm() {
           setIsLoading(false);
           return;
         }
-      }
-
-      // If not faculty (or Firestore profile doesn't exist yet), check Firebase Auth emailVerified status.
-      if (!user.emailVerified) {
-        try {
-          await sendEmailVerification(user);
-          toast({
-            title: 'Email Not Verified',
-            description: 'Your email is not yet verified. A new verification link has been sent. Please check your email and verify to log in.',
-            variant: 'destructive',
-            duration: 7000,
-          });
-        } catch (verificationError) {
-           console.error('Error resending verification email:', verificationError);
-           toast({
-            title: 'Email Not Verified',
-            description: 'Please verify your email to log in. Could not resend verification email at this time.',
-            variant: 'destructive',
-            duration: 7000,
-          });
+        
+        // For other roles (student, admin, super-admin), Firebase Auth emailVerified must be true.
+        if (!user.emailVerified) {
+            try {
+                await sendEmailVerification(user);
+                toast({
+                    title: 'Email Not Verified',
+                    description: 'Your email is not yet verified. A new verification link has been sent. Please check your email and verify to log in.',
+                    variant: 'destructive',
+                    duration: 7000,
+                });
+            } catch (verificationError) {
+                console.error('Error resending verification email:', verificationError);
+                toast({
+                    title: 'Email Not Verified',
+                    description: 'Please verify your email to log in. Could not resend verification email at this time.',
+                    variant: 'destructive',
+                    duration: 7000,
+                });
+            }
+            setIsLoading(false);
+            return; 
         }
-        setIsLoading(false);
-        return; // Stop login process for unverified non-faculty
-      }
-      
-      // If email is verified by Firebase Auth, and user is not faculty:
-      if (userDocSnap.exists()) {
-        const userProfile = userDocSnap.data() as UserProfile; // role will not be 'faculty' here
+        
+        // If email is verified by Firebase Auth (and not faculty), proceed.
         await refreshUserProfile(); 
-        if (userProfile.role === 'admin') {
+        if (userProfileData.role === 'admin') {
           router.push('/admin/dashboard');
-        } else if (userProfile.role === 'student') {
+        } else if (userProfileData.role === 'student') {
           router.push('/student/labs');
-        } else {
-          // Fallback for any other roles (should not happen if roles are well-defined)
+        } else if (userProfileData.role === 'super-admin'){
+            router.push('/main-admin/dashboard');
+        }
+         else {
           router.push('/'); 
         }
         toast({ title: 'Login Successful', description: 'Welcome back!' });
+
       } else {
-        // Email is verified by Firebase Auth, but no Firestore profile exists.
-        // This is an edge case, e.g., registration process was interrupted.
-        toast({
-          title: 'Login Error',
-          description: 'User profile not found in our records. Please ensure you have completed registration or contact support.',
-          variant: 'destructive',
-        });
+        // Email might be verified by Firebase Auth, but no Firestore profile exists.
+        // This could happen if registration was interrupted OR if it's an admin logging in for the first time
+        // after super-admin approval but before magic link has fully processed.
+        // The magic link flow handles new admin profile creation.
+        // If a user reaches here with a verified email but no profile, it's an anomaly.
+        if(user.emailVerified){
+             toast({
+                title: 'Profile Incomplete',
+                description: 'Your account exists but your profile is not fully set up. If you are a new college admin, please use the link sent to your email after approval. Otherwise, contact support.',
+                variant: 'destructive',
+                duration: 8000,
+            });
+        } else {
+            // This path should ideally not be hit if the above email verification check for non-faculty is working.
+             toast({
+                title: 'Login Error',
+                description: 'User profile not found. Please complete registration or verify your email.',
+                variant: 'destructive',
+            });
+        }
       }
     } catch (error: any) {
       console.error('Login error:', error);
@@ -227,15 +244,15 @@ export function LoginForm() {
       await sendPasswordResetEmail(auth, emailValidation.data);
       toast({
         title: 'Password Reset Email Sent',
-        description: `If an account exists for ${emailValidation.data}, a password reset link has been sent. Please check your inbox.`,
+        description: `If an account exists for ${emailValidation.data}, a password reset link has been sent. Please check your inbox and spam folder.`,
       });
     } catch (error: any) {
       console.error('Forgot password error:', error);
       let description = 'Failed to send password reset email. Please try again.';
       if (error.code === 'auth/user-not-found') {
-         description = `If an account exists for ${emailValidation.data}, a password reset link has been sent. Please check your inbox.`;
+         description = `If an account exists for ${emailValidation.data}, a password reset link has been sent. Please check your inbox and spam folder.`;
          toast({
-            title: 'Password Reset Email Sent',
+            title: 'Password Reset Email Sent', // Still show success-like message for user-not-found to prevent enumeration
             description: description,
         });
       } else {
