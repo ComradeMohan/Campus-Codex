@@ -1,6 +1,7 @@
 
 'use client';
 
+import * as React from 'react'; // Added import for React
 import Link from 'next/link';
 import { CodeXml, Menu, X, Sun, Moon, User, BookUser, Code2, BarChartHorizontalBig, LayoutDashboard, ExternalLink } from 'lucide-react';
 import { siteConfig } from '@/config/site';
@@ -18,12 +19,12 @@ export function Navbar() {
   const router = useRouter();
   const [isSheetOpen, setIsSheetOpen] = useState(false);
   const [isMounted, setIsMounted] = useState(false);
-  const [theme, setTheme] = useState('dark'); 
+  const [theme, setTheme] = useState('dark');
 
   useEffect(() => {
     setIsMounted(true);
     const storedTheme = localStorage.getItem('theme');
-    const initialTheme = storedTheme ? storedTheme : 'dark'; 
+    const initialTheme = storedTheme ? storedTheme : 'dark';
     setTheme(initialTheme);
     if (initialTheme === 'dark') {
       document.documentElement.classList.add('dark');
@@ -79,14 +80,13 @@ export function Navbar() {
         );
         if (isSheetItem) {
           return (
-            <SheetClose asChild key={item.label}>
+            <SheetClose asChild key={`${item.label.toLowerCase().replace(' ', '-')}-sheet`}>
               {linkButtonContent}
             </SheetClose>
           );
         }
         return (
-          // Key is correctly applied here for items in regularNavItems array
-          <Button variant="ghost" asChild className={commonLinkClasses} key={item.label}>
+          <Button variant="ghost" asChild className={commonLinkClasses} key={`${item.label.toLowerCase().replace(' ', '-')}-desktop`}>
             <Link href={item.href}>{item.label}</Link>
           </Button>
         );
@@ -107,7 +107,6 @@ export function Navbar() {
           );
         } else {
           authConditionalLinks.push(
-            // Ensure this Button, when pushed directly, has a key
             React.cloneElement(superAdminButtonContent, { key: "super-admin-dashboard-desktop" })
           );
         }
@@ -124,9 +123,9 @@ export function Navbar() {
             <SheetClose asChild key="admin-dashboard-sheet">{adminButtonContent}</SheetClose>
           );
         } else {
-          authConditionalLinks.push(
-            React.cloneElement(adminButtonContent, { key: "admin-dashboard-desktop" })
-          );
+           authConditionalLinks.push(
+             React.cloneElement(adminButtonContent, { key: "admin-dashboard-desktop" })
+           );
         }
       }
       // Student
@@ -176,11 +175,11 @@ export function Navbar() {
 
       // Logout Button
       authConditionalLinks.push(
-        <Button 
-          variant="ghost" 
+        <Button
+          variant="ghost"
           onClick={handleSignOut}
           className="text-foreground hover:bg-destructive/10"
-          key="logout" // This key is for its position in the authConditionalLinks array
+          key="logout-button" // Unique key for the logout button itself
         >
           Logout
         </Button>
@@ -194,7 +193,7 @@ export function Navbar() {
       </>
     );
   };
-  
+
   if (!isMounted) {
     return (
       <header className="sticky top-0 z-50 w-full border-b border-border/40 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
@@ -238,7 +237,7 @@ export function Navbar() {
             </SheetTrigger>
             <SheetContent side="right" className="w-[300px] sm:w-[400px] bg-background p-6">
               {/* Header Section for the Sheet */}
-              <div className="flex justify-between items-center mb-6"> 
+              <div className="flex justify-between items-center mb-6">
                 <SheetTitle asChild>
                   <Link href={currentUser && userProfile ? (userProfile.role === 'admin' ? '/admin/dashboard' : userProfile.role === 'student' ? '/student/labs' : userProfile.role === 'faculty' ? '/faculty/dashboard' : userProfile.role === 'super-admin' ? '/main-admin/dashboard' : '/') : '/'} className="flex items-center space-x-2" onClick={() => setIsSheetOpen(false)}>
                     <CodeXml className="h-8 w-8 text-primary" />
