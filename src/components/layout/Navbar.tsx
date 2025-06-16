@@ -85,6 +85,7 @@ export function Navbar() {
           );
         }
         return (
+          // Key is correctly applied here for items in regularNavItems array
           <Button variant="ghost" asChild className={commonLinkClasses} key={item.label}>
             <Link href={item.href}>{item.label}</Link>
           </Button>
@@ -93,121 +94,93 @@ export function Navbar() {
 
     const authConditionalLinks: JSX.Element[] = [];
     if (isMounted && currentUser) {
+      // Super Admin
       if (userProfile?.role === 'super-admin') {
-        const superAdminLink = (
+        const superAdminButtonContent = (
           <Button variant="ghost" asChild className={commonLinkClasses}>
              <Link href="/main-admin/dashboard" className="flex items-center gap-1.5"><BarChartHorizontalBig className="h-4 w-4"/> Platform Dashboard</Link>
           </Button>
         );
-         if (isSheetItem) {
+        if (isSheetItem) {
           authConditionalLinks.push(
-            <SheetClose asChild key="super-admin-dashboard">{superAdminLink}</SheetClose>
+            <SheetClose asChild key="super-admin-dashboard-sheet">{superAdminButtonContent}</SheetClose>
           );
         } else {
-          authConditionalLinks.push(superAdminLink);
+          authConditionalLinks.push(
+            // Ensure this Button, when pushed directly, has a key
+            React.cloneElement(superAdminButtonContent, { key: "super-admin-dashboard-desktop" })
+          );
         }
       }
+      // Admin
       if (userProfile?.role === 'admin') {
-        const adminLink = (
+        const adminButtonContent = (
           <Button variant="ghost" asChild className={commonLinkClasses}>
             <Link href="/admin/dashboard">College Dashboard</Link>
           </Button>
         );
         if (isSheetItem) {
           authConditionalLinks.push(
-            <SheetClose asChild key="admin-dashboard">{adminLink}</SheetClose>
+            <SheetClose asChild key="admin-dashboard-sheet">{adminButtonContent}</SheetClose>
           );
         } else {
           authConditionalLinks.push(
-             <Button variant="ghost" asChild className={commonLinkClasses} key="admin-dashboard">
-                <Link href="/admin/dashboard">College Dashboard</Link>
-            </Button>
+            React.cloneElement(adminButtonContent, { key: "admin-dashboard-desktop" })
           );
         }
       }
+      // Student
       if (userProfile?.role === 'student') {
-        const studentResourcesLink = (
-          <Button variant="ghost" asChild className={commonLinkClasses}>
-            <Link href="/student/dashboard" className="flex items-center gap-1.5"><ExternalLink className="h-4 w-4"/> Resources</Link>
-          </Button>
-        );
-        const studentLabsLink = (
-          <Button variant="ghost" asChild className={commonLinkClasses}>
-            <Link href="/student/labs">Labs</Link>
-          </Button>
-        );
-         const studentSandboxLink = (
-          <Button variant="ghost" asChild className={commonLinkClasses}>
-            <Link href="/student/sandbox" className="flex items-center gap-1.5"><Code2 className="h-4 w-4"/> Sandbox</Link>
-          </Button>
-        );
-           const studentProfileLink = (
-           <Button variant="ghost" asChild className={commonLinkClasses}>
-            <Link href="/student/profile" className="flex items-center gap-1.5"> <User className="h-4 w-4"/> Profile</Link>
-          </Button>
-        );
-
-        if (isSheetItem) {
-           authConditionalLinks.push(
-            <SheetClose asChild key="student-resources">{studentResourcesLink}</SheetClose>
-          );
-          authConditionalLinks.push(
-            <SheetClose asChild key="student-labs">{studentLabsLink}</SheetClose>
-          );
-          authConditionalLinks.push(
-            <SheetClose asChild key="student-sandbox">{studentSandboxLink}</SheetClose>
-          );
-           authConditionalLinks.push(
-            <SheetClose asChild key="student-profile">{studentProfileLink}</SheetClose>
-          );
-        } else {
-           authConditionalLinks.push(
-            <Button variant="ghost" asChild className={commonLinkClasses} key="student-resources">
-                <Link href="/student/dashboard" className="flex items-center gap-1.5"><ExternalLink className="h-4 w-4"/> Resources</Link>
+        const studentLinksConfig = [
+          { keyBase: 'student-resources', href: '/student/dashboard', label: 'Resources', icon: ExternalLink },
+          { keyBase: 'student-labs', href: '/student/labs', label: 'Labs', icon: null },
+          { keyBase: 'student-sandbox', href: '/student/sandbox', label: 'Sandbox', icon: Code2 },
+          { keyBase: 'student-profile', href: '/student/profile', label: 'Profile', icon: User },
+        ];
+        studentLinksConfig.forEach(linkConfig => {
+          const buttonContent = (
+            <Button variant="ghost" asChild className={commonLinkClasses}>
+              <Link href={linkConfig.href} className="flex items-center gap-1.5">
+                {linkConfig.icon && <linkConfig.icon className="h-4 w-4"/>} {linkConfig.label}
+              </Link>
             </Button>
           );
-          authConditionalLinks.push(
-            <Button variant="ghost" asChild className={commonLinkClasses} key="student-labs">
-                <Link href="/student/labs">Labs</Link>
-            </Button>
-          );
-          authConditionalLinks.push(
-            <Button variant="ghost" asChild className={commonLinkClasses} key="student-sandbox">
-               <Link href="/student/sandbox" className="flex items-center gap-1.5"><Code2 className="h-4 w-4"/> Sandbox</Link>
-            </Button>
-          );
-           authConditionalLinks.push(
-            <Button variant="ghost" asChild className={commonLinkClasses} key="student-profile">
-                 <Link href="/student/profile" className="flex items-center gap-1.5"> <User className="h-4 w-4"/> Profile</Link>
-            </Button>
-          );
-        }
+          if (isSheetItem) {
+            authConditionalLinks.push(
+              <SheetClose asChild key={`${linkConfig.keyBase}-sheet`}>{buttonContent}</SheetClose>
+            );
+          } else {
+             authConditionalLinks.push(
+                React.cloneElement(buttonContent, { key: `${linkConfig.keyBase}-desktop` })
+            );
+          }
+        });
       }
+      // Faculty
       if (userProfile?.role === 'faculty') {
-        const facultyDashboardLink = (
+        const facultyButtonContent = (
           <Button variant="ghost" asChild className={commonLinkClasses}>
             <Link href="/faculty/dashboard" className="flex items-center gap-1.5"><BookUser className="h-4 w-4"/> My Dashboard</Link>
           </Button>
         );
         if (isSheetItem) {
           authConditionalLinks.push(
-            <SheetClose asChild key="faculty-dashboard">{facultyDashboardLink}</SheetClose>
+            <SheetClose asChild key="faculty-dashboard-sheet">{facultyButtonContent}</SheetClose>
           );
         } else {
           authConditionalLinks.push(
-            <Button variant="ghost" asChild className={commonLinkClasses} key="faculty-dashboard">
-               <Link href="/faculty/dashboard" className="flex items-center gap-1.5"><BookUser className="h-4 w-4"/> My Dashboard</Link>
-            </Button>
+            React.cloneElement(facultyButtonContent, { key: "faculty-dashboard-desktop" })
           );
         }
       }
 
+      // Logout Button
       authConditionalLinks.push(
         <Button 
           variant="ghost" 
           onClick={handleSignOut}
           className="text-foreground hover:bg-destructive/10"
-          key="logout"
+          key="logout" // This key is for its position in the authConditionalLinks array
         >
           Logout
         </Button>
