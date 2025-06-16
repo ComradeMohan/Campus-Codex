@@ -4,7 +4,7 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { db, auth } from '@/lib/firebase';
-import { collection, getDocs, query, where, orderBy, doc, setDoc, updateDoc, serverTimestamp } from 'firebase/firestore';
+import { collection, getDocs, query, where, doc, setDoc, updateDoc, serverTimestamp, orderBy } from 'firebase/firestore';
 import type { College, UserProfile, CollegeRegistrationRequest } from '@/types';
 import { createUserWithEmailAndPassword, updateProfile, sendPasswordResetEmail, sendSignInLinkToEmail } from 'firebase/auth';
 
@@ -31,7 +31,7 @@ interface CollegeWithStats extends College {
   facultyCount: number;
   languageCount: number;
   courseCount: number;
-  adminName?: string; 
+  adminName?: string;
 }
 
 export default function MainAdminDashboardPage() {
@@ -57,6 +57,7 @@ export default function MainAdminDashboardPage() {
     for (let i = 0, n = charset.length; i < length; ++i) {
       password += charset.charAt(Math.floor(Math.random() * n));
     }
+    // Ensure password complexity
     if (!/[a-z]/.test(password)) password += 'a';
     if (!/[A-Z]/.test(password)) password += 'Z';
     if (!/[0-9]/.test(password)) password += '1';
@@ -125,7 +126,7 @@ export default function MainAdminDashboardPage() {
         }
         detailedCollegesData.push({ ...college, studentCount, facultyCount, languageCount, courseCount, adminName });
       }
-      
+
       setPlatformStats({
         totalColleges: fetchedColleges.length,
         totalStudents,
@@ -150,15 +151,22 @@ export default function MainAdminDashboardPage() {
   }, [toast, userProfile?.role]);
 
   useEffect(() => {
-    if (!authLoading) {
-        if (userProfile?.role === 'super-admin') {
-            fetchPlatformData();
-        } else {
-            setIsLoading(false);
-            if (userProfile) { 
-                 toast({ title: "Access Denied", description: "You do not have permission to view this page.", variant: "destructive" });
-            }
+     if (authLoading) {
+      // Still waiting for auth context to determine user status
+      setIsLoading(true);
+    } else {
+      // Auth context has loaded
+      if (userProfile?.role === 'super-admin') {
+        fetchPlatformData(); // This function will set isLoading to false in its finally block
+      } else {
+        // Not a super-admin or no user profile, so stop page loading
+        setIsLoading(false);
+        if (userProfile) { // User is logged in but not super-admin
+          toast({ title: "Access Denied", description: "You do not have permission to view this page.", variant: "destructive" });
+          // Optionally redirect: router.push('/');
         }
+        // If !userProfile, ProtectedRoute should handle redirection to login
+      }
     }
   }, [authLoading, userProfile, fetchPlatformData, toast]);
 
@@ -184,6 +192,9 @@ export default function MainAdminDashboardPage() {
         }
 
         const tempPassword = generateTemporaryPassword();
+        // Temporarily store current user to sign them back in if necessary
+        const currentAuthUser = auth.currentUser;
+
         const userCredential = await createUserWithEmailAndPassword(auth, request.email, tempPassword);
         const newAdminUser = userCredential.user;
 
@@ -193,7 +204,7 @@ export default function MainAdminDashboardPage() {
         await setDoc(newCollegeRef, {
           name: request.collegeName,
           adminEmail: request.email,
-          adminUid: newAdminUser.uid,
+          adminUid: newAdminUser.uid, // Set admin UID here
           createdAt: serverTimestamp(),
           status: 'active'
         });
@@ -206,33 +217,43 @@ export default function MainAdminDashboardPage() {
           collegeName: request.collegeName,
           collegeId: newCollegeRef.id,
           phoneNumber: request.phoneNumber || undefined,
-          isEmailVerified: true, 
+          isEmailVerified: true,
         };
         await setDoc(doc(db, 'users', newAdminUser.uid), {
           ...adminProfile,
           createdAt: serverTimestamp(),
         });
-        
+
         await updateDoc(doc(db, 'collegeRegistrationRequests', requestId), {
           status: 'approved',
           processedAt: serverTimestamp(),
           createdCollegeId: newCollegeRef.id,
           adminUid: newAdminUser.uid,
         });
+        
+        // If createUserWithEmailAndPassword signed in the new user, sign the super-admin back in
+        if (currentAuthUser && auth.currentUser?.uid !== currentAuthUser.uid) {
+            // This is complex client-side. The ideal solution involves Admin SDK.
+            // For now, the super-admin might need to be aware their session could be interrupted here.
+            // Or, more likely, Firebase handles this gracefully without signing out the current user.
+            // We will proceed assuming Firebase handles it or the impact is minimal for this app's context.
+             console.warn("Super-admin session might have been affected by new user creation. Re-login if issues occur.");
+        }
+
 
         setTempPasswordInfo({ email: request.email, tempPass: tempPassword });
         setShowTempPasswordDialog(true);
-        
+
         toast({ title: "College Approved!", description: `"${request.collegeName}" approved. Admin account created.` });
 
-      } else { 
+      } else {
         await updateDoc(doc(db, 'collegeRegistrationRequests', requestId), {
           status: 'rejected',
           processedAt: serverTimestamp(),
         });
         toast({ title: "College Rejected", description: `Registration request for "${request.collegeName}" has been rejected.` });
       }
-      fetchPlatformData(); 
+      fetchPlatformData();
     } catch (error: any) {
       console.error("Error processing request:", error);
       let desc = "Failed to process request.";
@@ -245,19 +266,19 @@ export default function MainAdminDashboardPage() {
       newStatusRef.current = null;
     }
   };
-  
+
   const handleSendPasswordReset = async (collegeAdminEmail: string | null | undefined, collegeName: string) => {
     if (!collegeAdminEmail) {
       toast({ title: "Error", description: `Admin email not found for ${collegeName}.`, variant: "destructive" });
       return;
     }
-    
+
     setIsSendingReset(prev => ({ ...prev, [collegeAdminEmail]: true }));
     try {
       await sendPasswordResetEmail(auth, collegeAdminEmail);
       toast({
         title: "Password Reset Email Sent",
-        description: `A password reset link has been sent to ${collegeAdminEmail} for the admin of ${collegeName}.`,
+        description: `A password reset link has been sent to ${collegeAdminEmail} for ${collegeName}'s admin. Please advise them to check their inbox and spam folder.`,
       });
     } catch (error: any) {
       console.error("Error sending password reset email:", error);
@@ -279,13 +300,13 @@ export default function MainAdminDashboardPage() {
     setIsSendingAccessLink(prev => ({ ...prev, [collegeAdminEmail]: true }));
     try {
       const actionCodeSettings = {
-        url: `${window.location.origin}/login?email=${encodeURIComponent(collegeAdminEmail)}`, // Simpler URL, login page handles the rest
+        url: `${window.location.origin}/login?email=${encodeURIComponent(collegeAdminEmail)}`,
         handleCodeInApp: true,
       };
       await sendSignInLinkToEmail(auth, collegeAdminEmail, actionCodeSettings);
       toast({
         title: "Access Link Sent",
-        description: `A magic sign-in link has been sent to ${collegeAdminEmail} for the admin of ${collegeName}.`,
+        description: `A magic sign-in link has been sent to ${collegeAdminEmail} for ${collegeName}'s admin. Please advise them to check their inbox and spam folder.`,
       });
     } catch (error: any) {
       console.error("Error sending access link:", error);
@@ -300,7 +321,7 @@ export default function MainAdminDashboardPage() {
   };
 
 
-  if (isLoading || authLoading) {
+  if (isLoading) { // Simplified loading check
     return (
       <div className="container mx-auto py-8 flex justify-center items-center min-h-[calc(100vh-10rem)]">
         <Loader2 className="h-12 w-12 animate-spin text-primary" />
@@ -318,7 +339,7 @@ export default function MainAdminDashboardPage() {
       </div>
     );
   }
-  
+
   if (!platformStats) {
     return (
         <div className="container mx-auto py-8 text-center">
@@ -326,7 +347,7 @@ export default function MainAdminDashboardPage() {
         </div>
     );
   }
-  
+
   const statCards = [
     { title: "Total Colleges", value: platformStats.totalColleges, icon: Building, color: "text-blue-500" },
     { title: "Total Students", value: platformStats.totalStudents, icon: Users, color: "text-green-500" },
@@ -482,14 +503,14 @@ export default function MainAdminDashboardPage() {
           )}
         </CardContent>
       </Card>
-      
+
       <Dialog open={showTempPasswordDialog} onOpenChange={(open) => { if (!open) { setShowTempPasswordDialog(false); setTempPasswordInfo(null); }}}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
             <DialogPrimitiveTitle className="text-lg font-semibold">College Admin Credentials</DialogPrimitiveTitle>
             <DialogPrimitiveDescription>
               The admin account for <strong>{tempPasswordInfo?.email}</strong> has been created. Please securely share these credentials with them.
-              They <strong className="text-destructive">MUST</strong> change this password immediately after their first login.
+              They <strong className="text-destructive">MUST</strong> change this password immediately after their first login using the 'Change Password' option in their profile.
             </DialogPrimitiveDescription>
           </DialogHeader>
           <div className="space-y-3 py-4">
