@@ -155,17 +155,17 @@ export function LoginForm() {
                 await sendEmailVerification(user);
                 toast({
                     title: 'Email Not Verified',
-                    description: 'Your email is not yet verified. A new verification link has been sent. Please check your email and verify to log in.',
+                    description: 'Your email address is not yet verified. A new verification link has been sent. Please check your inbox and spam/junk folder to verify.',
                     variant: 'destructive',
-                    duration: 7000,
+                    duration: 8000,
                 });
             } catch (verificationError) {
                 console.error('Error resending verification email:', verificationError);
                 toast({
                     title: 'Email Not Verified',
-                    description: 'Please verify your email to log in. Could not resend verification email at this time.',
+                    description: 'Please verify your email to log in. Could not resend verification email at this time. Check your spam/junk folder for the original link.',
                     variant: 'destructive',
-                    duration: 7000,
+                    duration: 8000,
                 });
             }
             setIsLoading(false);
@@ -203,7 +203,7 @@ export function LoginForm() {
             // This path should ideally not be hit if the above email verification check for non-faculty is working.
              toast({
                 title: 'Login Error',
-                description: 'User profile not found. Please complete registration or verify your email.',
+                description: 'User profile not found. Please complete registration or verify your email. Check spam/junk for verification email.',
                 variant: 'destructive',
             });
         }

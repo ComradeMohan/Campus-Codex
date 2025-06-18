@@ -75,7 +75,7 @@ export function StudentRegisterForm() {
           collegeId: values.collegeId,
           collegeName: selectedCollege?.name || undefined, // Save college name
           phoneNumber: values.phoneNumber,
-          isEmailVerified: user.emailVerified,
+          isEmailVerified: user.emailVerified, // Initially set from Firebase Auth user
         };
         await setDoc(doc(db, 'users', user.uid), {
           ...userProfileData,
@@ -97,6 +97,8 @@ export function StudentRegisterForm() {
       let errorMessage = 'An unexpected error occurred. Please try again.';
       if (error.code === 'auth/email-already-in-use') {
         errorMessage = 'This email address is already in use. Please try logging in or use a different email.';
+      } else if (error.code === 'auth/operation-not-allowed') {
+        errorMessage = 'Email/password accounts are not enabled. Contact support.';
       }
       toast({
         title: 'Registration Error',
@@ -271,3 +273,4 @@ export function StudentRegisterForm() {
     </Card>
   );
 }
+
