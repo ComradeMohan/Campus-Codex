@@ -86,7 +86,8 @@ export function StudentRegisterForm() {
 
         toast({
           title: 'Registration Successful!',
-          description: 'A verification email has been sent. Please verify your email to login.',
+          description: 'A verification email has been sent to your email address. Please check your inbox and spam/junk folder to verify your account before logging in.',
+          duration: 7000, 
         });
         setIsVerificationSent(true);
         form.reset();
@@ -117,7 +118,7 @@ export function StudentRegisterForm() {
           </CardDescription>
         </CardHeader>
         <CardContent>
-           <p className="text-sm text-muted-foreground">If you don&apos;t see the email, please check your spam folder.</p>
+           <p className="text-sm text-muted-foreground">If you don&apos;t see the email, please check your spam/junk folder.</p>
            <Button variant="link" asChild className="mt-4 px-0">
              <Link href="/login">Proceed to Login</Link>
            </Button>
