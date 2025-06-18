@@ -159,11 +159,15 @@ export function LoginForm() {
                     variant: 'destructive',
                     duration: 8000,
                 });
-            } catch (verificationError) {
+            } catch (verificationError: any) {
                 console.error('Error resending verification email:', verificationError);
+                let verificationErrorMessage = 'Please verify your email to log in. Could not resend verification email at this time. Check your spam/junk folder for the original link.';
+                if (verificationError.code === 'auth/too-many-requests') {
+                    verificationErrorMessage = 'Too many verification email requests have been sent to this address recently. Please check your existing emails (including spam/junk) or try again later.';
+                }
                 toast({
                     title: 'Email Not Verified',
-                    description: 'Please verify your email to log in. Could not resend verification email at this time. Check your spam/junk folder for the original link.',
+                    description: verificationErrorMessage,
                     variant: 'destructive',
                     duration: 8000,
                 });
@@ -373,3 +377,4 @@ export function LoginForm() {
     </Card>
   );
 }
+
