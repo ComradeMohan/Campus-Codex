@@ -15,6 +15,7 @@ import Image from 'next/image';
 import * as LucideIcons from 'lucide-react';
 import { Separator } from '@/components/ui/separator';
 import { Badge } from '@/components/ui/badge';
+import { Skeleton } from '@/components/ui/skeleton'; // Added import for Skeleton
 
 interface LanguageWithCourses extends ProgrammingLanguage {
   courses: Course[];
@@ -162,7 +163,8 @@ export default function StudentCodingLabsPage() {
         );
         if (hasExistingPendingRequest) {
           console.log("Student already has a pending request for this course.");
-          return; 
+          // Throw an error to be caught and display a specific toast
+          throw new Error(`Student already has a pending request for "${course.name}".`);
         }
         
         const newRequestObject: EnrollmentRequest = {
@@ -441,4 +443,3 @@ export default function StudentCodingLabsPage() {
     </div>
   );
 }
-
