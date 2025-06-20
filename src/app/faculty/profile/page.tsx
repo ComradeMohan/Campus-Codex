@@ -1,50 +1,74 @@
 
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect } from 'react';
+import Link from 'next/link';
 import { useAuth } from '@/contexts/AuthContext';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { UserCog, Mail, Building, Phone, KeyRound, Mailbox, Users, Lightbulb } from 'lucide-react';
-import { Skeleton } from '@/components/ui/skeleton';
-import Link from 'next/link';
 import { Button } from '@/components/ui/button';
+import { Loader2, UserCog, Mail, Building, Phone, KeyRound, BookUser, Lightbulb, AlertTriangle, BookOpen, BarChart3 } from 'lucide-react';
+import { Skeleton } from '@/components/ui/skeleton';
 import { ChangePasswordDialog } from '@/components/auth/ChangePasswordDialog';
-import { db } from '@/lib/firebase';
-import { collection, query, where, getDocs, onSnapshot } from 'firebase/firestore';
-import { Badge } from '@/components/ui/badge';
-import { useToast } from '@/hooks/use-toast';
 import { FeatureRequestFormDialog } from '@/components/feature-request/FeatureRequestFormDialog';
+import { Badge } from '@/components/ui/badge';
+import { db } from '@/lib/firebase';
+import { collection, query, where, getDocs } from 'firebase/firestore';
+import type { ProgrammingLanguage } from '@/types';
 
-
-export default function AdminProfilePage() {
-  const { userProfile, loading } = useAuth();
-  const { toast } = useToast();
+export default function FacultyProfilePage() {
+  const { userProfile, loading: authLoading, colleges } = useAuth();
   const [isChangePasswordDialogOpen, setIsChangePasswordDialogOpen] = useState(false);
   const [isFeatureRequestDialogOpen, setIsFeatureRequestDialogOpen] = useState(false);
-  const [unreadFeedbackCount, setUnreadFeedbackCount] = useState(0);
+  const [managedLanguages, setManagedLanguages] = useState<ProgrammingLanguage[]>([]);
+  const [isLoadingLanguages, setIsLoadingLanguages] = useState(false);
+
 
   useEffect(() => {
-    if (userProfile?.role === 'admin' && userProfile.collegeId) {
-      const feedbackRef = collection(db, 'colleges', userProfile.collegeId, 'feedback');
-      const q = query(feedbackRef, where('isRead', '==', false));
+    const fetchManagedLanguages = async () => {
+      if (userProfile?.collegeId && userProfile.managedLanguageIds && userProfile.managedLanguageIds.length > 0) {
+        setIsLoadingLanguages(true);
+        try {
+          const languagesRef = collection(db, 'colleges', userProfile.collegeId, 'languages');
+          const q = query(languagesRef, where('__name__', 'in', userProfile.managedLanguageIds));
+          const querySnapshot = await getDocs(q);
+          const fetchedLanguages = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as ProgrammingLanguage));
+          setManagedLanguages(fetchedLanguages);
+        } catch (error) {
+          console.error("Error fetching managed languages:", error);
+        } finally {
+          setIsLoadingLanguages(false);
+        }
+      }
+    };
 
-      const unsubscribe = onSnapshot(q, (querySnapshot) => {
-        setUnreadFeedbackCount(querySnapshot.size);
-      }, (error) => {
-        console.error("Error fetching unread feedback count: ", error);
-        toast({
-          title: "Error",
-          description: "Could not fetch unread feedback notifications.",
-          variant: "destructive",
-        });
-      });
-
-      return () => unsubscribe(); // Cleanup listener on component unmount
+    if (!authLoading && userProfile) {
+      fetchManagedLanguages();
     }
-  }, [userProfile, toast]);
+  }, [userProfile, authLoading]);
 
-  if (loading) {
+
+  const getInitials = (name: string = '') => {
+    return name
+      .split(' ')
+      .map((n) => n[0])
+      .join('')
+      .toUpperCase();
+  };
+  
+  const displayedCollegeName = React.useMemo(() => {
+    if (userProfile?.collegeName) {
+      return userProfile.collegeName;
+    }
+    if (userProfile?.collegeId && colleges.length > 0) {
+      const foundCollege = colleges.find(c => c.id === userProfile.collegeId);
+      return foundCollege?.name;
+    }
+    return undefined;
+  }, [userProfile?.collegeName, userProfile?.collegeId, colleges]);
+
+
+  if (authLoading) {
     return (
       <div className="space-y-6">
         <Skeleton className="h-10 w-1/3" />
@@ -59,7 +83,7 @@ export default function AdminProfilePage() {
             </div>
           </CardHeader>
           <CardContent className="space-y-4">
-            {[...Array(5)].map((_, i) => ( 
+            {[...Array(6)].map((_, i) => (
               <div key={i} className="flex items-center space-x-3">
                 <Skeleton className="h-5 w-5" />
                 <Skeleton className="h-4 w-2/3" />
@@ -70,7 +94,6 @@ export default function AdminProfilePage() {
             <Skeleton className="h-10 w-32" />
             <Skeleton className="h-10 w-32" />
             <Skeleton className="h-10 w-32" />
-            <Skeleton className="h-10 w-32" /> 
           </CardFooter>
         </Card>
       </div>
@@ -81,27 +104,19 @@ export default function AdminProfilePage() {
     return (
       <div className="text-center py-10">
         <p className="text-muted-foreground text-lg">User profile not found.</p>
-        <Button asChild className="mt-4">
-          <Link href="/admin/dashboard">Back to Dashboard</Link>
+         <Button asChild className="mt-4">
+          <Link href="/faculty/dashboard">Back to Dashboard</Link>
         </Button>
       </div>
     );
   }
 
-  const getInitials = (name: string = '') => {
-    return name
-      .split(' ')
-      .map((n) => n[0])
-      .join('')
-      .toUpperCase();
-  };
-
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-center">
-        <h1 className="text-3xl font-headline">Admin Profile</h1>
+        <h1 className="text-3xl font-headline">Faculty Profile</h1>
          <Button asChild variant="outline">
-            <Link href="/admin/dashboard">Back to Dashboard</Link>
+            <Link href="/faculty/dashboard">Back to Dashboard</Link>
         </Button>
       </div>
       <Card className="shadow-lg">
@@ -116,7 +131,7 @@ export default function AdminProfilePage() {
             <div>
               <CardTitle className="text-3xl font-headline">{userProfile.fullName}</CardTitle>
               <CardDescription className="text-md">
-                Administrator at {userProfile.collegeName || 'Your College'}
+                Faculty at {displayedCollegeName || 'N/A'}
               </CardDescription>
             </div>
           </div>
@@ -127,11 +142,11 @@ export default function AdminProfilePage() {
             <span className="text-muted-foreground">Email:</span>
             <span>{userProfile.email}</span>
           </div>
-          {userProfile.collegeName && (
+          {displayedCollegeName && (
             <div className="flex items-center space-x-3">
               <Building className="w-5 h-5 text-primary" />
               <span className="text-muted-foreground">College:</span>
-              <span>{userProfile.collegeName}</span>
+              <span>{displayedCollegeName}</span>
             </div>
           )}
           {userProfile.phoneNumber && (
@@ -142,38 +157,42 @@ export default function AdminProfilePage() {
             </div>
           )}
            <div className="flex items-center space-x-3">
-            <UserCog className="w-5 h-5 text-primary" />
+            <BookUser className="w-5 h-5 text-primary" />
             <span className="text-muted-foreground">Role:</span>
             <span className="capitalize">{userProfile.role}</span>
           </div>
+           <div className="space-y-2">
+            <div className="flex items-center space-x-3">
+                <BookOpen className="w-5 h-5 text-primary" />
+                <span className="text-muted-foreground">Managing Languages/Subjects:</span>
+            </div>
+            {isLoadingLanguages ? (
+                 <div className="flex items-center space-x-2 pl-8">
+                    <Loader2 className="h-4 w-4 animate-spin text-primary" />
+                    <span>Loading languages...</span>
+                </div>
+            ) : managedLanguages.length > 0 ? (
+                <div className="flex flex-wrap gap-2 pl-8">
+                    {managedLanguages.map(lang => (
+                    <Badge key={lang.id} variant="secondary">{lang.name}</Badge>
+                    ))}
+                </div>
+            ) : (
+                <p className="text-sm text-muted-foreground pl-8">Not assigned to any specific languages yet.</p>
+            )}
+           </div>
         </CardContent>
         <CardFooter className="border-t pt-4 flex flex-wrap gap-3">
             <Button variant="outline" onClick={() => setIsChangePasswordDialogOpen(true)}>
                 <KeyRound className="mr-2 h-4 w-4" /> Change Password
             </Button>
-             {userProfile.role === 'admin' && (
-              <Button asChild variant="outline">
-                <Link href="/admin/feedback" className="flex items-center gap-2">
-                  <Mailbox className="h-4 w-4" />
-                  View Feedback
-                  {unreadFeedbackCount > 0 && (
-                    <Badge variant="destructive" className="ml-2 scale-90 px-1.5 py-0.5">
-                      {unreadFeedbackCount}
-                    </Badge>
-                  )}
-                </Link>
-              </Button>
-            )}
-            {userProfile.role === 'admin' && (
-              <Button asChild variant="outline">
-                <Link href="/admin/users" className="flex items-center gap-2">
-                  <Users className="h-4 w-4" />
-                  Manage Users
-                </Link>
-              </Button>
-            )}
-            <Button variant="outline" onClick={() => setIsFeatureRequestDialogOpen(true)}>
+             <Button variant="outline" onClick={() => setIsFeatureRequestDialogOpen(true)}>
                 <Lightbulb className="mr-2 h-4 w-4" /> Suggest a Feature
+            </Button>
+            <Button asChild variant="outline">
+                <Link href="/faculty/dashboard" className="flex items-center gap-2">
+                    <BarChart3 className="h-4 w-4" /> View Dashboard
+                </Link>
             </Button>
         </CardFooter>
       </Card>

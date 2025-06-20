@@ -184,3 +184,18 @@ export interface CollegeResource {
   addedBy: string; 
 }
 
+export type FeatureRequestCategory = 'UI/UX Improvement' | 'New Feature' | 'Bug Report' | 'Performance' | 'AI Feature' | 'Other';
+
+export interface FeatureRequest {
+  id: string;
+  userId: string;
+  userEmail: string | null;
+  userRole: UserRole;
+  title: string;
+  description: string;
+  category: FeatureRequestCategory;
+  submittedAt: Timestamp | FieldValue;
+  status: 'pending' | 'reviewed' | 'in-progress' | 'completed' | 'declined';
+  adminNotes?: string;
+}
+

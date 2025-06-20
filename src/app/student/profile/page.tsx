@@ -12,11 +12,13 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter }
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
-import { Loader2, User, Mail, Building, Award, BarChart2, BookOpen, Star, ArrowLeft, Edit, Phone, KeyRound, MessageSquarePlus } from 'lucide-react';
+import { Loader2, User, Mail, Building, Award, BarChart2, BookOpen, Star, ArrowLeft, Edit, Phone, KeyRound, MessageSquarePlus, Lightbulb } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import * as LucideIcons from 'lucide-react';
 import { ChangePasswordDialog } from '@/components/auth/ChangePasswordDialog';
 import { FeedbackFormDialog } from '@/components/feedback/FeedbackFormDialog';
+import { FeatureRequestFormDialog } from '@/components/feature-request/FeatureRequestFormDialog';
+
 
 interface EnrolledLanguageWithDetails extends EnrolledLanguageProgress {
   totalPossibleScore: number;
@@ -41,6 +43,7 @@ export default function StudentProfilePage() {
   const [totalPossibleOverallScore, setTotalPossibleOverallScore] = useState(0);
   const [isChangePasswordDialogOpen, setIsChangePasswordDialogOpen] = useState(false);
   const [isFeedbackDialogOpen, setIsFeedbackDialogOpen] = useState(false);
+  const [isFeatureRequestDialogOpen, setIsFeatureRequestDialogOpen] = useState(false);
 
   const fetchStudentProgress = useCallback(async () => {
     if (!userProfile?.uid || !userProfile?.collegeId) {
@@ -196,6 +199,9 @@ export default function StudentProfilePage() {
             <Button variant="outline" onClick={() => setIsFeedbackDialogOpen(true)}>
                 <MessageSquarePlus className="mr-2 h-4 w-4" /> Give Feedback
             </Button>
+            <Button variant="outline" onClick={() => setIsFeatureRequestDialogOpen(true)}>
+                <Lightbulb className="mr-2 h-4 w-4" /> Suggest a Feature
+            </Button>
         </CardFooter>
       </Card>
 
@@ -308,6 +314,11 @@ export default function StudentProfilePage() {
         isOpen={isFeedbackDialogOpen}
         onOpenChange={setIsFeedbackDialogOpen}
         studentProfile={userProfile}
+      />
+      <FeatureRequestFormDialog
+        isOpen={isFeatureRequestDialogOpen}
+        onOpenChange={setIsFeatureRequestDialogOpen}
+        userProfile={userProfile}
       />
     </div>
   );
