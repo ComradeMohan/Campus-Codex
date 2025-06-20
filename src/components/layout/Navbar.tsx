@@ -1,7 +1,7 @@
 
 'use client';
 
-import * as React from 'react'; // Added import for React
+import * as React from 'react';
 import Link from 'next/link';
 import { CodeXml, Menu, X, Sun, Moon, User, BookUser, Code2, BarChartHorizontalBig, LayoutDashboard, ExternalLink } from 'lucide-react';
 import { siteConfig } from '@/config/site';
@@ -24,7 +24,7 @@ export function Navbar() {
   useEffect(() => {
     setIsMounted(true);
     const storedTheme = localStorage.getItem('theme');
-    const initialTheme = storedTheme ? storedTheme : 'dark';
+    const initialTheme = storedTheme ? storedTheme : 'dark'; // Default to dark if nothing stored
     setTheme(initialTheme);
     if (initialTheme === 'dark') {
       document.documentElement.classList.add('dark');
@@ -62,7 +62,7 @@ export function Navbar() {
   };
 
   const createNavLinks = (isSheetItem: boolean) => {
-    const commonLinkClasses = "text-foreground hover:bg-primary/10";
+    const commonLinkClasses = "text-foreground hover:bg-primary/10 dark:hover:text-primary-foreground";
 
     const navItemsToDisplay = siteConfig.navItems.filter(item => {
       if (currentUser) {
@@ -86,9 +86,8 @@ export function Navbar() {
           );
         }
         return (
-          <Button variant="ghost" asChild className={commonLinkClasses} key={`${item.label.toLowerCase().replace(' ', '-')}-desktop`}>
-            <Link href={item.href}>{item.label}</Link>
-          </Button>
+          // Add key for desktop items directly in the array
+          React.cloneElement(linkButtonContent, { key: `${item.label.toLowerCase().replace(' ', '-')}-desktop` })
         );
       });
 
@@ -178,8 +177,8 @@ export function Navbar() {
         <Button
           variant="ghost"
           onClick={handleSignOut}
-          className="text-foreground hover:bg-destructive/10"
-          key="logout-button" // Unique key for the logout button itself
+          className="text-foreground hover:bg-destructive/10 dark:hover:text-destructive-foreground"
+          key="logout-button" 
         >
           Logout
         </Button>

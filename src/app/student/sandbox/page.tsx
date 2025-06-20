@@ -25,7 +25,6 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { useIsMobile } from '@/hooks/use-mobile';
 
 
-const PLACEMENTS_COURSE_NAME = "Placements";
 const MIN_BOTTOM_PANEL_HEIGHT = 100; 
 const DEFAULT_BOTTOM_PANEL_HEIGHT = 250; 
 
@@ -175,17 +174,19 @@ export default function StudentSandboxPage() {
     setCurrentProgramTitle(isShared ? `[Shared] ${programData.title || 'Untitled'}` : programData.title || '');
     setCurrentCode(programData.code || '');
     setSampleInput(programData.lastInput || '');
-    setIsAIChatOpen(false); // Close AI chat when loading new program
+    setIsAIChatOpen(false); 
 
     let languageToLoad: ProgrammingLanguage | null = null;
+    const actualProgrammingLangs = availableLangs.filter(lang => lang.name !== "Placements" && lang.name !== "Aptitude");
+
     if(programData.languageId) {
-        languageToLoad = availableLangs.find(lang => lang.id === programData.languageId) || null;
+        languageToLoad = actualProgrammingLangs.find(lang => lang.id === programData.languageId) || null;
     }
     if(!languageToLoad && programData.languageName) {
-        languageToLoad = availableLangs.find(lang => lang.name === programData.languageName) || null;
+        languageToLoad = actualProgrammingLangs.find(lang => lang.name === programData.languageName) || null;
     }
-    if(!languageToLoad && availableLangs.length > 0) {
-        languageToLoad = availableLangs.filter(lang => lang.name !== PLACEMENTS_COURSE_NAME)[0] || availableLangs[0];
+    if(!languageToLoad && actualProgrammingLangs.length > 0) {
+        languageToLoad = actualProgrammingLangs[0];
     }
     
     setSelectedLanguage(languageToLoad);
@@ -196,10 +197,10 @@ export default function StudentSandboxPage() {
         setCurrentCode(programData.code || getDefaultCodeForLanguage(languageToLoad?.name));
     }
     
-    if (!languageToLoad && programData.languageName) {
+    if (!languageToLoad && programData.languageName && (programData.languageName !== "Placements" && programData.languageName !== "Aptitude")) {
          toast({
             title: "Language Mismatch",
-            description: `The language "${programData.languageName}" this program was saved/shared with is not currently available. Code loaded as plaintext.`,
+            description: `The language "${programData.languageName}" this program was saved/shared with is not currently available for solving. Code loaded as plaintext.`,
             variant: "default"
         });
     }
@@ -220,11 +221,13 @@ export default function StudentSandboxPage() {
   const handleNewProgram = useCallback(() => {
     setActiveProgramId(null);
     const newProgramDefaults: Partial<SavedProgram> = { title: '', code: '', lastInput: '' };
-    setIsAIChatOpen(false); // Close AI chat for new program
+    setIsAIChatOpen(false);
     
     let langForNewProgram = selectedLanguage;
-    if (!langForNewProgram && programmingLanguages.length > 0) {
-        langForNewProgram = programmingLanguages[0];
+    const filteredProgrammingLangs = programmingLanguages.filter(lang => lang.name !== "Placements" && lang.name !== "Aptitude");
+
+    if (!langForNewProgram && filteredProgrammingLangs.length > 0) {
+        langForNewProgram = filteredProgrammingLangs[0];
     }
     
     if (langForNewProgram) {
@@ -254,7 +257,7 @@ export default function StudentSandboxPage() {
         const fetchedCollegeLanguages = langsSnap.docs.map(docSnap => ({ id: docSnap.id, ...docSnap.data() } as ProgrammingLanguage));
         setAllCollegeLanguages(fetchedCollegeLanguages);
         
-        const actualProgrammingLangs = fetchedCollegeLanguages.filter(lang => lang.name !== PLACEMENTS_COURSE_NAME);
+        const actualProgrammingLangs = fetchedCollegeLanguages.filter(lang => lang.name !== "Placements" && lang.name !== "Aptitude");
         setProgrammingLanguages(actualProgrammingLangs);
 
         const programsRef = collection(db, 'users', userProfile.uid, 'savedPrograms');
@@ -555,11 +558,11 @@ export default function StudentSandboxPage() {
                    <li 
                       key={program.id} 
                       className={cn(
-                        "group flex items-center rounded-sm hover:bg-muted/50", // Removed justify-between
+                        "group flex items-center rounded-sm hover:bg-muted/50", 
                         activeProgramId === program.id && "bg-primary/10"
                       )}
                     >
-                      <div // Clickable area for title and icon
+                      <div 
                         className={cn(
                             "flex flex-1 items-center gap-1.5 p-1.5 cursor-pointer text-xs min-w-0", 
                             activeProgramId === program.id && "text-primary font-medium"
@@ -568,12 +571,12 @@ export default function StudentSandboxPage() {
                         role="button"
                         tabIndex={isSaving || isExecuting ? -1 : 0}
                         onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { if (!(isSaving || isExecuting)) handleLoadProgram(program, allCollegeLanguages); } }}
-                        title={program.title} // Tooltip for full title
+                        title={program.title} 
                       >
                         <ProgramIcon className="h-4 w-4 shrink-0" />
-                        <span className="truncate" title={program.title}>{program.title}</span> {/* Title with truncate */}
+                        <span className="truncate" title={program.title}>{program.title}</span> 
                       </div>
-                      <div className="flex shrink-0 items-center pr-1"> {/* Button container with right padding */}
+                      <div className="flex shrink-0 items-center pr-1"> 
                         <Button
                             variant="ghost"
                             size="icon"
@@ -704,7 +707,7 @@ export default function StudentSandboxPage() {
         )}
       </div>
 
-      <div className="flex flex-1 overflow-hidden relative"> {/* Added relative for AI Assistant positioning */}
+      <div className="flex flex-1 overflow-hidden relative"> 
         <Card className="w-[240px] md:w-[280px] hidden md:flex flex-col border-r rounded-none shrink-0">
           {sidebarContent()}
         </Card>
@@ -804,4 +807,3 @@ export default function StudentSandboxPage() {
     </div>
   );
 }
-    
