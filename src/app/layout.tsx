@@ -5,7 +5,7 @@ import { Toaster } from '@/components/ui/toaster';
 import { AuthProvider } from '@/contexts/AuthContext';
 import './globals.css';
 
-const GA_MEASUREMENT_ID = process.env.NEXT_PUBLIC_GA_MEASUREMENT_ID || "G-XXXXXXXXXX"; // Replace with your actual ID
+const GA_MEASUREMENT_ID = process.env.NEXT_PUBLIC_GA_MEASUREMENT_ID || "G-CVD1KGT6GM"; // Updated ID
 
 export const metadata: Metadata = {
   title: 'Campus Codex',
@@ -40,7 +40,10 @@ export default function RootLayout({
         <meta name="msapplication-tap-highlight" content="no" />
         
         {/* Google Analytics */}
-        {process.env.NODE_ENV === 'production' && GA_MEASUREMENT_ID !== "G-XXXXXXXXXX" && (
+        {process.env.NODE_ENV === 'production' && GA_MEASUREMENT_ID !== "G-XXXXXXXXXX" && GA_MEASUREMENT_ID !== "G-CVD1KGT6GM" && ( // Ensure we don't double-load if ID is already hardcoded
+           console.warn("Using hardcoded GA ID, NEXT_PUBLIC_GA_MEASUREMENT_ID env var not set or matches hardcoded placeholder.")
+        )}
+        {process.env.NODE_ENV === 'production' && (GA_MEASUREMENT_ID === "G-CVD1KGT6GM" || (process.env.NEXT_PUBLIC_GA_MEASUREMENT_ID && process.env.NEXT_PUBLIC_GA_MEASUREMENT_ID !== "G-XXXXXXXXXX")) && (
           <>
             <Script
               strategy="afterInteractive"
@@ -72,3 +75,4 @@ export default function RootLayout({
     </html>
   );
 }
+
