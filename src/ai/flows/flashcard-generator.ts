@@ -48,42 +48,56 @@ const generateFlashcardsFlow = ai.defineFlow(
     outputSchema: FlashcardGeneratorOutputSchema,
   },
   async (input) => {
-    let sourceContent: string | z.Part = '';
+    let sourceContentForPrompt: z.Part;
     let contentType = 'text';
 
     if (input.inputType === 'text') {
-      sourceContent = input.content;
+      sourceContentForPrompt = { text: input.content };
       contentType = 'text';
     } else if (input.inputType === 'pdf') {
-        sourceContent = { media: { url: input.content } };
+        sourceContentForPrompt = { media: { url: input.content } };
         contentType = 'PDF document';
     } else if (input.inputType === 'youtube') {
       try {
         const transcript = await YoutubeTranscript.fetchTranscript(input.content);
-        sourceContent = transcript.map(t => t.text).join(' ');
+        const transcriptText = transcript.map(t => t.text).join(' ');
+        if (!transcriptText.trim()) {
+            throw new Error("The YouTube video transcript is empty.");
+        }
+        sourceContentForPrompt = { text: transcriptText };
         contentType = 'YouTube video transcript';
-      } catch (error) {
+      } catch (error: any) {
          console.error("YouTube Transcript Error:", error);
+         if (error.message?.includes("disabled transcript")) {
+             throw new Error("Could not fetch transcript. The owner has disabled it for this video.");
+         }
          throw new Error("Could not fetch transcript for the provided YouTube video. It might not have captions available.");
       }
+    } else {
+        throw new Error("Invalid input type provided.");
     }
     
+    const promptInstructions = [
+        `You are an expert educator, skilled at creating concise and effective learning materials. Your task is to generate up to ${input.numFlashcards} flashcards based on the provided content.`,
+        `The content is from a ${contentType}.`,
+        input.topic ? `The specific topic to focus on is: ${input.topic}.` : '',
+        'For each flashcard, create a "front" with a clear question or key term, and a "back" with a concise answer or definition.',
+        'Here is the source content:'
+    ].filter(Boolean).join('\n\n');
+
     const { output } = await ai.generate({
-        prompt: `You are an expert educator, skilled at creating concise and effective learning materials. Your task is to generate ${input.numFlashcards} flashcards based on the provided content.
-
-        The content is from a ${contentType}.
-        ${input.topic ? `The specific topic to focus on is: ${input.topic}.` : ''}
-
-        For each flashcard, create a "front" with a clear question or key term, and a "back" with a concise answer or definition.
-
-        Here is the source content:
-        ${input.inputType === 'pdf' ? '{{media url=sourceContent}}' : '{{{sourceContent}}}'}
-        `,
-        input: { sourceContent },
+        prompt: [
+            { text: promptInstructions },
+            sourceContentForPrompt
+        ],
         output: { schema: FlashcardGeneratorOutputSchema },
         model: 'googleai/gemini-2.0-flash'
     });
     
-    return output!;
+    if (!output?.flashcards) {
+        throw new Error("The AI failed to generate flashcards in the expected format. Please try again with different content.");
+    }
+
+    return output;
   }
 );
