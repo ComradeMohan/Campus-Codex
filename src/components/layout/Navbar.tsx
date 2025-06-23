@@ -3,7 +3,7 @@
 
 import * as React from 'react';
 import Link from 'next/link';
-import { CodeXml, Menu, X, Sun, Moon, User, BookUser, Code2, BarChartHorizontalBig, LayoutDashboard, ExternalLink } from 'lucide-react';
+import { CodeXml, Menu, X, Sun, Moon, User, BookUser, Code2, BarChartHorizontalBig, LayoutDashboard, ExternalLink, Sparkles } from 'lucide-react';
 import { siteConfig } from '@/config/site';
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/contexts/AuthContext';
@@ -62,7 +62,7 @@ export function Navbar() {
   };
 
   const createNavLinks = (isSheetItem: boolean) => {
-    const commonLinkClasses = "text-foreground hover:bg-primary/10 dark:hover:text-primary-foreground";
+    const commonLinkClasses = "text-foreground hover:bg-accent hover:text-accent-foreground dark:hover:bg-accent dark:hover:text-primary-foreground";
 
     const navItemsToDisplay = siteConfig.navItems.filter(item => {
       if (currentUser) {
@@ -105,7 +105,7 @@ export function Navbar() {
             <SheetClose asChild key="super-admin-dashboard-sheet">{superAdminButtonContent}</SheetClose>
           );
         } else {
-          authConditionalLinks.push(
+           authConditionalLinks.push(
             React.cloneElement(superAdminButtonContent, { key: "super-admin-dashboard-desktop" })
           );
         }
@@ -130,8 +130,9 @@ export function Navbar() {
       // Student
       if (userProfile?.role === 'student') {
         const studentLinksConfig = [
-          { keyBase: 'student-resources', href: '/student/dashboard', label: 'Resources', icon: ExternalLink },
+          { keyBase: 'student-resources', href: '/student/dashboard', label: 'Dashboard', icon: LayoutDashboard },
           { keyBase: 'student-labs', href: '/student/labs', label: 'Labs', icon: null },
+          { keyBase: 'student-flashcards', href: '/student/flashcards', label: 'AI Flashcards', icon: Sparkles },
           { keyBase: 'student-sandbox', href: '/student/sandbox', label: 'Sandbox', icon: Code2 },
           { keyBase: 'student-profile', href: '/student/profile', label: 'Profile', icon: User },
         ];

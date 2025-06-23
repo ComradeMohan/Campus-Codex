@@ -15,7 +15,7 @@ import Image from 'next/image';
 import * as LucideIcons from 'lucide-react';
 import { Separator } from '@/components/ui/separator';
 import { Badge } from '@/components/ui/badge';
-import { Skeleton } from '@/components/ui/skeleton'; // Added import for Skeleton
+import { Skeleton } from '@/components/ui/skeleton';
 
 interface LanguageWithCourses extends ProgrammingLanguage {
   courses: Course[];
@@ -271,27 +271,27 @@ export default function StudentCodingLabsPage() {
             <Skeleton className="h-8 w-3/5" />
             <Skeleton className="h-4 w-4/5 mt-2" />
           </CardHeader>
-          <CardContent className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        </Card>
+        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
             {[...Array(3)].map((_, i) => (
-              <Card key={i} className="p-4 shadow-none border-0">
-                <div className="flex items-start space-x-4">
-                  <Skeleton className="h-12 w-12 rounded-lg" />
+            <Card key={i} className="p-4 flex flex-col h-full">
+                <div className="flex items-start space-x-4 mb-4">
+                  <Skeleton className="h-16 w-16 rounded-lg shrink-0" />
                   <div className="space-y-2 flex-1">
                     <Skeleton className="h-6 w-3/4" />
                     <Skeleton className="h-4 w-full" />
+                    <Skeleton className="h-4 w-5/6" />
                   </div>
                 </div>
-                <Skeleton className="h-10 w-full mt-4" />
-                 <div className="mt-4 space-y-3">
-                    <Skeleton className="h-4 w-1/2"/>
-                     <div className="grid grid-cols-1 gap-3">
-                        <Skeleton className="h-20 w-full rounded-md"/>
-                    </div>
-                 </div>
-              </Card>
+                <div className="space-y-3 mt-auto">
+                    <Skeleton className="h-10 w-full" />
+                    <Skeleton className="h-px w-full" />
+                    <Skeleton className="h-8 w-1/2" />
+                    <Skeleton className="h-20 w-full" />
+                </div>
+            </Card>
             ))}
-          </CardContent>
-        </Card>
+        </div>
       </div>
     );
   }
@@ -328,7 +328,7 @@ export default function StudentCodingLabsPage() {
             </CardContent>
         </Card>
       ) : (
-        <div className="space-y-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
           {detailedCollegeLanguages.map((language) => {
             const LanguageIcon = language.iconComponent;
             const isCurrentlyEnrollingInLanguage = isEnrolling[language.id];
@@ -336,17 +336,17 @@ export default function StudentCodingLabsPage() {
             const hasPublishedTestsForLanguage = languageHasPublishedTests.get(language.id) === true;
 
             return (
-              <Card key={language.id} className="shadow-lg hover:shadow-xl transition-shadow duration-300 ease-in-out bg-card">
-                <CardHeader className="flex flex-col sm:flex-row items-start sm:items-center gap-4 pb-4">
-                  <LanguageIcon className="w-12 h-12 text-primary sm:w-16 sm:h-16 flex-shrink-0" />
+              <Card key={language.id} className="shadow-lg hover:shadow-xl transition-shadow duration-300 ease-in-out bg-card flex flex-col h-full">
+                <CardHeader className="flex flex-row items-start gap-4 pb-4">
+                  <LanguageIcon className="w-12 h-12 text-primary flex-shrink-0" />
                   <div className="flex-grow">
-                    <CardTitle className="text-xl md:text-2xl font-semibold font-headline">{language.name}</CardTitle>
+                    <CardTitle className="text-xl font-semibold font-headline">{language.name}</CardTitle>
                     <CardDescription className="text-sm mt-1 text-muted-foreground line-clamp-2">
                       {language.description || 'Core programming subject for practice and assessments.'}
                     </CardDescription>
                   </div>
                 </CardHeader>
-                <CardContent className="space-y-4">
+                <CardContent className="space-y-4 flex-grow">
                     <div className="flex flex-col sm:flex-row gap-3">
                       {isAlreadyEnrolledInLanguage ? (
                         <>
@@ -381,9 +381,9 @@ export default function StudentCodingLabsPage() {
                         <Separator className="my-4" />
                         <div>
                             <h4 className="text-md font-semibold mb-3 text-foreground">
-                                Faculty-Led Courses in {language.name}
+                                Faculty-Led Courses
                             </h4>
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div className="grid grid-cols-1 gap-3">
                                 {language.courses.map(course => {
                                     const enrollmentStatusInfo = getStudentCourseEnrollmentStatus(course);
                                     const currentEnrollment = course.enrolledStudentUids?.length || 0;
@@ -433,8 +433,8 @@ export default function StudentCodingLabsPage() {
                         </div>
                       </>
                     )}
-                     {language.courses.length === 0 && isAlreadyEnrolledInLanguage && (<p className="text-xs text-muted-foreground text-center pt-2">No specific faculty-led courses listed for {language.name} yet. You can still access general practice labs and tests for this subject.</p>)}
                 </CardContent>
+                {language.courses.length === 0 && isAlreadyEnrolledInLanguage && (<CardFooter><p className="text-xs text-muted-foreground text-center w-full">No specific faculty-led courses listed yet. You can still access general practice labs and tests.</p></CardFooter>)}
               </Card>
             );
           })}
