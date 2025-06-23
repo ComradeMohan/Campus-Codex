@@ -28,9 +28,10 @@ const FlashcardGeneratorInputSchema = z.object({
 });
 export type FlashcardGeneratorInput = z.infer<typeof FlashcardGeneratorInputSchema>;
 
-// Define the output schema for the flow
+// Define the output schema for the flow, now with an optional error field
 const FlashcardGeneratorOutputSchema = z.object({
   flashcards: z.array(FlashcardSchema),
+  error: z.string().optional(),
 });
 export type FlashcardGeneratorOutput = z.infer<typeof FlashcardGeneratorOutputSchema>;
 
@@ -47,7 +48,7 @@ const generateFlashcardsFlow = ai.defineFlow(
     inputSchema: FlashcardGeneratorInputSchema,
     outputSchema: FlashcardGeneratorOutputSchema,
   },
-  async (input) => {
+  async (input): Promise<FlashcardGeneratorOutput> => {
     let sourceContentForPrompt: z.Part;
     let contentType = 'text';
 
@@ -62,19 +63,20 @@ const generateFlashcardsFlow = ai.defineFlow(
         const transcript = await YoutubeTranscript.fetchTranscript(input.content);
         const transcriptText = transcript.map(t => t.text).join(' ');
         if (!transcriptText.trim()) {
-            throw new Error("The YouTube video transcript is empty.");
+            return { flashcards: [], error: "The YouTube video transcript is empty or could not be processed." };
         }
         sourceContentForPrompt = { text: transcriptText };
         contentType = 'YouTube video transcript';
       } catch (error: any) {
          console.error("YouTube Transcript Error:", error);
          if (error.message?.includes("disabled transcript")) {
-             throw new Error("Could not fetch transcript. The owner has disabled it for this video.");
+             return { flashcards: [], error: "Could not fetch transcript. The owner has disabled it for this video." };
          }
-         throw new Error("Could not fetch transcript for the provided YouTube video. It might not have captions available.");
+         return { flashcards: [], error: "Could not fetch transcript for the provided YouTube video. It might not have captions available." };
       }
     } else {
-        throw new Error("Invalid input type provided.");
+        // This case should be caught by Zod, but as a safeguard:
+        return { flashcards: [], error: "Invalid input type provided." };
     }
     
     const promptInstructions = [
@@ -90,14 +92,14 @@ const generateFlashcardsFlow = ai.defineFlow(
             { text: promptInstructions },
             sourceContentForPrompt
         ],
-        output: { schema: FlashcardGeneratorOutputSchema },
+        output: { schema: z.object({ flashcards: z.array(FlashcardSchema) }) },
         model: 'googleai/gemini-2.0-flash'
     });
     
-    if (!output?.flashcards) {
-        throw new Error("The AI failed to generate flashcards in the expected format. Please try again with different content.");
+    if (!output?.flashcards || output.flashcards.length === 0) {
+        return { flashcards: [], error: "The AI failed to generate flashcards from the provided content. Please try again with different content or be more specific with your topic." };
     }
 
-    return output;
+    return { flashcards: output.flashcards };
   }
 );

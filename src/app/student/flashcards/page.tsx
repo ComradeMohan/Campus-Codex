@@ -92,16 +92,32 @@ export default function StudentFlashcardGeneratorPage() {
         content,
         topic: topic || undefined,
       });
-      setFlashcards(result.flashcards);
-      toast({
-        title: 'Flashcards Generated!',
-        description: `${result.flashcards.length} flashcards have been created from your content.`,
-      });
-    } catch (error) {
+
+      if (result.error) {
+        toast({
+          title: 'Generation Failed',
+          description: result.error,
+          variant: 'destructive',
+        });
+        setFlashcards([]);
+      } else if (result.flashcards && result.flashcards.length > 0) {
+        setFlashcards(result.flashcards);
+        toast({
+          title: 'Flashcards Generated!',
+          description: `${result.flashcards.length} flashcards have been created from your content.`,
+        });
+      } else {
+         toast({
+          title: 'No Flashcards Generated',
+          description: 'The AI could not generate any flashcards from the provided content.',
+          variant: 'default',
+        });
+      }
+    } catch (error) { // This will now catch unexpected system/network errors
       console.error('Error generating flashcards:', error);
       toast({
-        title: 'Generation Failed',
-        description: (error instanceof Error ? error.message : 'An unknown error occurred.') + ' Please try again.',
+        title: 'An Unexpected Error Occurred',
+        description: (error instanceof Error ? error.message : 'The request failed. Please check your connection and try again.'),
         variant: 'destructive',
       });
     } finally {
