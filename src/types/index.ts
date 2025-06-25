@@ -33,12 +33,14 @@ export interface UserProfile {
   phoneNumber?: string;
   isEmailVerified: boolean;
   managedLanguageIds?: string[];
+  fcmTokens?: string[]; // For push notifications
 }
 
 export interface College {
   id: string;
   name: string;
   adminEmail: string;
+  adminUid: string;
   hasUnreadFeedback?: boolean;
 }
 
@@ -199,3 +201,26 @@ export interface FeatureRequest {
   adminNotes?: string;
 }
 
+export interface CollegeRegistrationRequest {
+  id: string;
+  fullName: string;
+  email: string;
+  phoneNumber?: string;
+  collegeName: string;
+  status: 'pending' | 'approved' | 'rejected';
+  requestedAt: Timestamp;
+  processedAt?: Timestamp;
+  createdCollegeId?: string;
+  adminUid?: string;
+}
+
+export interface AdminNotification {
+  id: string;
+  title: string;
+  body: string;
+  targetAudience: 'all' | 'students' | 'faculty';
+  collegeId: string;
+  sentBy: string; // Admin UID
+  createdAt: Timestamp | FieldValue;
+  status: 'pending' | 'sent' | 'failed';
+}

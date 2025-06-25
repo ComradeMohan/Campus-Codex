@@ -2,7 +2,7 @@
 'use client';
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { BarChart3, Users, Settings, BookOpen, UserCog, Loader2, SlidersHorizontal, ExternalLink } from "lucide-react";
+import { BarChart3, Users, Settings, BookOpen, UserCog, Loader2, SlidersHorizontal, ExternalLink, Send } from "lucide-react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/contexts/AuthContext";
@@ -21,8 +21,9 @@ export default function AdminDashboardPage() {
   const dashboardItems = [
     { title: "User Management", description: "View and manage student and faculty accounts.", icon: Users, href: "/admin/users" },
     { title: "Course Management", description: "Create, edit, and organize courses and labs.", icon: BookOpen, href: "/admin/courses" },
-    { title: "College Resources", description: "Manage external resources and links for your students.", icon: ExternalLink, href: "/admin/resources" },
+    { title: "Notifications", description: "Send push notifications to students and faculty.", icon: Send, href: "/admin/notifications" },
     { title: "Platform Analytics", description: "Track usage statistics and platform performance.", icon: BarChart3, href: "/admin/analytics" },
+    { title: "College Resources", description: "Manage external resources and links for your students.", icon: ExternalLink, href: "/admin/resources" },
     { title: "Admin Profile", description: "View and manage your profile details.", icon: UserCog, href: "/admin/profile" },
     { title: "System Settings", description: "Configure platform settings and integrations.", icon: SlidersHorizontal, href: "/admin/settings" },
   ];
@@ -76,7 +77,7 @@ export default function AdminDashboardPage() {
       </Card>
 
       <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-        {dashboardItems.map((item) => (
+        {dashboardItems.sort((a,b) => a.title.localeCompare(b.title)).map((item) => (
           <Card key={item.title} className="shadow-md hover:shadow-lg transition-shadow">
             <CardHeader className="flex flex-row items-center space-x-3 pb-2">
               <item.icon className="w-8 h-8 text-primary" />
