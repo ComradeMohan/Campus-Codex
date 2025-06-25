@@ -10,15 +10,21 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
-import { Loader2, ExternalLink, LayoutDashboard, AlertTriangle, Tag } from 'lucide-react';
+import { Loader2, ExternalLink, LayoutDashboard, AlertTriangle, Tag, TerminalSquare, Sparkles, Code2, MessageSquare, User, BookOpen, KeyRound, MessageSquarePlus, Lightbulb } from 'lucide-react';
 import type { CollegeResource } from '@/types';
 import { formatDistanceToNowStrict } from 'date-fns';
+import { ChangePasswordDialog } from '@/components/auth/ChangePasswordDialog';
+import { FeedbackFormDialog } from '@/components/feedback/FeedbackFormDialog';
+import { FeatureRequestFormDialog } from '@/components/feature-request/FeatureRequestFormDialog';
 
 export default function StudentDashboardPage() {
   const { userProfile, loading: authLoading } = useAuth();
   const { toast } = useToast();
   const [collegeResources, setCollegeResources] = useState<CollegeResource[]>([]);
   const [isLoadingResources, setIsLoadingResources] = useState(true);
+  const [isChangePasswordDialogOpen, setIsChangePasswordDialogOpen] = useState(false);
+  const [isFeedbackDialogOpen, setIsFeedbackDialogOpen] = useState(false);
+  const [isFeatureRequestDialogOpen, setIsFeatureRequestDialogOpen] = useState(false);
 
   const fetchCollegeResources = useCallback(async () => {
     if (userProfile?.collegeId) {
@@ -51,6 +57,14 @@ export default function StudentDashboardPage() {
     }
   }, [authLoading, userProfile, fetchCollegeResources]);
 
+  const dashboardItems = [
+    { title: "Practice Labs", description: "Hone your skills in guided coding labs for your subjects.", icon: TerminalSquare, href: "/student/labs" },
+    { title: "AI Flashcards", description: "Generate flashcards from text, PDFs, or videos to study smart.", icon: Sparkles, href: "/student/flashcards" },
+    { title: "Code Sandbox", description: "An open playground to experiment with code in various languages.", icon: Code2, href: "/student/sandbox" },
+    { title: "Chat", description: "Connect and collaborate with peers and faculty in your college.", icon: MessageSquare, href: "/student/chat" },
+    { title: "My Profile", description: "View your progress, achievements, and manage your account.", icon: User, href: "/student/profile" },
+  ];
+
   if (authLoading) {
     return (
       <div className="container mx-auto py-8 flex justify-center items-center min-h-[calc(100vh-10rem)]">
@@ -60,7 +74,6 @@ export default function StudentDashboardPage() {
     );
   }
    if (!userProfile) {
-    // This should be handled by ProtectedRoute, but as a safeguard
     return <div className="container mx-auto py-8 text-center"><p>Please log in to view your dashboard.</p></div>;
   }
 
@@ -72,9 +85,41 @@ export default function StudentDashboardPage() {
             <LayoutDashboard className="w-8 h-8 mr-3 text-primary" />
             Student Dashboard
           </CardTitle>
-          <CardDescription>Welcome, {userProfile.fullName}! Here are some resources from {userProfile.collegeName || "your college"}.</CardDescription>
+          <CardDescription>Welcome, {userProfile.fullName}! Here's your hub for learning and collaboration.</CardDescription>
         </CardHeader>
+        <CardFooter className="pt-4 flex flex-wrap gap-2">
+            <Button variant="outline" size="sm" onClick={() => setIsChangePasswordDialogOpen(true)}>
+                <KeyRound className="mr-2 h-4 w-4" /> Change Password
+            </Button>
+            <Button variant="outline" size="sm" onClick={() => setIsFeedbackDialogOpen(true)}>
+                <MessageSquarePlus className="mr-2 h-4 w-4" /> Give Feedback
+            </Button>
+            <Button variant="outline" size="sm" onClick={() => setIsFeatureRequestDialogOpen(true)}>
+                <Lightbulb className="mr-2 h-4 w-4" /> Suggest a Feature
+            </Button>
+        </CardFooter>
       </Card>
+      
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {dashboardItems.map((item) => (
+            <Card key={item.title} className="shadow-md hover:shadow-xl transition-shadow flex flex-col">
+              <CardHeader>
+                <div className="flex items-center gap-4">
+                    <item.icon className="w-8 h-8 text-primary shrink-0" />
+                    <CardTitle className="text-lg font-semibold">{item.title}</CardTitle>
+                </div>
+              </CardHeader>
+              <CardContent className="flex-grow">
+                 <p className="text-sm text-muted-foreground">{item.description}</p>
+              </CardContent>
+              <CardFooter>
+                 <Button asChild variant="secondary" className="w-full">
+                    <Link href={item.href}>Go to {item.title}</Link>
+                 </Button>
+              </CardFooter>
+            </Card>
+          ))}
+      </div>
 
       <section>
         <h2 className="text-2xl font-semibold mb-4 font-headline flex items-center">
@@ -130,7 +175,12 @@ export default function StudentDashboardPage() {
           </div>
         )}
       </section>
-      {/* Future sections can be added here, e.g., My Courses Overview, Recent Activity, etc. */}
+
+      {/* Dialogs */}
+      {userProfile?.email && <ChangePasswordDialog isOpen={isChangePasswordDialogOpen} onOpenChange={setIsChangePasswordDialogOpen} email={userProfile.email} />}
+      <FeedbackFormDialog isOpen={isFeedbackDialogOpen} onOpenChange={setIsFeedbackDialogOpen} studentProfile={userProfile} />
+      <FeatureRequestFormDialog isOpen={isFeatureRequestDialogOpen} onOpenChange={setIsFeatureRequestDialogOpen} userProfile={userProfile} />
+
     </div>
   );
 }

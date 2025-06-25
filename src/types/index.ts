@@ -1,4 +1,3 @@
-
 import type { LucideIcon } from 'lucide-react';
 import type { Timestamp, FieldValue } from 'firebase/firestore';
 
@@ -223,4 +222,26 @@ export interface AdminNotification {
   sentBy: string; // Admin UID
   createdAt: Timestamp | FieldValue;
   status: 'pending' | 'sent' | 'failed';
+}
+
+export interface ChatMessage {
+  id: string;
+  chatId: string;
+  senderId: string;
+  senderName: string;
+  text: string;
+  createdAt: Timestamp | FieldValue;
+}
+
+export interface Chat {
+  id: string;
+  participants: string[];
+  participantNames: { [uid: string]: string };
+  lastMessage?: {
+    text: string;
+    timestamp: Timestamp | FieldValue;
+    senderId: string;
+  };
+  createdAt: Timestamp | FieldValue;
+  updatedAt: Timestamp | FieldValue;
 }

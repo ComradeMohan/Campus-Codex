@@ -41,9 +41,6 @@ export default function StudentProfilePage() {
   const [isLoadingProgress, setIsLoadingProgress] = useState(true);
   const [totalOverallScore, setTotalOverallScore] = useState(0);
   const [totalPossibleOverallScore, setTotalPossibleOverallScore] = useState(0);
-  const [isChangePasswordDialogOpen, setIsChangePasswordDialogOpen] = useState(false);
-  const [isFeedbackDialogOpen, setIsFeedbackDialogOpen] = useState(false);
-  const [isFeatureRequestDialogOpen, setIsFeatureRequestDialogOpen] = useState(false);
 
   const fetchStudentProgress = useCallback(async () => {
     if (!userProfile?.uid || !userProfile?.collegeId) {
@@ -77,14 +74,13 @@ export default function StudentProfilePage() {
         if (!isNaN(currentScoreNum)) {
           overallScoreAcc += currentScoreNum;
         } else {
-           // If currentScore is NaN or invalid, treat as 0 for this language's contribution to overall score
            console.warn(`Invalid currentScore for ${enrolledLang.languageName}: ${enrolledLang.currentScore}. Treating as 0.`);
         }
         possibleOverallScoreAcc += totalPossibleScoreForLang;
         
         return {
           ...enrolledLang,
-          currentScore: !isNaN(currentScoreNum) ? currentScoreNum : 0, // Ensure currentScore is a number
+          currentScore: !isNaN(currentScoreNum) ? currentScoreNum : 0,
           totalPossibleScore: totalPossibleScoreForLang,
           languageIcon: getIconComponent(enrolledLang.iconName),
         };
@@ -130,7 +126,7 @@ export default function StudentProfilePage() {
     return undefined;
   }, [userProfile?.collegeName, userProfile?.collegeId, colleges]);
 
-  if (authLoading || (!userProfile && !authLoading && isLoadingProgress)) { // Adjusted loading condition
+  if (authLoading || (!userProfile && !authLoading && isLoadingProgress)) {
     return (
       <div className="container mx-auto py-8 flex justify-center items-center min-h-[calc(100vh-10rem)]">
         <Loader2 className="h-12 w-12 animate-spin text-primary" />
@@ -144,12 +140,11 @@ export default function StudentProfilePage() {
       <div className="container mx-auto py-8 text-center">
         <p className="text-lg text-muted-foreground">User profile not found.</p>
          <Button asChild className="mt-4">
-          <Link href="/student/labs">Back to Labs</Link>
+          <Link href="/student/dashboard">Back to Dashboard</Link>
         </Button>
       </div>
     );
   }
-
 
   return (
     <div className="space-y-8">
@@ -192,17 +187,6 @@ export default function StudentProfilePage() {
             </div>
           )}
         </CardContent>
-        <CardFooter className="border-t pt-4 flex flex-wrap gap-3 items-center">
-            <Button variant="outline" onClick={() => setIsChangePasswordDialogOpen(true)}>
-                <KeyRound className="mr-2 h-4 w-4" /> Change Password
-            </Button>
-            <Button variant="outline" onClick={() => setIsFeedbackDialogOpen(true)}>
-                <MessageSquarePlus className="mr-2 h-4 w-4" /> Give Feedback
-            </Button>
-            <Button variant="outline" onClick={() => setIsFeatureRequestDialogOpen(true)}>
-                <Lightbulb className="mr-2 h-4 w-4" /> Suggest a Feature
-            </Button>
-        </CardFooter>
       </Card>
 
       <Card className="shadow-lg">
@@ -302,24 +286,9 @@ export default function StudentProfilePage() {
       
       <div className="text-center mt-8">
         <Button asChild variant="outline">
-            <Link href="/student/labs"><ArrowLeft className="mr-2 h-4 w-4"/> Back to Labs</Link>
+            <Link href="/student/dashboard"><ArrowLeft className="mr-2 h-4 w-4"/> Back to Dashboard</Link>
         </Button>
       </div>
-      <ChangePasswordDialog 
-        email={userProfile.email}
-        isOpen={isChangePasswordDialogOpen}
-        onOpenChange={setIsChangePasswordDialogOpen}
-      />
-      <FeedbackFormDialog
-        isOpen={isFeedbackDialogOpen}
-        onOpenChange={setIsFeedbackDialogOpen}
-        studentProfile={userProfile}
-      />
-      <FeatureRequestFormDialog
-        isOpen={isFeatureRequestDialogOpen}
-        onOpenChange={setIsFeatureRequestDialogOpen}
-        userProfile={userProfile}
-      />
     </div>
   );
 }

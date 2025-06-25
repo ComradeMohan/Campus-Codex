@@ -3,7 +3,7 @@
 
 import * as React from 'react';
 import Link from 'next/link';
-import { CodeXml, Menu, X, Sun, Moon, User, BookUser, Code2, BarChartHorizontalBig, LayoutDashboard, ExternalLink, Sparkles } from 'lucide-react';
+import { CodeXml, Menu, X, Sun, Moon, User, BookUser, Code2, BarChartHorizontalBig, LayoutDashboard, ExternalLink, Sparkles, MessageSquare } from 'lucide-react';
 import { siteConfig } from '@/config/site';
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/contexts/AuthContext';
@@ -86,14 +86,12 @@ export function Navbar() {
           );
         }
         return (
-          // Add key for desktop items directly in the array
           React.cloneElement(linkButtonContent, { key: `${item.label.toLowerCase().replace(' ', '-')}-desktop` })
         );
       });
 
     const authConditionalLinks: JSX.Element[] = [];
     if (isMounted && currentUser) {
-      // Super Admin
       if (userProfile?.role === 'super-admin') {
         const superAdminButtonContent = (
           <Button variant="ghost" asChild className={commonLinkClasses}>
@@ -110,7 +108,6 @@ export function Navbar() {
           );
         }
       }
-      // Admin
       if (userProfile?.role === 'admin') {
         const adminButtonContent = (
           <Button variant="ghost" asChild className={commonLinkClasses}>
@@ -127,12 +124,12 @@ export function Navbar() {
            );
         }
       }
-      // Student
       if (userProfile?.role === 'student') {
         const studentLinksConfig = [
           { keyBase: 'student-resources', href: '/student/dashboard', label: 'Dashboard', icon: LayoutDashboard },
           { keyBase: 'student-labs', href: '/student/labs', label: 'Labs', icon: null },
           { keyBase: 'student-flashcards', href: '/student/flashcards', label: 'AI Flashcards', icon: Sparkles },
+          { keyBase: 'student-chat', href: '/student/chat', label: 'Chat', icon: MessageSquare },
           { keyBase: 'student-sandbox', href: '/student/sandbox', label: 'Sandbox', icon: Code2 },
           { keyBase: 'student-profile', href: '/student/profile', label: 'Profile', icon: User },
         ];
@@ -155,7 +152,6 @@ export function Navbar() {
           }
         });
       }
-      // Faculty
       if (userProfile?.role === 'faculty') {
         const facultyButtonContent = (
           <Button variant="ghost" asChild className={commonLinkClasses}>
@@ -173,7 +169,6 @@ export function Navbar() {
         }
       }
 
-      // Logout Button
       authConditionalLinks.push(
         <Button
           variant="ghost"
@@ -215,7 +210,6 @@ export function Navbar() {
           <span className="font-bold text-xl font-headline">{siteConfig.name}</span>
         </Link>
 
-        {/* Desktop Navigation */}
         <nav className="hidden md:flex items-center space-x-1">
           {createNavLinks(false)}
           <Button variant="ghost" size="icon" onClick={toggleTheme} aria-label="Toggle theme" className="text-foreground hover:bg-primary/10">
@@ -223,7 +217,6 @@ export function Navbar() {
           </Button>
         </nav>
 
-        {/* Mobile Navigation */}
         <div className="md:hidden flex items-center">
           <Button variant="ghost" size="icon" onClick={toggleTheme} aria-label="Toggle theme" className="mr-2 text-foreground hover:bg-primary/10">
             {theme === 'light' ? <Moon className="h-5 w-5" /> : <Sun className="h-5 w-5" />}
@@ -236,7 +229,6 @@ export function Navbar() {
               </Button>
             </SheetTrigger>
             <SheetContent side="right" className="w-[300px] sm:w-[400px] bg-background p-6">
-              {/* Header Section for the Sheet */}
               <div className="flex justify-between items-center mb-6">
                 <SheetTitle asChild>
                   <Link href={currentUser && userProfile ? (userProfile.role === 'admin' ? '/admin/dashboard' : userProfile.role === 'student' ? '/student/labs' : userProfile.role === 'faculty' ? '/faculty/dashboard' : userProfile.role === 'super-admin' ? '/main-admin/dashboard' : '/') : '/'} className="flex items-center space-x-2" onClick={() => setIsSheetOpen(false)}>
@@ -252,7 +244,6 @@ export function Navbar() {
                 </SheetClose>
               </div>
 
-              {/* Navigation Section */}
               <nav className="flex flex-col space-y-3">
                {createNavLinks(true)}
               </nav>
