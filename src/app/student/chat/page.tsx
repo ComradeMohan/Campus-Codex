@@ -352,16 +352,27 @@ export default function StudentChatPage() {
   }, [activeChat?.id, toast]);
   
 
-  const handleSelectChat = (chat: ActiveChat) => {
+  const handleSelectChat = async (chat: ActiveChat) => {
     setActiveChat(chat);
     if (isMobile) setIsSidebarOpen(false);
 
-    // Mark chat as read
+    // Mark chat as read. We first check if the document exists before trying to update it.
+    // This prevents an error when a user clicks on a chat for the very first time
+    // before any messages have been sent (and thus before the document is created).
     if (userProfile?.uid && chat.id) {
         const chatDocRef = doc(db, 'chats', chat.id);
-        updateDoc(chatDocRef, {
-            [`lastSeen.${userProfile.uid}`]: serverTimestamp()
-        }).catch(err => console.error("Error marking chat as read:", err));
+        try {
+            const docSnap = await getDoc(chatDocRef);
+            if (docSnap.exists()) {
+                // Document exists, so we can safely update it.
+                await updateDoc(chatDocRef, {
+                    [`lastSeen.${userProfile.uid}`]: serverTimestamp()
+                });
+            }
+            // If doc doesn't exist, we do nothing. The doc will be created on first message.
+        } catch (err) {
+            console.error("Error marking chat as read:", err)
+        }
     }
   };
   
