@@ -191,11 +191,19 @@ const ChatWindow: React.FC<ChatWindowProps> = ({
   isSending,
 }) => {
   const isMuted = userProfile?.chatNotificationSettings?.[activeChat.id] === false;
-  const messageEndRef = React.useRef<HTMLDivElement>(null);
+  const scrollAreaRef = React.useRef<HTMLDivElement>(null);
 
   React.useEffect(() => {
-    messageEndRef.current?.scrollIntoView({ behavior: "auto" });
-  }, [messages, activeChat]);
+    const viewport = scrollAreaRef.current?.querySelector<HTMLDivElement>('[data-radix-scroll-area-viewport]');
+    if (viewport) {
+      // A small timeout allows the DOM to update before we scroll
+      setTimeout(() => {
+        if (viewport) {
+            viewport.scrollTop = viewport.scrollHeight;
+        }
+      }, 50);
+    }
+  }, [messages, activeChat]); // Scroll to bottom when messages or the active chat changes
 
   return (
     <>
@@ -226,7 +234,7 @@ const ChatWindow: React.FC<ChatWindowProps> = ({
           )}
         </header>
       )}
-      <ScrollArea className="flex-1 p-4 bg-muted/20">
+      <ScrollArea ref={scrollAreaRef} className="flex-1 p-4 bg-muted/20">
         <div className="space-y-4">
           {isLoadingMessages ? (
             <div className="flex justify-center p-8"><Loader2 className="h-8 w-8 animate-spin"/></div>
@@ -256,7 +264,6 @@ const ChatWindow: React.FC<ChatWindowProps> = ({
               </div>
             ))
           )}
-          <div ref={messageEndRef} />
         </div>
       </ScrollArea>
       <div className="p-2 md:p-4 border-t bg-card">
@@ -526,7 +533,7 @@ export default function StudentChatPage() {
   };
 
   return (
-    <div className={cn("flex h-[calc(100vh-10rem)] border rounded-lg bg-card", isMobile && "h-[calc(100vh-6rem)]")}>
+    <div className={cn("flex h-[calc(100vh-10rem)] border rounded-lg bg-card overflow-hidden", isMobile && "h-[calc(100vh-6rem)]")}>
       {isMobile ? (
         <Sheet open={isSidebarOpen} onOpenChange={setIsSidebarOpen}>
           <div className="w-full flex flex-col">
