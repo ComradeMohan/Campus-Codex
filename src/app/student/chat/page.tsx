@@ -36,28 +36,9 @@ import Link from 'next/link';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { Sheet, SheetContent, SheetTrigger, SheetClose } from '@/components/ui/sheet';
 
-// --- Types ---
-
-interface ActiveChat {
-  id: string; 
-  name: string;
-  type: 'group' | 'user';
-  user?: UserProfile; 
-}
-
-interface DisplayableUserChat {
-    user: UserProfile;
-    chatId: string;
-    lastMessage?: Chat['lastMessage'];
-    updatedAt?: Timestamp;
-    isUnread: boolean;
-}
-
 const getInitials = (name: string = ''): string => {
   return name.split(' ').map((n) => n[0]).join('').toUpperCase();
 };
-
-// --- Child Components ---
 
 interface UserListProps {
   userProfile: UserProfile | null;
@@ -69,6 +50,21 @@ interface UserListProps {
   isGeneralChatUnread: boolean;
   isMobile: boolean;
   onCloseSidebar?: () => void;
+}
+
+interface DisplayableUserChat {
+    user: UserProfile;
+    chatId: string;
+    lastMessage?: Chat['lastMessage'];
+    updatedAt?: Timestamp;
+    isUnread: boolean;
+}
+
+interface ActiveChat {
+  id: string; 
+  name: string;
+  type: 'group' | 'user';
+  user?: UserProfile; 
 }
 
 const UserList: React.FC<UserListProps> = ({ 
@@ -95,7 +91,6 @@ const UserList: React.FC<UserListProps> = ({
           <div className="p-4 flex justify-center"><Loader2 className="h-6 w-6 animate-spin" /></div>
         ) : (
           <ul>
-            {/* Pinned General College Chat */}
             {userProfile?.collegeId && (
               <li>
                 <button
@@ -127,7 +122,6 @@ const UserList: React.FC<UserListProps> = ({
                 </button>
               </li>
             )}
-            {/* Sorted User Chats */}
             {sortedChats.length > 0 ? (
               sortedChats.map(({ user, chatId, lastMessage, isUnread, updatedAt }) => (
                 <li key={user.uid}>
@@ -297,7 +291,6 @@ const WelcomeScreen: React.FC = () => {
   );
 };
 
-// --- Main Page Component ---
 export default function StudentChatPage() {
   const { userProfile, refreshUserProfile } = useAuth();
   const { toast } = useToast();
@@ -314,7 +307,6 @@ export default function StudentChatPage() {
   const [isSending, setIsSending] = useState(false);
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
 
-  // --- Data Fetching Effects ---
   useEffect(() => {
     if (!userProfile?.collegeId || !userProfile.uid) return;
     
@@ -564,7 +556,7 @@ export default function StudentChatPage() {
                 <Link href="/student/dashboard"><ArrowLeft/></Link>
               </Button>
             </header>
-            <main className="flex-1 flex flex-col">
+            <main className="flex-1 flex flex-col overflow-hidden">
               {activeChat && userProfile ? (
                 <ChatWindow
                   activeChat={activeChat}
@@ -609,7 +601,7 @@ export default function StudentChatPage() {
               isMobile={isMobile}
             />
           </aside>
-          <main className="w-2/3 flex flex-col">
+          <main className="w-2/3 flex flex-col overflow-hidden">
             {activeChat && userProfile ? (
               <ChatWindow
                 activeChat={activeChat}
