@@ -142,7 +142,6 @@ export default function StudentSandboxPage() {
   
   const sharedProgramHandled = useRef(false);
 
-  const [allCollegeLanguages, setAllCollegeLanguages] = useState<ProgrammingLanguage[]>([]);
   const [programmingLanguages, setProgrammingLanguages] = useState<ProgrammingLanguage[]>([]);
   const [savedPrograms, setSavedPrograms] = useState<SavedProgram[]>([]);
   
@@ -171,7 +170,6 @@ export default function StudentSandboxPage() {
   const initialHeightRef = useRef(0);
   const sandboxContainerRef = useRef<HTMLDivElement>(null);
 
-
   const loadProgramIntoEditor = useCallback((programData: Partial<SavedProgram>, availableLangs: ProgrammingLanguage[], isShared = false) => {
     setCurrentProgramTitle(isShared ? `[Shared] ${programData.title || 'Untitled'}` : programData.title || '');
     setCurrentCode(programData.code || '');
@@ -179,13 +177,12 @@ export default function StudentSandboxPage() {
     setIsAIChatOpen(false); 
 
     let languageToLoad: ProgrammingLanguage | null = null;
-    const actualProgrammingLangs = availableLangs.filter(lang => lang.name !== "Placements" && lang.name !== "Aptitude");
 
     if(programData.languageId) {
-        languageToLoad = actualProgrammingLangs.find(lang => lang.id === programData.languageId) || null;
+        languageToLoad = availableLangs.find(lang => lang.id === programData.languageId) || null;
     }
     if(!languageToLoad && programData.languageName) {
-        languageToLoad = actualProgrammingLangs.find(lang => lang.name === programData.languageName) || null;
+        languageToLoad = availableLangs.find(lang => lang.name === programData.languageName) || null;
     }
     
     setSelectedLanguage(languageToLoad);
@@ -212,14 +209,13 @@ export default function StudentSandboxPage() {
 
   const handleLoadProgram = useCallback((program: SavedProgram) => {
     setActiveProgramId(program.id);
-    loadProgramIntoEditor(program, allCollegeLanguages, false);
+    loadProgramIntoEditor(program, programmingLanguages, false);
     setIsMobileSidebarOpen(false);
-  }, [loadProgramIntoEditor, allCollegeLanguages]);
+  }, [loadProgramIntoEditor, programmingLanguages]);
 
   const handleNewProgram = useCallback(() => {
     setActiveProgramId(null);
-    const filteredProgrammingLangs = programmingLanguages.filter(lang => lang.name !== "Placements" && lang.name !== "Aptitude");
-    const langForNewProgram = selectedLanguage || (filteredProgrammingLangs.length > 0 ? filteredProgrammingLangs[0] : null);
+    const langForNewProgram = selectedLanguage || (programmingLanguages.length > 0 ? programmingLanguages[0] : null);
 
     const newProgramDefaults: Partial<SavedProgram> = { 
       title: '', 
@@ -237,24 +233,27 @@ export default function StudentSandboxPage() {
   // Main useEffect to orchestrate all data loading and state initialization.
   useEffect(() => {
     const loadSandboxData = async () => {
-        if (!userProfile?.uid || !userProfile?.collegeId) {
+        if (!userProfile?.uid || !userProfile.collegeId) {
             if (!authLoading) toast({ title: "Error", description: "User or college information not found.", variant: "destructive" });
             setIsLoadingPageData(false);
             return;
         }
 
         setIsLoadingPageData(true);
+        let fetchedCollegeLanguages: ProgrammingLanguage[] = [];
+        let fetchedPrograms: SavedProgram[] = [];
+        let actualProgrammingLangs: ProgrammingLanguage[] = [];
+
         try {
             const langsRef = collection(db, 'colleges', userProfile.collegeId, 'languages');
             const langsSnap = await getDocs(query(langsRef, orderBy('name', 'asc')));
-            const fetchedCollegeLanguages = langsSnap.docs.map(docSnap => ({ id: docSnap.id, ...docSnap.data() } as ProgrammingLanguage));
-            setAllCollegeLanguages(fetchedCollegeLanguages);
-            const actualProgrammingLangs = fetchedCollegeLanguages.filter(lang => lang.name !== "Placements" && lang.name !== "Aptitude");
+            fetchedCollegeLanguages = langsSnap.docs.map(docSnap => ({ id: docSnap.id, ...docSnap.data() } as ProgrammingLanguage));
+            actualProgrammingLangs = fetchedCollegeLanguages.filter(lang => lang.name !== "Placements" && lang.name !== "Aptitude");
             setProgrammingLanguages(actualProgrammingLangs);
 
             const programsRef = collection(db, 'users', userProfile.uid, 'savedPrograms');
             const programsSnap = await getDocs(query(programsRef, orderBy('updatedAt', 'desc')));
-            const fetchedPrograms = programsSnap.docs.map(docSnap => ({ 
+            fetchedPrograms = programsSnap.docs.map(docSnap => ({ 
                 id: docSnap.id, 
                 ...docSnap.data(),
                 createdAt: docSnap.data().createdAt?.toDate ? docSnap.data().createdAt.toDate() : new Date(),
@@ -262,41 +261,40 @@ export default function StudentSandboxPage() {
             } as SavedProgram));
             setSavedPrograms(fetchedPrograms);
 
-            const shareUserId = searchParams.get('shareUserId');
-            const shareProgramId = searchParams.get('shareProgramId');
-
-            if (shareUserId && shareProgramId) {
-                sharedProgramHandled.current = true;
-                setIsLoadingSharedProgram(true);
-                router.replace('/student/sandbox', { scroll: false }); 
-
-                const programDocRef = doc(db, 'users', shareUserId, 'savedPrograms', shareProgramId);
-                const programSnap = await getDoc(programDocRef);
-                
-                if (programSnap.exists()) {
-                    const sharedProgramData = programSnap.data() as SavedProgram;
-                    loadProgramIntoEditor(sharedProgramData, fetchedCollegeLanguages, true);
-                    setActiveProgramId(null);
-                    toast({ title: "Shared Program Loaded", description: `Viewing "${sharedProgramData.title}". You can save it as your own copy.` });
-                } else {
-                    toast({ title: "Error", description: "Shared program not found or access denied.", variant: "destructive" });
-                    if (fetchedPrograms.length > 0) handleLoadProgram(fetchedPrograms[0]);
-                    else handleNewProgram();
-                }
-                setIsLoadingSharedProgram(false);
-            } else if (sharedProgramHandled.current) {
-                sharedProgramHandled.current = false;
-            } else if (!activeProgramId) {
-                if (fetchedPrograms.length > 0) handleLoadProgram(fetchedPrograms[0]);
-                else handleNewProgram();
-            }
-
         } catch (error) {
             console.error("Error loading sandbox:", error);
             toast({ title: "Error", description: "Could not load sandbox data.", variant: "destructive" });
-        } finally {
             setIsLoadingPageData(false);
+            return;
         }
+
+        const shareUserId = searchParams.get('shareUserId');
+        const shareProgramId = searchParams.get('shareProgramId');
+
+        if (shareUserId && shareProgramId && !sharedProgramHandled.current) {
+            sharedProgramHandled.current = true;
+            setIsLoadingSharedProgram(true);
+            router.replace('/student/sandbox', { scroll: false }); 
+
+            const programDocRef = doc(db, 'users', shareUserId, 'savedPrograms', shareProgramId);
+            const programSnap = await getDoc(programDocRef);
+            
+            if (programSnap.exists()) {
+                const sharedProgramData = programSnap.data() as SavedProgram;
+                loadProgramIntoEditor(sharedProgramData, actualProgrammingLangs, true);
+                setActiveProgramId(null);
+                toast({ title: "Shared Program Loaded", description: `Viewing "${sharedProgramData.title}". You can save it as your own copy.` });
+            } else {
+                toast({ title: "Error", description: "Shared program not found or access denied.", variant: "destructive" });
+                if (fetchedPrograms.length > 0) handleLoadProgram(fetchedPrograms[0]);
+                else handleNewProgram();
+            }
+            setIsLoadingSharedProgram(false);
+        } else if (!activeProgramId) {
+            if (fetchedPrograms.length > 0) handleLoadProgram(fetchedPrograms[0]);
+            else handleNewProgram();
+        }
+        setIsLoadingPageData(false);
     };
 
     if (!authLoading && userProfile) {
@@ -305,7 +303,7 @@ export default function StudentSandboxPage() {
         setIsLoadingPageData(false);
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [userProfile, authLoading, searchParams]);
+  }, [userProfile, authLoading]);
 
 
   const handleSaveProgram = useCallback(async () => {
@@ -362,10 +360,17 @@ export default function StudentSandboxPage() {
     setIsSaving(true); 
     try {
       await deleteDoc(doc(db, 'users', userProfile.uid, 'savedPrograms', programToDelete.id));
-      setSavedPrograms(prev => prev.filter(p => p.id !== programToDelete.id));
+      const newProgramList = savedPrograms.filter(p => p.id !== programToDelete.id);
+      setSavedPrograms(newProgramList);
+
       toast({ title: "Program Deleted", description: `"${programToDelete.title}" has been deleted.` });
+      
       if (activeProgramId === programToDelete.id) {
-        handleNewProgram(); 
+          if (newProgramList.length > 0) {
+            handleLoadProgram(newProgramList[0]);
+          } else {
+            handleNewProgram(); 
+          }
       }
     } catch (error) {
       console.error("Error deleting program:", error);
@@ -374,7 +379,7 @@ export default function StudentSandboxPage() {
       setProgramToDelete(null);
       setIsSaving(false);
     }
-  },[programToDelete, userProfile, toast, handleNewProgram, activeProgramId]);
+  },[programToDelete, userProfile, toast, handleNewProgram, activeProgramId, savedPrograms, handleLoadProgram]);
 
   const handleRunCode = useCallback(async () => {
     if (!selectedLanguage || !currentCode.trim()) {
