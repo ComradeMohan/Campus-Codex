@@ -1,3 +1,4 @@
+
 import type { LucideIcon } from 'lucide-react';
 import type { Timestamp, FieldValue } from 'firebase/firestore';
 
@@ -33,6 +34,7 @@ export interface UserProfile {
   isEmailVerified: boolean;
   managedLanguageIds?: string[];
   fcmTokens?: string[]; // For push notifications
+  chatNotificationSettings?: { [chatId: string]: boolean }; // chatId -> true for notify, false for mute
 }
 
 export interface College {
@@ -244,4 +246,8 @@ export interface Chat {
   };
   createdAt: Timestamp | FieldValue;
   updatedAt: Timestamp | FieldValue;
+  isGroupChat?: boolean;
+  collegeId?: string;
+  name?: string;
+  description?: string;
 }

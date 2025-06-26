@@ -26,7 +26,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Loader2, Send, MessageSquare, Users, AlertTriangle, ArrowLeft } from 'lucide-react';
+import { Loader2, Send, MessageSquare, Users, AlertTriangle, ArrowLeft, Bell, BellOff } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { formatDistanceToNowStrict } from 'date-fns';
 import { useToast } from '@/hooks/use-toast';
@@ -34,14 +34,20 @@ import Link from 'next/link';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { Sheet, SheetContent, SheetTrigger, SheetClose } from '@/components/ui/sheet';
 
+interface ActiveChat {
+  id: string; // The document ID for the chat
+  name: string; // The display name for the chat header
+  type: 'group' | 'user';
+  user?: UserProfile; // The other user in a 1-on-1 chat
+}
+
 export default function StudentChatPage() {
-  const { userProfile } = useAuth();
+  const { userProfile, refreshUserProfile } = useAuth();
   const { toast } = useToast();
   const isMobile = useIsMobile();
   
   const [users, setUsers] = useState<UserProfile[]>([]);
-  const [selectedUser, setSelectedUser] = useState<UserProfile | null>(null);
-  const [activeChatId, setActiveChatId] = useState<string | null>(null);
+  const [activeChat, setActiveChat] = useState<ActiveChat | null>(null);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [newMessage, setNewMessage] = useState('');
   
@@ -79,10 +85,13 @@ export default function StudentChatPage() {
 
   // Subscribe to messages for the active chat
   useEffect(() => {
-    if (!activeChatId) return;
+    if (!activeChat?.id) {
+      setMessages([]);
+      return;
+    };
 
     setIsLoadingMessages(true);
-    const messagesRef = collection(db, 'chats', activeChatId, 'messages');
+    const messagesRef = collection(db, 'chats', activeChat.id, 'messages');
     const q = query(messagesRef, orderBy('createdAt', 'asc'));
 
     const unsubscribe = onSnapshot(q, (querySnapshot) => {
@@ -96,13 +105,10 @@ export default function StudentChatPage() {
     });
 
     return () => unsubscribe();
-  }, [activeChatId, toast]);
+  }, [activeChat?.id, toast]);
 
-  const handleSelectUser = (user: UserProfile) => {
-    if (!userProfile) return;
-    setSelectedUser(user);
-    const chatId = [userProfile.uid, user.uid].sort().join('_');
-    setActiveChatId(chatId);
+  const handleSelectChat = (chat: ActiveChat) => {
+    setActiveChat(chat);
     if(isMobile) setIsSidebarOpen(false);
   };
   
@@ -111,52 +117,63 @@ export default function StudentChatPage() {
   };
 
   const handleSendMessage = async () => {
-    if (!newMessage.trim() || !userProfile || !selectedUser || !activeChatId) return;
+    if (!newMessage.trim() || !userProfile || !activeChat) return;
     setIsSending(true);
 
     const messageData: Omit<ChatMessage, 'id' | 'createdAt'> = {
-        chatId: activeChatId,
+        chatId: activeChat.id,
         senderId: userProfile.uid,
         senderName: userProfile.fullName,
         text: newMessage.trim(),
     };
     
-    const chatDocRef = doc(db, 'chats', activeChatId);
+    const chatDocRef = doc(db, 'chats', activeChat.id);
     const messagesCollectionRef = collection(chatDocRef, 'messages');
 
     try {
         const chatDocSnap = await getDoc(chatDocRef);
-        
         const batch = writeBatch(db);
         
         const newMessageRef = doc(messagesCollectionRef);
-        batch.set(newMessageRef, {
-            ...messageData,
-            createdAt: serverTimestamp(),
-        });
+        batch.set(newMessageRef, { ...messageData, createdAt: serverTimestamp() });
 
-        const chatDataUpdate: Partial<Chat> = {
-            participantNames: {
-                [userProfile.uid]: userProfile.fullName,
-                [selectedUser.uid]: selectedUser.fullName,
-            },
-            lastMessage: {
-                text: newMessage.trim(),
-                timestamp: serverTimestamp(),
-                senderId: userProfile.uid,
-            },
-            updatedAt: serverTimestamp(),
+        const lastMessageUpdate = {
+            text: newMessage.trim(),
+            timestamp: serverTimestamp(),
+            senderId: userProfile.uid,
         };
 
         if (!chatDocSnap.exists()) {
-            const newChatData: Omit<Chat, 'id'> = {
-                participants: [userProfile.uid, selectedUser.uid],
+            let newChatData: Omit<Chat, 'id'> = {
                 createdAt: serverTimestamp(),
-                ...chatDataUpdate,
+                updatedAt: serverTimestamp(),
+                lastMessage: lastMessageUpdate,
+                participantNames: {},
+                participants: [],
             };
-             batch.set(chatDocRef, newChatData);
+
+            if (activeChat.type === 'group' && userProfile.collegeId) {
+                newChatData = {
+                    ...newChatData,
+                    isGroupChat: true,
+                    collegeId: userProfile.collegeId,
+                    name: activeChat.name,
+                    description: 'College-wide general chat for study-related discussions.'
+                };
+            } else if (activeChat.type === 'user' && activeChat.user) {
+                 newChatData = {
+                    ...newChatData,
+                    isGroupChat: false,
+                    participants: [userProfile.uid, activeChat.user.uid],
+                    participantNames: {
+                        [userProfile.uid]: userProfile.fullName,
+                        [activeChat.user.uid]: activeChat.user.fullName,
+                    },
+                 };
+            }
+            batch.set(chatDocRef, newChatData);
         } else {
-             batch.update(chatDocRef, chatDataUpdate);
+            batch.update(chatDocRef, { lastMessage: lastMessageUpdate, updatedAt: serverTimestamp() });
         }
         
         await batch.commit();
@@ -169,42 +186,88 @@ export default function StudentChatPage() {
     }
   };
 
+  const handleToggleMute = async () => {
+    if (!userProfile || !activeChat || activeChat.type !== 'group') return;
+    const isCurrentlyMuted = userProfile.chatNotificationSettings?.[activeChat.id] === false;
+    const newMutedState = !isCurrentlyMuted;
+
+    const userDocRef = doc(db, 'users', userProfile.uid);
+    try {
+        await updateDoc(userDocRef, {
+            [`chatNotificationSettings.${activeChat.id}`]: newMutedState ? false : true // false for muted, true for notify
+        });
+        await refreshUserProfile(); // Re-fetches user profile to update state
+        toast({
+            title: newMutedState ? 'Chat Muted' : 'Notifications Enabled',
+            description: `You will ${newMutedState ? 'no longer' : 'now'} receive notifications for this chat.`,
+        });
+    } catch (error) {
+        console.error("Error updating notification settings:", error);
+        toast({ title: "Error", description: "Could not update notification settings.", variant: "destructive" });
+    }
+  }
+
+
   const UserList = () => (
     <>
       <div className="p-4 border-b flex justify-between items-center">
         <h2 className="text-xl font-semibold flex items-center gap-2">
-          <Users /> Contacts
+          <MessageSquare /> Chats
         </h2>
         {isMobile && <SheetClose asChild><Button variant="ghost" size="icon"><ArrowLeft/></Button></SheetClose>}
       </div>
       <ScrollArea className="flex-1">
         {isLoadingUsers ? (
           <div className="p-4 flex justify-center"><Loader2 className="h-6 w-6 animate-spin" /></div>
-        ) : users.length > 0 ? (
-          <ul>
-            {users.map(user => (
-              <li key={user.uid}>
-                <button
-                  onClick={() => handleSelectUser(user)}
-                  className={cn(
-                    "w-full text-left p-3 hover:bg-muted transition-colors flex items-center gap-3",
-                    selectedUser?.uid === user.uid && "bg-muted"
-                  )}
-                >
-                  <Avatar className="h-10 w-10">
-                     <AvatarImage src={undefined} alt={user.fullName} data-ai-hint="person face" />
-                     <AvatarFallback>{getInitials(user.fullName)}</AvatarFallback>
-                  </Avatar>
-                  <div className="flex-1 min-w-0">
-                      <p className="font-semibold truncate">{user.fullName}</p>
-                      <p className="text-xs text-muted-foreground capitalize">{user.role}</p>
-                  </div>
-                </button>
-              </li>
-            ))}
-          </ul>
         ) : (
-          <p className="p-4 text-sm text-muted-foreground text-center">No other users found in your college to chat with.</p>
+          <ul>
+            {/* General Chat */}
+            {userProfile?.collegeId && (
+                 <li>
+                    <button
+                        onClick={() => handleSelectChat({ id: userProfile.collegeId!, name: 'General College Chat', type: 'group' })}
+                        className={cn(
+                            "w-full text-left p-3 hover:bg-muted transition-colors flex items-center gap-3",
+                            activeChat?.type === 'group' && "bg-muted"
+                        )}
+                    >
+                    <Avatar className="h-10 w-10 bg-primary text-primary-foreground flex items-center justify-center">
+                        <Users className="h-5 w-5"/>
+                    </Avatar>
+                    <div className="flex-1 min-w-0">
+                        <p className="font-semibold truncate">General College Chat</p>
+                        <p className="text-xs text-muted-foreground">All members of your college</p>
+                    </div>
+                    </button>
+                </li>
+            )}
+            
+            {/* User Chats */}
+            {users.length > 0 ? (
+              users.map(user => (
+                <li key={user.uid}>
+                  <button
+                    onClick={() => handleSelectChat({ id: [userProfile!.uid, user.uid].sort().join('_'), name: user.fullName, type: 'user', user })}
+                    className={cn(
+                      "w-full text-left p-3 hover:bg-muted transition-colors flex items-center gap-3",
+                      activeChat?.type === 'user' && activeChat.user?.uid === user.uid && "bg-muted"
+                    )}
+                  >
+                    <Avatar className="h-10 w-10">
+                       <AvatarImage src={undefined} alt={user.fullName} data-ai-hint="person face" />
+                       <AvatarFallback>{getInitials(user.fullName)}</AvatarFallback>
+                    </Avatar>
+                    <div className="flex-1 min-w-0">
+                        <p className="font-semibold truncate">{user.fullName}</p>
+                        <p className="text-xs text-muted-foreground capitalize">{user.role}</p>
+                    </div>
+                  </button>
+                </li>
+              ))
+            ) : (
+              !userProfile?.collegeId && <p className="p-4 text-sm text-muted-foreground text-center">No other users found in your college to chat with.</p>
+            )}
+          </ul>
         )}
       </ScrollArea>
     </>
@@ -219,15 +282,21 @@ export default function StudentChatPage() {
                 <SheetTrigger asChild>
                     <Button variant="ghost" size="icon"><Users/></Button>
                 </SheetTrigger>
-                {selectedUser ? (
+                {activeChat ? (
                     <>
                         <Avatar className="h-9 w-9">
-                            <AvatarImage src={undefined} alt={selectedUser.fullName} />
-                            <AvatarFallback>{getInitials(selectedUser.fullName)}</AvatarFallback>
+                            {activeChat.type === 'group' ? (
+                                 <div className="h-full w-full bg-primary text-primary-foreground flex items-center justify-center"><Users className="h-5 w-5"/></div>
+                            ) : (
+                                <>
+                                <AvatarImage src={undefined} alt={activeChat.name} />
+                                <AvatarFallback>{getInitials(activeChat.name)}</AvatarFallback>
+                                </>
+                            )}
                         </Avatar>
                         <div>
-                            <h3 className="font-semibold text-sm">{selectedUser.fullName}</h3>
-                            <p className="text-xs text-muted-foreground capitalize">{selectedUser.role}</p>
+                            <h3 className="font-semibold text-sm">{activeChat.name}</h3>
+                            {activeChat.type === 'user' && <p className="text-xs text-muted-foreground capitalize">{activeChat.user?.role}</p>}
                         </div>
                     </>
                 ) : <h3 className="font-semibold">Chat</h3>}
@@ -236,7 +305,7 @@ export default function StudentChatPage() {
                 </Button>
             </header>
             <main className="flex-1 flex flex-col">
-                {selectedUser ? <ChatWindow /> : <WelcomeScreen />}
+                {activeChat ? <ChatWindow /> : <WelcomeScreen />}
             </main>
           </div>
           <SheetContent side="left" className="p-0 flex flex-col w-[85vw] max-w-[320px]">
@@ -249,7 +318,7 @@ export default function StudentChatPage() {
                 <UserList />
             </aside>
             <main className="w-2/3 flex flex-col">
-                {selectedUser ? <ChatWindow /> : <WelcomeScreen />}
+                {activeChat ? <ChatWindow /> : <WelcomeScreen />}
             </main>
         </>
       )}
@@ -267,18 +336,35 @@ export default function StudentChatPage() {
   }
 
   function ChatWindow() {
+      if (!activeChat) return <WelcomeScreen />;
+      const isMuted = userProfile?.chatNotificationSettings?.[activeChat.id] === false;
       return (
           <>
             {!isMobile && (
                  <header className="p-4 border-b flex items-center gap-3">
-                    <Avatar>
-                        <AvatarImage src={undefined} alt={selectedUser!.fullName} />
-                        <AvatarFallback>{getInitials(selectedUser!.fullName)}</AvatarFallback>
+                    <Avatar className="h-10 w-10">
+                        {activeChat.type === 'group' ? (
+                            <div className="h-full w-full bg-primary text-primary-foreground flex items-center justify-center"><Users className="h-5 w-5"/></div>
+                        ) : (
+                           <>
+                            <AvatarImage src={undefined} alt={activeChat.name} />
+                            <AvatarFallback>{getInitials(activeChat.name)}</AvatarFallback>
+                           </>
+                        )}
                     </Avatar>
                     <div>
-                        <h3 className="font-semibold">{selectedUser!.fullName}</h3>
-                        <p className="text-sm text-muted-foreground capitalize">{selectedUser!.role}</p>
+                        <h3 className="font-semibold">{activeChat.name}</h3>
+                        {activeChat.type === 'user' ? (
+                             <p className="text-sm text-muted-foreground capitalize">{activeChat.user?.role}</p>
+                        ) : (
+                             <p className="text-sm text-muted-foreground">Study-related discussion only. Be respectful.</p>
+                        )}
                     </div>
+                    {activeChat.type === 'group' && (
+                        <Button variant="ghost" size="icon" className="ml-auto" onClick={handleToggleMute} title={isMuted ? "Unmute Notifications" : "Mute Notifications"}>
+                            {isMuted ? <BellOff className="h-5 w-5"/> : <Bell className="h-5 w-5"/>}
+                        </Button>
+                    )}
                 </header>
             )}
             
@@ -289,7 +375,7 @@ export default function StudentChatPage() {
               ) : messages.length === 0 ? (
                  <p className="text-center text-sm text-muted-foreground py-8">No messages yet. Start the conversation!</p>
               ) : (
-                messages.map((msg, index) => (
+                messages.map((msg) => (
                   <div
                     key={msg.id}
                     className={cn("flex items-end gap-2", msg.senderId === userProfile?.uid ? "justify-end" : "justify-start")}
