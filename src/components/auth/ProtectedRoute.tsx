@@ -5,11 +5,12 @@ import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContext';
 import type { UserRole } from '@/types';
-import { Loader2 } from 'lucide-react';
+import { Loader2, Phone } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { sendEmailVerification } from 'firebase/auth';
 import { auth } from '@/lib/firebase';
 import { useToast } from '@/hooks/use-toast';
+import { OtpVerificationDialog } from './OtpVerificationDialog';
 
 interface ProtectedRouteProps {
   children: React.ReactNode;
@@ -22,6 +23,7 @@ export function ProtectedRoute({ children, allowedRoles }: ProtectedRouteProps) 
   const { toast } = useToast();
   const [isResending, setIsResending] = useState(false);
   const [isRefreshingStatus, setIsRefreshingStatus] = useState(false);
+  const [isOtpDialogOpen, setIsOtpDialogOpen] = useState(false);
 
   useEffect(() => {
     if (!loading) {
@@ -116,32 +118,45 @@ export function ProtectedRoute({ children, allowedRoles }: ProtectedRouteProps) 
   
   if (userProfile && userProfile.role !== 'admin' && !userProfile.isEmailVerified) {
      return (
-      <div className="flex flex-col h-screen items-center justify-center bg-background p-4 text-center">
-        <h1 className="text-2xl font-bold text-primary mb-4">Email Verification Required</h1>
-        <p className="text-muted-foreground mb-6 max-w-md">
-          Your email address <span className="font-semibold">{currentUser?.email}</span> is not verified.
-          Please check your inbox (and spam folder) for the verification link we sent.
-          If you&apos;ve already verified, click &quot;Refresh Status&quot;.
-        </p>
-        <div className="flex flex-col sm:flex-row items-center gap-4">
-          <Button onClick={handleResendVerification} disabled={isResending || isRefreshingStatus}>
-            {isResending ? ( <Loader2 className="mr-2 h-4 w-4 animate-spin" /> ) : null}
-            Resend Verification Email
-          </Button>
-          <Button 
-            onClick={handleRefreshStatus} 
-            variant="outline" 
-            disabled={isRefreshingStatus || isResending}
-          >
-            {isRefreshingStatus ? ( <Loader2 className="mr-2 h-4 w-4 animate-spin" /> ) : null}
-            Refresh Status
-          </Button>
+      <>
+        <div className="flex flex-col h-screen items-center justify-center bg-background p-4 text-center">
+          <h1 className="text-2xl font-bold text-primary mb-4">Account Verification Required</h1>
+          <p className="text-muted-foreground mb-6 max-w-md">
+            Your account is not yet verified. Please use one of the options below to gain access.
+          </p>
+          <div className="flex flex-col sm:flex-row items-center gap-4">
+            <Button onClick={handleResendVerification} disabled={isResending || isRefreshingStatus}>
+              {isResending ? ( <Loader2 className="mr-2 h-4 w-4 animate-spin" /> ) : null}
+              Resend Verification Email
+            </Button>
+            {userProfile.phoneNumber && (
+                <Button variant="secondary" onClick={() => setIsOtpDialogOpen(true)} disabled={isResending || isRefreshingStatus}>
+                    <Phone className="mr-2 h-4 w-4" /> Verify with Phone OTP
+                </Button>
+            )}
+          </div>
+          <div className="mt-6">
+             <Button 
+                onClick={handleRefreshStatus} 
+                variant="outline" 
+                disabled={isRefreshingStatus || isResending}
+            >
+                {isRefreshingStatus ? ( <Loader2 className="mr-2 h-4 w-4 animate-spin" /> ) : null}
+                I've already verified, Refresh Status
+            </Button>
+          </div>
+          <Button variant="link" className="mt-8" onClick={() => { auth.signOut(); router.push('/login');}}>Go to Login</Button>
         </div>
-         <Button variant="link" className="mt-8" onClick={() => { auth.signOut(); router.push('/login');}}>Go to Login</Button>
-      </div>
+        {userProfile.phoneNumber && (
+            <OtpVerificationDialog 
+                isOpen={isOtpDialogOpen}
+                onOpenChange={setIsOtpDialogOpen}
+                phoneNumber={userProfile.phoneNumber}
+            />
+        )}
+      </>
     );
   }
 
   return <>{children}</>;
 }
-

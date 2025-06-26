@@ -18,7 +18,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { useToast } from '@/hooks/use-toast';
 import { signInWithEmailAndPassword, isSignInWithEmailLink, signInWithEmailLink, sendPasswordResetEmail, type Auth, sendEmailVerification } from 'firebase/auth';
 import { auth, db } from '@/lib/firebase';
-import { doc, getDoc, setDoc, serverTimestamp, collection, addDoc, updateDoc } from 'firebase/firestore'; // Added updateDoc
+import { doc, getDoc, setDoc, serverTimestamp, collection, addDoc, updateDoc, query, where, limit } from 'firebase/firestore'; 
 import type { UserProfile } from '@/types';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
@@ -27,7 +27,7 @@ import { useAuth }  from '@/contexts/AuthContext';
 import { Loader2, Eye, EyeOff } from 'lucide-react';
 
 const loginSchema = z.object({
-  email: z.string().email({ message: 'Invalid email address.' }),
+  username: z.string().min(3, { message: 'Please enter your email or phone number.' }),
   password: z.string().min(1, { message: 'Password is required.' }),
 });
 
@@ -44,7 +44,7 @@ export function LoginForm() {
   const form = useForm<z.infer<typeof loginSchema>>({
     resolver: zodResolver(loginSchema),
     defaultValues: {
-      email: '',
+      username: '',
       password: '',
     },
   });
@@ -121,7 +121,7 @@ export function LoginForm() {
     } else {
       const emailFromQuery = searchParams.get('email');
       if (emailFromQuery) {
-        form.setValue('email', emailFromQuery);
+        form.setValue('username', emailFromQuery);
       }
     }
   }, [router, toast, searchParams, form, refreshUserProfile]);
@@ -129,8 +129,39 @@ export function LoginForm() {
 
   async function onSubmit(values: z.infer<typeof loginSchema>) {
     setIsLoading(true);
+    let email = values.username;
+    
+    // Check if the username is an email or a phone number
+    const isLikelyEmail = email.includes('@');
+
+    if (!isLikelyEmail) {
+        // Assume it's a phone number, try to find the user's email
+        try {
+            const usersRef = collection(db, 'users');
+            const q = query(usersRef, where('phoneNumber', '==', values.username), limit(1));
+            const querySnapshot = await getDocs(q);
+            if (querySnapshot.empty) {
+                toast({ title: 'Login Error', description: 'No account found with this phone number.', variant: 'destructive' });
+                setIsLoading(false);
+                return;
+            }
+            const userDoc = querySnapshot.docs[0].data();
+            if (!userDoc.email) {
+                 toast({ title: 'Login Error', description: 'Account associated with this phone number does not have a valid email.', variant: 'destructive' });
+                 setIsLoading(false);
+                 return;
+            }
+            email = userDoc.email;
+        } catch (e) {
+            console.error("Phone number lookup error:", e);
+            toast({ title: 'Login Error', description: 'Could not verify phone number. Please try again.', variant: 'destructive' });
+            setIsLoading(false);
+            return;
+        }
+    }
+
     try {
-      const userCredential = await signInWithEmailAndPassword(auth, values.email, values.password);
+      const userCredential = await signInWithEmailAndPassword(auth, email, values.password);
       const user = userCredential.user;
 
       const userDocRef = doc(db, 'users', user.uid);
@@ -231,30 +262,30 @@ export function LoginForm() {
   }
 
   async function handleForgotPassword() {
-    const email = form.getValues('email');
-    const emailValidation = z.string().email({ message: "Please enter a valid email address to reset your password." }).safeParse(email);
+    const username = form.getValues('username');
+    if (!username) {
+        toast({ title: 'Email required', description: 'Please enter your email address to reset your password.', variant: 'destructive' });
+        return;
+    }
 
-    if (!emailValidation.success) {
-      toast({
-        title: 'Invalid Email',
-        description: emailValidation.error.errors[0]?.message || "Please enter a valid email address.",
-        variant: 'destructive',
-      });
-      return;
+    const isEmail = z.string().email().safeParse(username).success;
+    if (!isEmail) {
+        toast({ title: 'Email required', description: 'Password reset is only available via email. Please enter your email address.', variant: 'destructive' });
+        return;
     }
 
     setIsSendingResetEmail(true);
     try {
-      await sendPasswordResetEmail(auth, emailValidation.data);
+      await sendPasswordResetEmail(auth, username);
       toast({
         title: 'Password Reset Email Sent',
-        description: `If an account exists for ${emailValidation.data}, a password reset link has been sent. Please check your inbox and spam folder.`,
+        description: `If an account exists for ${username}, a password reset link has been sent. Please check your inbox and spam folder.`,
       });
     } catch (error: any) {
       console.error('Forgot password error:', error);
       let description = 'Failed to send password reset email. Please try again.';
       if (error.code === 'auth/user-not-found') {
-         description = `If an account exists for ${emailValidation.data}, a password reset link has been sent. Please check your inbox and spam folder.`;
+         description = `If an account exists for ${username}, a password reset link has been sent. Please check your inbox and spam folder.`;
          toast({
             title: 'Password Reset Email Sent', // Still show success-like message for user-not-found to prevent enumeration
             description: description,
@@ -300,12 +331,12 @@ export function LoginForm() {
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
             <FormField
               control={form.control}
-              name="email"
+              name="username"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Email</FormLabel>
+                  <FormLabel>Email or Phone Number</FormLabel>
                   <FormControl>
-                    <Input type="email" placeholder="user@example.com" {...field} />
+                    <Input placeholder="user@example.com or 1234567890" {...field} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -377,4 +408,3 @@ export function LoginForm() {
     </Card>
   );
 }
-
