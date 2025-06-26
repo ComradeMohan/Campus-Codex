@@ -14,13 +14,13 @@ import {
   addDoc,
   serverTimestamp,
   orderBy,
-  limit,
-  setDoc,
   updateDoc,
   writeBatch,
   getDoc,
   FieldValue,
   Timestamp,
+  arrayUnion,
+  deleteDoc,
 } from 'firebase/firestore';
 import type { UserProfile, Chat, ChatMessage } from '@/types';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -28,13 +28,27 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Loader2, Send, MessageSquare, Users, AlertTriangle, ArrowLeft, Bell, BellOff, Circle } from 'lucide-react';
+import { Loader2, Send, MessageSquare, Users, AlertTriangle, ArrowLeft, Bell, BellOff, Circle, Plus, Share2, Trash2, Copy, Users2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { formatDistanceToNowStrict } from 'date-fns';
 import { useToast } from '@/hooks/use-toast';
 import Link from 'next/link';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { Sheet, SheetContent, SheetTrigger, SheetClose } from '@/components/ui/sheet';
+import { useSearchParams, useRouter } from 'next/navigation';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+  DialogClose,
+  DialogTrigger,
+} from '@/components/ui/dialog';
+import { Label } from '@/components/ui/label';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter as AlertDialogFooterComponent, AlertDialogHeader as AlertDialogHeaderComponent, AlertDialogTitle as AlertDialogTitleComponent, AlertDialogTrigger as AlertDialogTriggerComponent } from '@/components/ui/alert-dialog';
+
 
 const getInitials = (name: string = ''): string => {
   return name.split(' ').map((n) => n[0]).join('').toUpperCase();
@@ -43,28 +57,35 @@ const getInitials = (name: string = ''): string => {
 interface UserListProps {
   userProfile: UserProfile | null;
   isLoadingUsers: boolean;
-  sortedChats: DisplayableUserChat[];
+  sortedChats: DisplayableChat[];
   handleSelectChat: (chat: ActiveChat) => void;
   activeChat: ActiveChat | null;
   generalChatData: Chat | undefined;
   isGeneralChatUnread: boolean;
   isMobile: boolean;
   onCloseSidebar?: () => void;
+  onCreateGroup: () => void;
 }
 
-interface DisplayableUserChat {
-    user: UserProfile;
-    chatId: string;
+interface DisplayableChat {
+    id: string;
+    type: 'user' | 'group' | 'general';
+    name: string;
     lastMessage?: Chat['lastMessage'];
     updatedAt?: Timestamp;
     isUnread: boolean;
+    // User-specific
+    user?: UserProfile;
+    // Group-specific
+    ownerId?: string;
 }
 
 interface ActiveChat {
   id: string; 
   name: string;
-  type: 'group' | 'user';
+  type: 'group' | 'user' | 'general';
   user?: UserProfile; 
+  ownerId?: string;
 }
 
 const UserList: React.FC<UserListProps> = ({ 
@@ -76,7 +97,8 @@ const UserList: React.FC<UserListProps> = ({
     generalChatData,
     isGeneralChatUnread,
     isMobile, 
-    onCloseSidebar 
+    onCloseSidebar,
+    onCreateGroup,
 }) => {
   return (
     <>
@@ -84,7 +106,12 @@ const UserList: React.FC<UserListProps> = ({
         <h2 className="text-xl font-semibold flex items-center gap-2">
           <MessageSquare /> Chats
         </h2>
-        {isMobile && <SheetClose asChild><Button variant="ghost" size="icon" onClick={onCloseSidebar}><ArrowLeft/></Button></SheetClose>}
+        <div className='flex items-center gap-1'>
+            <Button variant="ghost" size="icon" title="Create a new group chat" onClick={onCreateGroup}>
+                <Plus className="h-5 w-5"/>
+            </Button>
+            {isMobile && <SheetClose asChild><Button variant="ghost" size="icon" onClick={onCloseSidebar}><ArrowLeft/></Button></SheetClose>}
+        </div>
       </div>
       <ScrollArea className="flex-1">
         {isLoadingUsers ? (
@@ -94,10 +121,10 @@ const UserList: React.FC<UserListProps> = ({
             {userProfile?.collegeId && (
               <li>
                 <button
-                  onClick={() => handleSelectChat({ id: userProfile.collegeId!, name: 'General College Chat', type: 'group' })}
+                  onClick={() => handleSelectChat({ id: userProfile.collegeId!, name: 'General College Chat', type: 'general' })}
                   className={cn(
                     "w-full text-left p-3 hover:bg-muted transition-colors flex items-center gap-3",
-                    activeChat?.type === 'group' && "bg-muted"
+                    activeChat?.type === 'general' && "bg-muted"
                   )}
                 >
                   <Avatar className="h-10 w-10 bg-primary text-primary-foreground flex items-center justify-center">
@@ -123,33 +150,39 @@ const UserList: React.FC<UserListProps> = ({
               </li>
             )}
             {sortedChats.length > 0 ? (
-              sortedChats.map(({ user, chatId, lastMessage, isUnread, updatedAt }) => (
-                <li key={user.uid}>
+              sortedChats.map((chat) => (
+                <li key={chat.id}>
                   <button
-                    onClick={() => handleSelectChat({ id: chatId, name: user.fullName, type: 'user', user })}
+                    onClick={() => handleSelectChat(chat)}
                     className={cn(
                       "w-full text-left p-3 hover:bg-muted transition-colors flex items-center gap-3",
-                      activeChat?.type === 'user' && activeChat.user?.uid === user.uid && "bg-muted"
+                      activeChat?.id === chat.id && "bg-muted"
                     )}
                   >
                     <Avatar className="h-10 w-10">
-                      <AvatarImage src={undefined} alt={user.fullName} data-ai-hint="person face" />
-                      <AvatarFallback>{getInitials(user.fullName)}</AvatarFallback>
+                      {chat.type === 'user' && chat.user ? (
+                        <>
+                           <AvatarImage src={undefined} alt={chat.name} data-ai-hint="person face" />
+                           <AvatarFallback>{getInitials(chat.name)}</AvatarFallback>
+                        </>
+                      ) : (
+                        <div className="h-full w-full bg-secondary text-secondary-foreground flex items-center justify-center"><Users2 className="h-5 w-5"/></div>
+                      )}
                     </Avatar>
                     <div className="flex-1 min-w-0">
                       <div className="flex justify-between items-center">
-                        <p className={cn("font-semibold truncate", isUnread && "font-bold")}>{user.fullName}</p>
-                        {updatedAt && (
+                        <p className={cn("font-semibold truncate", chat.isUnread && "font-bold")}>{chat.name}</p>
+                        {chat.updatedAt && (
                           <p className="text-xs text-muted-foreground flex-shrink-0 ml-2">
-                            {formatDistanceToNowStrict(updatedAt.toDate(), { addSuffix: true })}
+                            {formatDistanceToNowStrict(chat.updatedAt.toDate(), { addSuffix: true })}
                           </p>
                         )}
                       </div>
-                      <p className={cn("text-xs text-muted-foreground truncate", isUnread && "font-semibold text-foreground")}>
-                        {lastMessage?.text || `Chat with ${user.role}`}
+                      <p className={cn("text-xs text-muted-foreground truncate", chat.isUnread && "font-semibold text-foreground")}>
+                        {chat.lastMessage?.text || `Chat with ${chat.type === 'user' ? chat.user?.role : 'group'}`}
                       </p>
                     </div>
-                    {isUnread && (
+                    {chat.isUnread && (
                       <Circle className="h-2.5 w-2.5 fill-primary text-primary flex-shrink-0" />
                     )}
                   </button>
@@ -172,6 +205,8 @@ interface ChatWindowProps {
   isLoadingMessages: boolean;
   isMobile: boolean;
   handleToggleMute: () => void;
+  handleShareGroup: () => void;
+  handleDeleteGroup: () => void;
   newMessage: string;
   setNewMessage: (value: string) => void;
   handleSendMessage: () => void;
@@ -185,33 +220,37 @@ const ChatWindow: React.FC<ChatWindowProps> = ({
   isLoadingMessages,
   isMobile,
   handleToggleMute,
+  handleShareGroup,
+  handleDeleteGroup,
   newMessage,
   setNewMessage,
   handleSendMessage,
   isSending,
 }) => {
   const isMuted = userProfile?.chatNotificationSettings?.[activeChat.id] === false;
+  const isOwner = activeChat.type === 'group' && activeChat.ownerId === userProfile.uid;
   const scrollAreaRef = React.useRef<HTMLDivElement>(null);
 
   React.useEffect(() => {
     const viewport = scrollAreaRef.current?.querySelector<HTMLDivElement>('[data-radix-scroll-area-viewport]');
     if (viewport) {
-      // A small timeout allows the DOM to update before we scroll
       setTimeout(() => {
         if (viewport) {
             viewport.scrollTop = viewport.scrollHeight;
         }
       }, 50);
     }
-  }, [messages, activeChat]); // Scroll to bottom when messages or the active chat changes
+  }, [messages, activeChat]);
 
   return (
     <>
       {!isMobile && (
         <header className="p-4 border-b flex items-center gap-3">
           <Avatar className="h-10 w-10">
-            {activeChat.type === 'group' ? (
-              <div className="h-full w-full bg-primary text-primary-foreground flex items-center justify-center"><Users className="h-5 w-5"/></div>
+            {activeChat.type === 'general' ? (
+                <div className="h-full w-full bg-primary text-primary-foreground flex items-center justify-center"><Users className="h-5 w-5"/></div>
+            ) : activeChat.type === 'group' ? (
+                <div className="h-full w-full bg-secondary text-secondary-foreground flex items-center justify-center"><Users2 className="h-5 w-5"/></div>
             ) : (
               <>
                 <AvatarImage src={undefined} alt={activeChat.name} />
@@ -227,11 +266,39 @@ const ChatWindow: React.FC<ChatWindowProps> = ({
               <p className="text-sm text-muted-foreground">Study-related discussion only. Be respectful.</p>
             )}
           </div>
-          {activeChat.type === 'group' && (
-            <Button variant="ghost" size="icon" className="ml-auto" onClick={handleToggleMute} title={isMuted ? "Unmute Notifications" : "Mute Notifications"}>
-              {isMuted ? <BellOff className="h-5 w-5"/> : <Bell className="h-5 w-5"/>}
-            </Button>
-          )}
+          <div className='ml-auto flex items-center gap-1'>
+            {isOwner && (
+                <>
+                    <Button variant="ghost" size="icon" onClick={handleShareGroup} title="Share Invite Link">
+                        <Share2 className="h-5 w-5 text-blue-500"/>
+                    </Button>
+                    <AlertDialog>
+                        <AlertDialogTrigger asChild>
+                            <Button variant="ghost" size="icon" title="Delete Group">
+                                <Trash2 className="h-5 w-5 text-destructive"/>
+                            </Button>
+                        </AlertDialogTrigger>
+                        <AlertDialogContent>
+                            <AlertDialogHeaderComponent>
+                                <AlertDialogTitleComponent>Are you sure you want to delete this group?</AlertDialogTitleComponent>
+                                <AlertDialogDescription>
+                                    This action cannot be undone. This will permanently delete the group and all its messages for everyone.
+                                </AlertDialogDescription>
+                            </AlertDialogHeaderComponent>
+                            <AlertDialogFooterComponent>
+                                <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                <AlertDialogAction onClick={handleDeleteGroup}>Delete</AlertDialogAction>
+                            </AlertDialogFooterComponent>
+                        </AlertDialogContent>
+                    </AlertDialog>
+                </>
+            )}
+            {activeChat.type === 'general' && (
+                <Button variant="ghost" size="icon" onClick={handleToggleMute} title={isMuted ? "Unmute Notifications" : "Mute Notifications"}>
+                {isMuted ? <BellOff className="h-5 w-5"/> : <Bell className="h-5 w-5"/>}
+                </Button>
+            )}
+          </div>
         </header>
       )}
       <ScrollArea ref={scrollAreaRef} className="flex-1 p-4 bg-muted/20">
@@ -293,7 +360,7 @@ const WelcomeScreen: React.FC = () => {
     <div className="flex flex-col h-full items-center justify-center text-center p-4">
       <MessageSquare className="h-16 w-16 text-muted-foreground mb-4" />
       <h3 className="text-2xl font-semibold">Select a conversation</h3>
-      <p className="text-muted-foreground">Choose someone from the list to start chatting.</p>
+      <p className="text-muted-foreground">Choose someone from the list to start chatting, or create a new group.</p>
     </div>
   );
 };
@@ -301,6 +368,8 @@ const WelcomeScreen: React.FC = () => {
 export default function StudentChatPage() {
   const { userProfile, refreshUserProfile } = useAuth();
   const { toast } = useToast();
+  const router = useRouter();
+  const searchParams = useSearchParams();
   const isMobile = useIsMobile();
   
   const [allUsers, setAllUsers] = useState<UserProfile[]>([]);
@@ -313,6 +382,37 @@ export default function StudentChatPage() {
   const [isLoadingMessages, setIsLoadingMessages] = useState(false);
   const [isSending, setIsSending] = useState(false);
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+  
+  const [isCreateGroupOpen, setIsCreateGroupOpen] = useState(false);
+  const [newGroupName, setNewGroupName] = useState('');
+  const [isCreatingGroup, setIsCreatingGroup] = useState(false);
+
+  useEffect(() => {
+    const joinGroupId = searchParams.get('joinGroup');
+    if (joinGroupId && userProfile) {
+      const joinGroup = async () => {
+        const chatDocRef = doc(db, 'chats', joinGroupId);
+        try {
+          const chatDoc = await getDoc(chatDocRef);
+          if (!chatDoc.exists() || !chatDoc.data()?.isGroupChat) {
+            toast({ title: "Invalid Link", description: "The group you are trying to join does not exist.", variant: "destructive" });
+            return;
+          }
+          await updateDoc(chatDocRef, {
+            participants: arrayUnion(userProfile.uid)
+          });
+          toast({ title: "Group Joined!", description: `You have been added to "${chatDoc.data()?.name}".` });
+          setActiveChat({ id: joinGroupId, name: chatDoc.data()?.name || 'Group', type: 'group' });
+        } catch (error) {
+          console.error("Error joining group:", error);
+          toast({ title: "Error", description: "Could not join the group.", variant: "destructive" });
+        } finally {
+          router.replace('/student/chat', { scroll: false });
+        }
+      };
+      joinGroup();
+    }
+  }, [searchParams, userProfile, router, toast]);
 
   useEffect(() => {
     if (!userProfile?.collegeId || !userProfile.uid) return;
@@ -369,37 +469,53 @@ export default function StudentChatPage() {
     return () => unsubscribe();
   }, [activeChat?.id, toast]);
   
-  const sortedChats = React.useMemo<DisplayableUserChat[]>(() => {
-    if (!userProfile || allUsers.length === 0) return [];
-    
-    return allUsers
-        .map(user => {
-            const chatId = [userProfile.uid, user.uid].sort().join('_');
-            const chatData = chats.find(c => c.id === chatId);
-            const isUnread = (() => {
-                if (!chatData?.updatedAt) return false;
-                if (chatData.lastMessage?.senderId === userProfile.uid) return false;
-                
-                const lastMessageTimestamp = (chatData.updatedAt as Timestamp).toMillis();
-                const userLastSeenTimestamp = (chatData.lastSeen?.[userProfile.uid] as Timestamp)?.toMillis();
-                
-                if (!userLastSeenTimestamp) return true;
-                return lastMessageTimestamp > userLastSeenTimestamp;
-            })();
+  const sortedChats = React.useMemo<DisplayableChat[]>(() => {
+    if (!userProfile) return [];
 
+    const calculateUnread = (chat: Chat) => {
+        if (!chat?.updatedAt) return false;
+        if (chat.lastMessage?.senderId === userProfile.uid) return false;
+        const lastMessageTimestamp = (chat.updatedAt as Timestamp).toMillis();
+        const userLastSeenTimestamp = (chat.lastSeen?.[userProfile.uid] as Timestamp)?.toMillis();
+        if (!userLastSeenTimestamp) return true;
+        return lastMessageTimestamp > userLastSeenTimestamp;
+    }
+
+    const oneOnOneChats = allUsers.map(user => {
+        const chatId = [userProfile.uid, user.uid].sort().join('_');
+        const chatData = chats.find(c => c.id === chatId);
+        return {
+            id: chatId,
+            type: 'user' as const,
+            name: user.fullName,
+            lastMessage: chatData?.lastMessage,
+            updatedAt: chatData?.updatedAt as Timestamp,
+            isUnread: chatData ? calculateUnread(chatData) : false,
+            user,
+        };
+    });
+
+    const groupChats = chats
+        .filter(chat => chat.isGroupChat && chat.ownerId && chat.id !== userProfile.collegeId)
+        .map(chat => {
             return {
-                user,
-                chatId,
-                lastMessage: chatData?.lastMessage,
-                updatedAt: chatData?.updatedAt as Timestamp,
-                isUnread,
+                id: chat.id,
+                type: 'group' as const,
+                name: chat.name || 'Unnamed Group',
+                lastMessage: chat.lastMessage,
+                updatedAt: chat.updatedAt as Timestamp,
+                isUnread: calculateUnread(chat),
+                ownerId: chat.ownerId,
             };
-        })
-        .sort((a, b) => {
-            const timeA = a.updatedAt?.toMillis() || 0;
-            const timeB = b.updatedAt?.toMillis() || 0;
-            return timeB - timeA;
         });
+
+    const combined = [...oneOnOneChats, ...groupChats];
+    
+    return combined.sort((a, b) => {
+        const timeA = a.updatedAt?.toMillis() || 0;
+        const timeB = b.updatedAt?.toMillis() || 0;
+        return timeB - timeA;
+    });
   }, [allUsers, chats, userProfile]);
 
   const generalChatData = React.useMemo(() => {
@@ -409,10 +525,8 @@ export default function StudentChatPage() {
   const isGeneralChatUnread = React.useMemo(() => {
     if (!userProfile || !generalChatData?.updatedAt) return false;
     if (generalChatData.lastMessage?.senderId === userProfile.uid) return false;
-    
     const lastMessageTimestamp = (generalChatData.updatedAt as Timestamp).toMillis();
     const userLastSeenTimestamp = (generalChatData.lastSeen?.[userProfile.uid] as Timestamp)?.toMillis();
-
     if (!userLastSeenTimestamp) return true;
     return lastMessageTimestamp > userLastSeenTimestamp;
   }, [generalChatData, userProfile]);
@@ -420,18 +534,15 @@ export default function StudentChatPage() {
   const handleSelectChat = async (chat: ActiveChat) => {
     setActiveChat(chat);
     if (isMobile) setIsSidebarOpen(false);
-
     if (userProfile?.uid && chat.id) {
         const chatDocRef = doc(db, 'chats', chat.id);
         try {
             const docSnap = await getDoc(chatDocRef);
             if (docSnap.exists()) {
-                await updateDoc(chatDocRef, {
-                    [`lastSeen.${userProfile.uid}`]: serverTimestamp()
-                });
+                await updateDoc(chatDocRef, { [`lastSeen.${userProfile.uid}`]: serverTimestamp() });
             }
         } catch (err) {
-            console.error("Error marking chat as read:", err)
+            console.error("Error marking chat as read:", err);
         }
     }
   };
@@ -439,68 +550,30 @@ export default function StudentChatPage() {
   const handleSendMessage = async () => {
     if (!newMessage.trim() || !userProfile || !activeChat) return;
     setIsSending(true);
-
     const messageData: Omit<ChatMessage, 'id' | 'createdAt'> = {
         chatId: activeChat.id,
         senderId: userProfile.uid,
         senderName: userProfile.fullName,
         text: newMessage.trim(),
     };
-    
     const chatDocRef = doc(db, 'chats', activeChat.id);
     const messagesCollectionRef = collection(chatDocRef, 'messages');
-
     try {
         const chatDocSnap = await getDoc(chatDocRef);
         const batch = writeBatch(db);
-        
         const newMessageRef = doc(messagesCollectionRef);
         batch.set(newMessageRef, { ...messageData, createdAt: serverTimestamp() });
-
-        const lastMessageUpdate = {
-            text: newMessage.trim(),
-            timestamp: serverTimestamp(),
-            senderId: userProfile.uid,
-        };
-
-        const lastSeenUpdate = {
-            [`lastSeen.${userProfile.uid}`]: serverTimestamp()
-        };
-
+        const lastMessageUpdate = { text: newMessage.trim(), timestamp: serverTimestamp(), senderId: userProfile.uid };
+        const lastSeenUpdate = { [`lastSeen.${userProfile.uid}`]: serverTimestamp() };
         if (!chatDocSnap.exists()) {
-            let newChatData: Omit<Chat, 'id'> = {
-                createdAt: serverTimestamp(),
-                updatedAt: serverTimestamp(),
-                lastMessage: lastMessageUpdate,
-                lastSeen: { [userProfile.uid]: serverTimestamp() },
-                participants: [],
-            };
-
-            if (activeChat.type === 'group' && userProfile.collegeId) {
-                newChatData = {
-                    ...newChatData,
-                    isGroupChat: true,
-                    collegeId: userProfile.collegeId,
-                    name: activeChat.name,
-                    description: 'College-wide general chat for study-related discussions.',
-                    participants: [userProfile.uid],
-                };
-            } else if (activeChat.type === 'user' && activeChat.user) {
-                 newChatData = {
-                    ...newChatData,
-                    isGroupChat: false,
-                    participants: [userProfile.uid, activeChat.user.uid],
-                 };
+            let newChatData: Omit<Chat, 'id'> = { createdAt: serverTimestamp(), updatedAt: serverTimestamp(), lastMessage: lastMessageUpdate, lastSeen: { [userProfile.uid]: serverTimestamp() }, participants: [] };
+            if (activeChat.type === 'user' && activeChat.user) {
+                 newChatData = { ...newChatData, isGroupChat: false, participants: [userProfile.uid, activeChat.user.uid] };
             }
             batch.set(chatDocRef, newChatData);
         } else {
-            batch.update(chatDocRef, { 
-                lastMessage: lastMessageUpdate, 
-                updatedAt: serverTimestamp(),
-                ...lastSeenUpdate,
-             });
+            batch.update(chatDocRef, { lastMessage: lastMessageUpdate, updatedAt: serverTimestamp(), ...lastSeenUpdate });
         }
-        
         await batch.commit();
         setNewMessage('');
     } catch(error) {
@@ -512,15 +585,12 @@ export default function StudentChatPage() {
   };
 
   const handleToggleMute = async () => {
-    if (!userProfile || !activeChat || activeChat.type !== 'group') return;
+    if (!userProfile || !activeChat || activeChat.type !== 'general') return;
     const isCurrentlyMuted = userProfile.chatNotificationSettings?.[activeChat.id] === false;
     const newMutedState = !isCurrentlyMuted;
-
     const userDocRef = doc(db, 'users', userProfile.uid);
     try {
-        await updateDoc(userDocRef, {
-            [`chatNotificationSettings.${activeChat.id}`]: newMutedState ? false : true
-        });
+        await updateDoc(userDocRef, { [`chatNotificationSettings.${activeChat.id}`]: !newMutedState });
         await refreshUserProfile();
         toast({
             title: newMutedState ? 'Chat Muted' : 'Notifications Enabled',
@@ -531,8 +601,62 @@ export default function StudentChatPage() {
         toast({ title: "Error", description: "Could not update notification settings.", variant: "destructive" });
     }
   };
+  
+  const handleCreateGroup = async () => {
+    if (!newGroupName.trim() || !userProfile) return;
+    setIsCreatingGroup(true);
+    try {
+      const chatsCollectionRef = collection(db, 'chats');
+      const newGroupData = {
+        name: newGroupName.trim(),
+        isGroupChat: true,
+        ownerId: userProfile.uid,
+        participants: [userProfile.uid],
+        createdAt: serverTimestamp(),
+        updatedAt: serverTimestamp(),
+        collegeId: userProfile.collegeId,
+      };
+      const newDocRef = await addDoc(chatsCollectionRef, newGroupData);
+      const inviteLink = `${window.location.origin}/student/chat?joinGroup=${newDocRef.id}`;
+      navigator.clipboard.writeText(inviteLink);
+      toast({
+        title: 'Group Created!',
+        description: 'Invitation link copied to your clipboard.',
+      });
+      setIsCreateGroupOpen(false);
+      setNewGroupName('');
+    } catch (error) {
+      console.error("Error creating group:", error);
+      toast({ title: 'Error', description: 'Failed to create group.', variant: 'destructive' });
+    } finally {
+      setIsCreatingGroup(false);
+    }
+  };
+
+  const handleShareGroup = () => {
+    if (!activeChat || activeChat.type !== 'group') return;
+    const inviteLink = `${window.location.origin}/student/chat?joinGroup=${activeChat.id}`;
+    navigator.clipboard.writeText(inviteLink);
+    toast({ title: "Invite Link Copied!", description: "Share this link with other students in your college."});
+  };
+
+  const handleDeleteGroup = async () => {
+    if (!activeChat || activeChat.type !== 'group' || !userProfile || activeChat.ownerId !== userProfile.uid) {
+        toast({ title: 'Error', description: 'You are not the owner of this group.', variant: 'destructive'});
+        return;
+    }
+    try {
+        await deleteDoc(doc(db, 'chats', activeChat.id));
+        toast({ title: 'Group Deleted', description: `Group "${activeChat.name}" has been deleted.`});
+        setActiveChat(null);
+    } catch (error) {
+        console.error("Error deleting group:", error);
+        toast({ title: 'Error', description: 'Failed to delete group.', variant: 'destructive'});
+    }
+  };
 
   return (
+    <>
     <div className={cn("flex h-[calc(100vh-10rem)] border rounded-lg bg-card overflow-hidden", isMobile && "h-[calc(100vh-6rem)]")}>
       {isMobile ? (
         <Sheet open={isSidebarOpen} onOpenChange={setIsSidebarOpen}>
@@ -544,14 +668,10 @@ export default function StudentChatPage() {
               {activeChat ? (
                 <>
                   <Avatar className="h-9 w-9">
-                    {activeChat.type === 'group' ? (
-                      <div className="h-full w-full bg-primary text-primary-foreground flex items-center justify-center"><Users className="h-5 w-5"/></div>
-                    ) : (
-                      <>
-                        <AvatarImage src={undefined} alt={activeChat.name} />
-                        <AvatarFallback>{getInitials(activeChat.name)}</AvatarFallback>
-                      </>
-                    )}
+                    {activeChat.type === 'general' ? <div className="h-full w-full bg-primary text-primary-foreground flex items-center justify-center"><Users className="h-5 w-5"/></div>
+                    : activeChat.type === 'group' ? <div className="h-full w-full bg-secondary text-secondary-foreground flex items-center justify-center"><Users2 className="h-5 w-5"/></div>
+                    : <><AvatarImage src={undefined} alt={activeChat.name} /><AvatarFallback>{getInitials(activeChat.name)}</AvatarFallback></>
+                    }
                   </Avatar>
                   <div>
                     <h3 className="font-semibold text-sm">{activeChat.name}</h3>
@@ -566,31 +686,19 @@ export default function StudentChatPage() {
             <main className="flex-1 flex flex-col overflow-hidden">
               {activeChat && userProfile ? (
                 <ChatWindow
-                  activeChat={activeChat}
-                  userProfile={userProfile}
-                  messages={messages}
-                  isLoadingMessages={isLoadingMessages}
-                  isMobile={isMobile}
-                  handleToggleMute={handleToggleMute}
-                  newMessage={newMessage}
-                  setNewMessage={setNewMessage}
-                  handleSendMessage={handleSendMessage}
-                  isSending={isSending}
+                  activeChat={activeChat} userProfile={userProfile} messages={messages} isLoadingMessages={isLoadingMessages}
+                  isMobile={isMobile} handleToggleMute={handleToggleMute} handleShareGroup={handleShareGroup} handleDeleteGroup={handleDeleteGroup}
+                  newMessage={newMessage} setNewMessage={setNewMessage} handleSendMessage={handleSendMessage} isSending={isSending}
                 />
               ) : <WelcomeScreen />}
             </main>
           </div>
           <SheetContent side="left" className="p-0 flex flex-col w-[85vw] max-w-[320px]">
             <UserList
-              userProfile={userProfile}
-              isLoadingUsers={isLoadingUsers}
-              sortedChats={sortedChats}
-              generalChatData={generalChatData}
-              isGeneralChatUnread={isGeneralChatUnread}
-              handleSelectChat={handleSelectChat}
-              activeChat={activeChat}
-              isMobile={isMobile}
-              onCloseSidebar={() => setIsSidebarOpen(false)}
+              userProfile={userProfile} isLoadingUsers={isLoadingUsers} sortedChats={sortedChats}
+              generalChatData={generalChatData} isGeneralChatUnread={isGeneralChatUnread}
+              handleSelectChat={handleSelectChat} activeChat={activeChat} isMobile={isMobile}
+              onCloseSidebar={() => setIsSidebarOpen(false)} onCreateGroup={() => setIsCreateGroupOpen(true)}
             />
           </SheetContent>
         </Sheet>
@@ -598,34 +706,53 @@ export default function StudentChatPage() {
         <>
           <aside className="w-1/3 border-r flex flex-col">
             <UserList
-              userProfile={userProfile}
-              isLoadingUsers={isLoadingUsers}
-              sortedChats={sortedChats}
-              generalChatData={generalChatData}
-              isGeneralChatUnread={isGeneralChatUnread}
-              handleSelectChat={handleSelectChat}
-              activeChat={activeChat}
-              isMobile={isMobile}
+              userProfile={userProfile} isLoadingUsers={isLoadingUsers} sortedChats={sortedChats}
+              generalChatData={generalChatData} isGeneralChatUnread={isGeneralChatUnread}
+              handleSelectChat={handleSelectChat} activeChat={activeChat} isMobile={isMobile}
+              onCreateGroup={() => setIsCreateGroupOpen(true)}
             />
           </aside>
           <main className="w-2/3 flex flex-col overflow-hidden">
             {activeChat && userProfile ? (
               <ChatWindow
-                activeChat={activeChat}
-                userProfile={userProfile}
-                messages={messages}
-                isLoadingMessages={isLoadingMessages}
-                isMobile={isMobile}
-                handleToggleMute={handleToggleMute}
-                newMessage={newMessage}
-                setNewMessage={setNewMessage}
-                handleSendMessage={handleSendMessage}
-                isSending={isSending}
+                activeChat={activeChat} userProfile={userProfile} messages={messages} isLoadingMessages={isLoadingMessages}
+                isMobile={isMobile} handleToggleMute={handleToggleMute} handleShareGroup={handleShareGroup} handleDeleteGroup={handleDeleteGroup}
+                newMessage={newMessage} setNewMessage={setNewMessage} handleSendMessage={handleSendMessage} isSending={isSending}
               />
             ) : <WelcomeScreen />}
           </main>
         </>
       )}
     </div>
+     <Dialog open={isCreateGroupOpen} onOpenChange={setIsCreateGroupOpen}>
+        <DialogContent>
+            <DialogHeader>
+                <DialogTitle>Create New Group</DialogTitle>
+                <DialogDescription>
+                    Give your new study group a name. You can share the invite link after creation.
+                </DialogDescription>
+            </DialogHeader>
+            <div className="py-4">
+                <Label htmlFor="group-name" className="text-right">
+                    Group Name
+                </Label>
+                <Input
+                    id="group-name"
+                    value={newGroupName}
+                    onChange={(e) => setNewGroupName(e.target.value)}
+                    className="col-span-3 mt-2"
+                    placeholder="e.g., Data Structures Study Group"
+                />
+            </div>
+            <DialogFooter>
+                <DialogClose asChild><Button type="button" variant="outline">Cancel</Button></DialogClose>
+                <Button onClick={handleCreateGroup} disabled={isCreatingGroup || !newGroupName.trim()}>
+                    {isCreatingGroup && <Loader2 className="mr-2 h-4 w-4 animate-spin"/>}
+                    Create Group
+                </Button>
+            </DialogFooter>
+        </DialogContent>
+    </Dialog>
+    </>
   );
 }

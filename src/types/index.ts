@@ -249,6 +249,7 @@ export interface Chat {
   collegeId?: string;
   name?: string;
   description?: string;
+  ownerId?: string;
   lastSeen?: {
     [uid: string]: Timestamp | FieldValue;
   };
