@@ -48,6 +48,7 @@ import {
 } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter as AlertDialogFooterComponent, AlertDialogHeader as AlertDialogHeaderComponent, AlertDialogTitle as AlertDialogTitleComponent, AlertDialogTrigger as AlertDialogTriggerComponent } from '@/components/ui/alert-dialog';
+import { moderateChatMessage } from '@/ai/flows/chat-moderator';
 
 
 const getInitials = (name: string = ''): string => {
@@ -549,36 +550,80 @@ export default function StudentChatPage() {
   
   const handleSendMessage = async () => {
     if (!newMessage.trim() || !userProfile || !activeChat) return;
+
+    const sentMessageText = newMessage.trim();
     setIsSending(true);
+    setNewMessage(''); // Optimistically clear the input
+
     const messageData: Omit<ChatMessage, 'id' | 'createdAt'> = {
         chatId: activeChat.id,
         senderId: userProfile.uid,
         senderName: userProfile.fullName,
-        text: newMessage.trim(),
+        text: sentMessageText,
     };
     const chatDocRef = doc(db, 'chats', activeChat.id);
     const messagesCollectionRef = collection(chatDocRef, 'messages');
+    
     try {
         const chatDocSnap = await getDoc(chatDocRef);
         const batch = writeBatch(db);
         const newMessageRef = doc(messagesCollectionRef);
         batch.set(newMessageRef, { ...messageData, createdAt: serverTimestamp() });
-        const lastMessageUpdate = { text: newMessage.trim(), timestamp: serverTimestamp(), senderId: userProfile.uid };
+        const lastMessageUpdate = { text: sentMessageText, timestamp: serverTimestamp(), senderId: userProfile.uid };
         const lastSeenUpdate = { [`lastSeen.${userProfile.uid}`]: serverTimestamp() };
+        
+        let chatTopicForModeration = 'a one-on-one student chat';
+
         if (!chatDocSnap.exists()) {
-            let newChatData: Omit<Chat, 'id'> = { createdAt: serverTimestamp(), updatedAt: serverTimestamp(), lastMessage: lastMessageUpdate, lastSeen: { [userProfile.uid]: serverTimestamp() }, participants: [] };
+            let newChatData: Omit<Chat, 'id'> = { createdAt: serverTimestamp(), updatedAt: serverTimestamp(), lastMessage: lastMessageUpdate, lastSeen: { [userProfile.uid]: serverTimestamp() }, participants: [], collegeId: userProfile.collegeId };
             if (activeChat.type === 'user' && activeChat.user) {
                  newChatData = { ...newChatData, isGroupChat: false, participants: [userProfile.uid, activeChat.user.uid] };
+            } else if (activeChat.type === 'group') {
+                newChatData = { ...newChatData, isGroupChat: true, participants: [userProfile.uid], name: activeChat.name, ownerId: activeChat.ownerId };
+                chatTopicForModeration = activeChat.name;
+            } else if (activeChat.type === 'general') {
+                newChatData = { ...newChatData, isGroupChat: true, name: "General College Chat" };
+                chatTopicForModeration = "General College Chat for study-related topics";
             }
             batch.set(chatDocRef, newChatData);
         } else {
+            if (activeChat.type === 'group') chatTopicForModeration = activeChat.name;
+            if (activeChat.type === 'general') chatTopicForModeration = "General College Chat for study-related topics";
             batch.update(chatDocRef, { lastMessage: lastMessageUpdate, updatedAt: serverTimestamp(), ...lastSeenUpdate });
         }
         await batch.commit();
-        setNewMessage('');
+
+        // --- AI Moderation Call ---
+        if (activeChat.type === 'group' || activeChat.type === 'general') {
+            (async () => {
+                try {
+                    const moderationResult = await moderateChatMessage({
+                        messageText: sentMessageText,
+                        chatTopic: chatTopicForModeration,
+                    });
+
+                    if (moderationResult.isOffTopic || moderationResult.isViolation) {
+                        toast({
+                            title: 'Message Flagged for Review',
+                            description: `Reason: ${moderationResult.reason}. Your message may be removed by a moderator if it violates community guidelines.`,
+                            variant: 'destructive',
+                            duration: 8000
+                        });
+                        // In a real app, a Cloud Function would listen for new messages,
+                        // run this check, and delete the message document from Firestore if it's flagged.
+                        // Example: await deleteDoc(newMessageRef);
+                    }
+                } catch (moderationError) {
+                    console.warn("AI Moderation call failed:", moderationError);
+                    // Fail silently, don't block the user experience if moderation fails.
+                }
+            })();
+        }
+
     } catch(error) {
         console.error("Error sending message:", error);
         toast({ title: "Error", description: "Message could not be sent.", variant: "destructive" });
+        setNewMessage(sentMessageText); // Restore user's text on failure
     } finally {
         setIsSending(false);
     }
