@@ -186,10 +186,9 @@ const ChatWindow: React.FC<ChatWindowProps> = ({
   const messageEndRef = React.useRef<HTMLDivElement>(null);
 
   React.useEffect(() => {
-    // We use a timeout to ensure the DOM has updated before we scroll
-    setTimeout(() => {
-        messageEndRef.current?.scrollIntoView({ behavior: "smooth" });
-    }, 100);
+    // Instantly scroll to the bottom when new messages arrive.
+    // The 'auto' behavior is less jarring than 'smooth' in this context.
+    messageEndRef.current?.scrollIntoView({ behavior: "auto" });
   }, [messages]);
 
 
