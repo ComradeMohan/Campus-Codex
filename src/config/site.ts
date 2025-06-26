@@ -54,7 +54,7 @@ export const siteConfig = {
     apiKey: "AIzaSyCVZJ9HsosLnGNtWofpB0UDYXGzhjJonYI",
   authDomain: "tester-c330a.firebaseapp.com",
   projectId: "tester-c330a",
-  storageBucket: "tester-c330a.firebasestorage.app",
+  storageBucket: "tester-c330a.appspot.com",
   messagingSenderId: "457957223942",
   appId: "1:457957223942:web:26a2d88dde5fb12b839d87"
   },
@@ -65,4 +65,3 @@ export const isFirebasePlaceholdersUsed =
   !fbConfig.apiKey || fbConfig.apiKey === "YOUR_API_KEY" ||
   !fbConfig.authDomain || fbConfig.authDomain === "YOUR_AUTH_DOMAIN" ||
   !fbConfig.projectId || fbConfig.projectId === "YOUR_PROJECT_ID";
-
