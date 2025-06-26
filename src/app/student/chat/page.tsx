@@ -273,11 +273,11 @@ const ChatWindow: React.FC<ChatWindowProps> = ({
                         <Share2 className="h-5 w-5 text-blue-500"/>
                     </Button>
                     <AlertDialog>
-                        <AlertDialogTrigger asChild>
+                        <AlertDialogTriggerComponent asChild>
                             <Button variant="ghost" size="icon" title="Delete Group">
                                 <Trash2 className="h-5 w-5 text-destructive"/>
                             </Button>
-                        </AlertDialogTrigger>
+                        </AlertDialogTriggerComponent>
                         <AlertDialogContent>
                             <AlertDialogHeaderComponent>
                                 <AlertDialogTitleComponent>Are you sure you want to delete this group?</AlertDialogTitleComponent>
