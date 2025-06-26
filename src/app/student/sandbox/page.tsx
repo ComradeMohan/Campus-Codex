@@ -139,6 +139,8 @@ export default function StudentSandboxPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const isMobile = useIsMobile();
+  
+  const sharedProgramHandled = useRef(false);
 
   const [allCollegeLanguages, setAllCollegeLanguages] = useState<ProgrammingLanguage[]>([]);
   const [programmingLanguages, setProgrammingLanguages] = useState<ProgrammingLanguage[]>([]);
@@ -208,11 +210,11 @@ export default function StudentSandboxPage() {
   }, [toast]);
 
 
-  const handleLoadProgram = useCallback((program: SavedProgram, availableLangs: ProgrammingLanguage[]) => {
+  const handleLoadProgram = useCallback((program: SavedProgram) => {
     setActiveProgramId(program.id);
-    loadProgramIntoEditor(program, availableLangs);
+    loadProgramIntoEditor(program, allCollegeLanguages, false);
     setIsMobileSidebarOpen(false);
-  }, [loadProgramIntoEditor]);
+  }, [loadProgramIntoEditor, allCollegeLanguages]);
 
   const handleNewProgram = useCallback(() => {
     setActiveProgramId(null);
@@ -243,7 +245,6 @@ export default function StudentSandboxPage() {
 
         setIsLoadingPageData(true);
         try {
-            // Step 1: Always fetch base data (languages, user's saved programs)
             const langsRef = collection(db, 'colleges', userProfile.collegeId, 'languages');
             const langsSnap = await getDocs(query(langsRef, orderBy('name', 'asc')));
             const fetchedCollegeLanguages = langsSnap.docs.map(docSnap => ({ id: docSnap.id, ...docSnap.data() } as ProgrammingLanguage));
@@ -261,12 +262,14 @@ export default function StudentSandboxPage() {
             } as SavedProgram));
             setSavedPrograms(fetchedPrograms);
 
-            // Step 2: Handle Shared Program if params exist in URL
             const shareUserId = searchParams.get('shareUserId');
             const shareProgramId = searchParams.get('shareProgramId');
 
             if (shareUserId && shareProgramId) {
+                sharedProgramHandled.current = true;
                 setIsLoadingSharedProgram(true);
+                router.replace('/student/sandbox', { scroll: false }); 
+
                 const programDocRef = doc(db, 'users', shareUserId, 'savedPrograms', shareProgramId);
                 const programSnap = await getDoc(programDocRef);
                 
@@ -277,22 +280,15 @@ export default function StudentSandboxPage() {
                     toast({ title: "Shared Program Loaded", description: `Viewing "${sharedProgramData.title}". You can save it as your own copy.` });
                 } else {
                     toast({ title: "Error", description: "Shared program not found or access denied.", variant: "destructive" });
-                    // Fallback to default state after failed share
-                    if (fetchedPrograms.length > 0) {
-                        handleLoadProgram(fetchedPrograms[0], fetchedCollegeLanguages);
-                    } else {
-                        handleNewProgram();
-                    }
+                    if (fetchedPrograms.length > 0) handleLoadProgram(fetchedPrograms[0]);
+                    else handleNewProgram();
                 }
-                // Clean URL to prevent re-loading on refresh and stop further processing in this render
-                router.replace('/student/sandbox', { scroll: false });
                 setIsLoadingSharedProgram(false);
-            } else if (!activeProgramId && fetchedPrograms.length > 0) {
-                // Step 3: If no share link, load the most recent program if one isn't already active
-                handleLoadProgram(fetchedPrograms[0], fetchedCollegeLanguages);
+            } else if (sharedProgramHandled.current) {
+                sharedProgramHandled.current = false;
             } else if (!activeProgramId) {
-                // Step 4: If no saved programs or active selection, load a new blank program
-                handleNewProgram();
+                if (fetchedPrograms.length > 0) handleLoadProgram(fetchedPrograms[0]);
+                else handleNewProgram();
             }
 
         } catch (error) {
@@ -553,10 +549,10 @@ export default function StudentSandboxPage() {
                             "flex flex-1 items-center gap-1.5 p-1.5 cursor-pointer text-xs min-w-0", 
                             activeProgramId === program.id && "text-primary font-medium"
                         )}
-                        onClick={() => !(isSaving || isExecuting) && handleLoadProgram(program, allCollegeLanguages)}
+                        onClick={() => !(isSaving || isExecuting) && handleLoadProgram(program)}
                         role="button"
                         tabIndex={isSaving || isExecuting ? -1 : 0}
-                        onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { if (!(isSaving || isExecuting)) handleLoadProgram(program, allCollegeLanguages); } }}
+                        onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { if (!(isSaving || isExecuting)) handleLoadProgram(program); } }}
                         title={program.title} 
                       >
                         <ProgramIcon className="h-4 w-4 shrink-0" />
