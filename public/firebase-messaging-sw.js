@@ -1,31 +1,38 @@
-// This file must be in the public directory
-// It's required for Firebase Cloud Messaging to work in the background.
+// public/firebase-messaging-sw.js
+// This file MUST be in the public folder.
 
-import { initializeApp } from 'firebase/app';
-import { getMessaging, onBackgroundMessage } from 'firebase/messaging/sw';
+// Scripts for Firebase products are available from the Firebase CDN.
+// See: https://firebase.google.com/docs/web/setup#access-firebase
+// Using compat libraries for service worker for simpler setup.
+importScripts('https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js');
+importScripts('https://www.gstatic.com/firebasejs/10.12.2/firebase-messaging-compat.js');
 
-// IMPORTANT: These should match your client-side Firebase config.
-// It's often best to manage this through environment variables or a build process,
-// but for simplicity in this file, they are hardcoded. Ensure they are correct.
+
+// Your web app's Firebase configuration.
+// This needs to be kept in sync with your main app's config.
 const firebaseConfig = {
-  apiKey: "AIzaSyCVZJ9HsosLnGNtWofpB0UDYXGzhjJonYI",
-  authDomain: "tester-c330a.firebaseapp.com",
-  projectId: "tester-c330a",
-  storageBucket: "tester-c330a.appspot.com",
-  messagingSenderId: "457957223942",
-  appId: "1:457957223942:web:26a2d88dde5fb12b839d87",
-  measurementId: "G-CVD1KGT6GM"
+    apiKey: "AIzaSyCVZJ9HsosLnGNtWofpB0UDYXGzhjJonYI",
+    authDomain: "tester-c330a.firebaseapp.com",
+    projectId: "tester-c330a",
+    storageBucket: "tester-c330a.firebasestorage.app",
+    messagingSenderId: "457957223942",
+    appId: "1:457957223942:web:26a2d88dde5fb12b839d87"
 };
 
-const app = initializeApp(firebaseConfig);
-const messaging = getMessaging(app);
+// Initialize Firebase
+const app = firebase.initializeApp(firebaseConfig);
+const messaging = firebase.messaging(app);
 
-onBackgroundMessage(messaging, (payload) => {
-  console.log('[firebase-messaging-sw.js] Received background message ', payload);
+// Optional: Handle background messages
+messaging.onBackgroundMessage((payload) => {
+  console.log(
+    '[firebase-messaging-sw.js] Received background message ',
+    payload
+  );
   
-  const notificationTitle = payload.notification?.title || "New Notification";
+  const notificationTitle = payload.notification?.title || 'New Notification';
   const notificationOptions = {
-    body: payload.notification?.body || "You have a new message.",
+    body: payload.notification?.body || 'You have a new message.',
     icon: '/icons/icon-192x192.png'
   };
 
