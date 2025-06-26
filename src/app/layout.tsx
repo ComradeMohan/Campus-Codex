@@ -1,5 +1,5 @@
 
-import type { Metadata } from 'next';
+import type { Metadata, Viewport } from 'next';
 import Script from 'next/script';
 import { Toaster } from '@/components/ui/toaster';
 import { AuthProvider } from '@/contexts/AuthContext';
@@ -16,7 +16,10 @@ export const metadata: Metadata = {
     icon: '/icons/icon-192x192.png', // Default icon
     apple: '/icons/icon-192x192.png', // Apple touch icon
   },
-  themeColor: '#29ABE2', // Matches primary color
+};
+
+export const viewport: Viewport = {
+  themeColor: '#29ABE2',
 };
 
 export default function RootLayout({
