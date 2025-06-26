@@ -20,6 +20,7 @@ import {
   writeBatch,
   getDoc,
   FieldValue,
+  Timestamp,
 } from 'firebase/firestore';
 import type { UserProfile, Chat, ChatMessage } from '@/types';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -27,7 +28,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Loader2, Send, MessageSquare, Users, AlertTriangle, ArrowLeft, Bell, BellOff } from 'lucide-react';
+import { Loader2, Send, MessageSquare, Users, AlertTriangle, ArrowLeft, Bell, BellOff, Circle } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { formatDistanceToNowStrict } from 'date-fns';
 import { useToast } from '@/hooks/use-toast';
@@ -36,10 +37,10 @@ import { useIsMobile } from '@/hooks/use-mobile';
 import { Sheet, SheetContent, SheetTrigger, SheetClose } from '@/components/ui/sheet';
 
 interface ActiveChat {
-  id: string; // The document ID for the chat
-  name: string; // The display name for the chat header
+  id: string; 
+  name: string;
   type: 'group' | 'user';
-  user?: UserProfile; // The other user in a 1-on-1 chat
+  user?: UserProfile; 
 }
 
 const getInitials = (name: string = ''): string => {
@@ -54,11 +55,25 @@ interface UserListProps {
   users: UserProfile[];
   handleSelectChat: (chat: ActiveChat) => void;
   activeChat: ActiveChat | null;
+  chats: Chat[];
   isMobile: boolean;
   onCloseSidebar?: () => void;
 }
 
-const UserList: React.FC<UserListProps> = ({ userProfile, isLoadingUsers, users, handleSelectChat, activeChat, isMobile, onCloseSidebar }) => {
+const UserList: React.FC<UserListProps> = ({ userProfile, isLoadingUsers, users, handleSelectChat, activeChat, chats, isMobile, onCloseSidebar }) => {
+  const isChatUnread = (chatId: string) => {
+    if (!userProfile) return false;
+    const chat = chats.find(c => c.id === chatId);
+    if (!chat || !chat.updatedAt) return false;
+    
+    const lastMessageTimestamp = (chat.updatedAt as Timestamp)?.toMillis();
+    const userLastSeenTimestamp = (chat.lastSeen?.[userProfile.uid] as Timestamp)?.toMillis();
+    
+    if (!userLastSeenTimestamp) return true; // Never seen, so it's unread
+
+    return lastMessageTimestamp > userLastSeenTimestamp;
+  }
+
   return (
     <>
       <div className="p-4 border-b flex justify-between items-center">
@@ -88,30 +103,39 @@ const UserList: React.FC<UserListProps> = ({ userProfile, isLoadingUsers, users,
                     <p className="font-semibold truncate">General College Chat</p>
                     <p className="text-xs text-muted-foreground">All members of your college</p>
                   </div>
+                  {isChatUnread(userProfile.collegeId) && (
+                     <Circle className="h-2.5 w-2.5 fill-primary text-primary flex-shrink-0" />
+                  )}
                 </button>
               </li>
             )}
             {users.length > 0 ? (
-              users.map(user => (
-                <li key={user.uid}>
-                  <button
-                    onClick={() => handleSelectChat({ id: [userProfile!.uid, user.uid].sort().join('_'), name: user.fullName, type: 'user', user })}
-                    className={cn(
-                      "w-full text-left p-3 hover:bg-muted transition-colors flex items-center gap-3",
-                      activeChat?.type === 'user' && activeChat.user?.uid === user.uid && "bg-muted"
-                    )}
-                  >
-                    <Avatar className="h-10 w-10">
-                      <AvatarImage src={undefined} alt={user.fullName} data-ai-hint="person face" />
-                      <AvatarFallback>{getInitials(user.fullName)}</AvatarFallback>
-                    </Avatar>
-                    <div className="flex-1 min-w-0">
-                      <p className="font-semibold truncate">{user.fullName}</p>
-                      <p className="text-xs text-muted-foreground capitalize">{user.role}</p>
-                    </div>
-                  </button>
-                </li>
-              ))
+              users.map(user => {
+                 const chatId = [userProfile!.uid, user.uid].sort().join('_');
+                 return (
+                    <li key={user.uid}>
+                    <button
+                        onClick={() => handleSelectChat({ id: chatId, name: user.fullName, type: 'user', user })}
+                        className={cn(
+                        "w-full text-left p-3 hover:bg-muted transition-colors flex items-center gap-3",
+                        activeChat?.type === 'user' && activeChat.user?.uid === user.uid && "bg-muted"
+                        )}
+                    >
+                        <Avatar className="h-10 w-10">
+                        <AvatarImage src={undefined} alt={user.fullName} data-ai-hint="person face" />
+                        <AvatarFallback>{getInitials(user.fullName)}</AvatarFallback>
+                        </Avatar>
+                        <div className="flex-1 min-w-0">
+                          <p className="font-semibold truncate">{user.fullName}</p>
+                          <p className="text-xs text-muted-foreground capitalize">{user.role}</p>
+                        </div>
+                        {isChatUnread(chatId) && (
+                            <Circle className="h-2.5 w-2.5 fill-primary text-primary flex-shrink-0" />
+                        )}
+                    </button>
+                    </li>
+                 )
+              })
             ) : (
               !userProfile?.collegeId && <p className="p-4 text-sm text-muted-foreground text-center">No other users found in your college.</p>
             )}
@@ -144,7 +168,6 @@ interface ChatWindowProps {
   setNewMessage: (value: string) => void;
   handleSendMessage: () => void;
   isSending: boolean;
-  messageEndRef: React.RefObject<HTMLDivElement>;
 }
 
 const ChatWindow: React.FC<ChatWindowProps> = ({
@@ -158,9 +181,17 @@ const ChatWindow: React.FC<ChatWindowProps> = ({
   setNewMessage,
   handleSendMessage,
   isSending,
-  messageEndRef,
 }) => {
   const isMuted = userProfile?.chatNotificationSettings?.[activeChat.id] === false;
+  const messageEndRef = React.useRef<HTMLDivElement>(null);
+
+  React.useEffect(() => {
+    // We use a timeout to ensure the DOM has updated before we scroll
+    setTimeout(() => {
+        messageEndRef.current?.scrollIntoView({ behavior: "smooth" });
+    }, 100);
+  }, [messages]);
+
 
   return (
     <>
@@ -254,6 +285,7 @@ export default function StudentChatPage() {
   const isMobile = useIsMobile();
   
   const [users, setUsers] = useState<UserProfile[]>([]);
+  const [chats, setChats] = useState<Chat[]>([]);
   const [activeChat, setActiveChat] = useState<ActiveChat | null>(null);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [newMessage, setNewMessage] = useState('');
@@ -263,32 +295,40 @@ export default function StudentChatPage() {
   const [isSending, setIsSending] = useState(false);
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
 
-  const messageEndRef = useRef<HTMLDivElement>(null);
+  // --- Data Fetching Effects ---
 
   useEffect(() => {
-    messageEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [messages]);
-
-  useEffect(() => {
-    if (!userProfile?.collegeId) return;
+    if (!userProfile?.collegeId || !userProfile.uid) return;
+    
+    // Fetch all users in the college
     setIsLoadingUsers(true);
     const usersRef = collection(db, 'users');
-    const q = query(
+    const usersQuery = query(
         usersRef, 
         where('collegeId', '==', userProfile.collegeId),
         where('uid', '!=', userProfile.uid)
     );
-    getDocs(q).then((querySnapshot) => {
+    getDocs(usersQuery).then((querySnapshot) => {
       const fetchedUsers = querySnapshot.docs.map(doc => doc.data() as UserProfile);
       setUsers(fetchedUsers.sort((a,b) => a.role.localeCompare(b.role) || a.fullName.localeCompare(b.fullName)));
-      setIsLoadingUsers(false);
     }).catch(error => {
         console.error("Error fetching users: ", error);
         toast({ title: "Error", description: "Could not fetch users for chat.", variant: "destructive" });
-        setIsLoadingUsers(false);
+    }).finally(() => setIsLoadingUsers(false));
+
+    // Listen to all chats the user is a part of
+    const chatsRef = collection(db, 'chats');
+    const chatsQuery = query(chatsRef, where('participants', 'array-contains', userProfile.uid));
+    const unsubscribeChats = onSnapshot(chatsQuery, (snapshot) => {
+        const userChats = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Chat));
+        setChats(userChats);
     });
+
+    return () => unsubscribeChats();
   }, [userProfile?.collegeId, userProfile?.uid, toast]);
 
+
+  // Listen for messages in the currently active chat
   useEffect(() => {
     if (!activeChat?.id) {
       setMessages([]);
@@ -311,10 +351,19 @@ export default function StudentChatPage() {
 
     return () => unsubscribe();
   }, [activeChat?.id, toast]);
+  
 
   const handleSelectChat = (chat: ActiveChat) => {
     setActiveChat(chat);
     if (isMobile) setIsSidebarOpen(false);
+
+    // Mark chat as read
+    if (userProfile?.uid && chat.id) {
+        const chatDocRef = doc(db, 'chats', chat.id);
+        updateDoc(chatDocRef, {
+            [`lastSeen.${userProfile.uid}`]: serverTimestamp()
+        }).catch(err => console.error("Error marking chat as read:", err));
+    }
   };
   
   const handleSendMessage = async () => {
@@ -344,37 +393,46 @@ export default function StudentChatPage() {
             senderId: userProfile.uid,
         };
 
+        const lastSeenUpdate = {
+            [`lastSeen.${userProfile.uid}`]: serverTimestamp()
+        };
+
         if (!chatDocSnap.exists()) {
             let newChatData: Omit<Chat, 'id'> = {
                 createdAt: serverTimestamp(),
                 updatedAt: serverTimestamp(),
                 lastMessage: lastMessageUpdate,
-                participantNames: {},
+                lastSeen: { [userProfile.uid]: serverTimestamp() },
                 participants: [],
             };
 
             if (activeChat.type === 'group' && userProfile.collegeId) {
+                // To create the group chat, we need to know all participants.
+                // For a college-wide chat, we'd fetch all users.
+                // For simplicity, we assume the group chat document is pre-created by an admin,
+                // or we create it with just the current user. Here, we'll create it.
                 newChatData = {
                     ...newChatData,
                     isGroupChat: true,
                     collegeId: userProfile.collegeId,
                     name: activeChat.name,
-                    description: 'College-wide general chat for study-related discussions.'
+                    description: 'College-wide general chat for study-related discussions.',
+                    participants: [userProfile.uid], // Add other users as they join/chat
                 };
             } else if (activeChat.type === 'user' && activeChat.user) {
                  newChatData = {
                     ...newChatData,
                     isGroupChat: false,
                     participants: [userProfile.uid, activeChat.user.uid],
-                    participantNames: {
-                        [userProfile.uid]: userProfile.fullName,
-                        [activeChat.user.uid]: activeChat.user.fullName,
-                    },
                  };
             }
             batch.set(chatDocRef, newChatData);
         } else {
-            batch.update(chatDocRef, { lastMessage: lastMessageUpdate, updatedAt: serverTimestamp() });
+            batch.update(chatDocRef, { 
+                lastMessage: lastMessageUpdate, 
+                updatedAt: serverTimestamp(),
+                ...lastSeenUpdate, // Also update sender's last seen time
+             });
         }
         
         await batch.commit();
@@ -452,7 +510,6 @@ export default function StudentChatPage() {
                   setNewMessage={setNewMessage}
                   handleSendMessage={handleSendMessage}
                   isSending={isSending}
-                  messageEndRef={messageEndRef}
                 />
               ) : <WelcomeScreen />}
             </main>
@@ -462,6 +519,7 @@ export default function StudentChatPage() {
               userProfile={userProfile}
               isLoadingUsers={isLoadingUsers}
               users={users}
+              chats={chats}
               handleSelectChat={handleSelectChat}
               activeChat={activeChat}
               isMobile={isMobile}
@@ -476,6 +534,7 @@ export default function StudentChatPage() {
               userProfile={userProfile}
               isLoadingUsers={isLoadingUsers}
               users={users}
+              chats={chats}
               handleSelectChat={handleSelectChat}
               activeChat={activeChat}
               isMobile={isMobile}
@@ -494,7 +553,6 @@ export default function StudentChatPage() {
                 setNewMessage={setNewMessage}
                 handleSendMessage={handleSendMessage}
                 isSending={isSending}
-                messageEndRef={messageEndRef}
               />
             ) : <WelcomeScreen />}
           </main>

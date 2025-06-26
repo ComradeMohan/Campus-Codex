@@ -238,7 +238,6 @@ export interface ChatMessage {
 export interface Chat {
   id: string;
   participants: string[];
-  participantNames: { [uid: string]: string };
   lastMessage?: {
     text: string;
     timestamp: Timestamp | FieldValue;
@@ -250,4 +249,7 @@ export interface Chat {
   collegeId?: string;
   name?: string;
   description?: string;
+  lastSeen?: {
+    [uid: string]: Timestamp | FieldValue;
+  };
 }
