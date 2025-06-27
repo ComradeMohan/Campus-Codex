@@ -4,7 +4,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import Link from 'next/link';
 import { useAuth } from '@/contexts/AuthContext';
-import { db } from '@/lib/firebase';
+import { db, auth } from '@/lib/firebase';
 import { collection, getDocs, doc, getDoc, query, orderBy } from 'firebase/firestore';
 import type { UserProfile, EnrolledLanguageProgress, ProgrammingLanguage, Question, College } from '@/types';
 
@@ -12,12 +12,14 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter }
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
-import { Loader2, User, Mail, Building, Award, BarChart2, BookOpen, Star, ArrowLeft, Edit, Phone, KeyRound, MessageSquarePlus, Lightbulb } from 'lucide-react';
+import { Loader2, User, Mail, Building, Award, BarChart2, BookOpen, Star, ArrowLeft, Edit, Phone, KeyRound, MessageSquarePlus, Lightbulb, AlertTriangle, RefreshCw } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import * as LucideIcons from 'lucide-react';
 import { ChangePasswordDialog } from '@/components/auth/ChangePasswordDialog';
 import { FeedbackFormDialog } from '@/components/feedback/FeedbackFormDialog';
 import { FeatureRequestFormDialog } from '@/components/feature-request/FeatureRequestFormDialog';
+import { Badge } from '@/components/ui/badge';
+import { sendEmailVerification } from 'firebase/auth';
 
 
 interface EnrolledLanguageWithDetails extends EnrolledLanguageProgress {
@@ -41,6 +43,9 @@ export default function StudentProfilePage() {
   const [isLoadingProgress, setIsLoadingProgress] = useState(true);
   const [totalOverallScore, setTotalOverallScore] = useState(0);
   const [totalPossibleOverallScore, setTotalPossibleOverallScore] = useState(0);
+  
+  const [isResending, setIsResending] = useState(false);
+  const [isRefreshing, setIsRefreshing] = useState(false);
 
   const fetchStudentProgress = useCallback(async () => {
     if (!userProfile?.uid || !userProfile?.collegeId) {
@@ -107,6 +112,33 @@ export default function StudentProfilePage() {
     }
   }, [authLoading, userProfile, fetchStudentProgress]);
   
+  const handleResendVerification = async () => {
+    if (!auth.currentUser) return;
+    setIsResending(true);
+    try {
+      await sendEmailVerification(auth.currentUser);
+      toast({
+        title: "Verification Email Sent",
+        description: `A new verification link has been sent to ${userProfile?.email}. Please check your inbox and spam folder.`,
+      });
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to send verification email.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsResending(false);
+    }
+  };
+
+  const handleRefreshStatus = async () => {
+    setIsRefreshing(true);
+    await refreshUserProfile();
+    setIsRefreshing(false);
+    toast({ title: "Status Refreshed", description: "Your profile has been updated." });
+  };
+
   const getInitials = (name: string = '') => {
     return name
       .split(' ')
@@ -148,6 +180,33 @@ export default function StudentProfilePage() {
 
   return (
     <div className="space-y-8">
+      {!userProfile.isEmailVerified && (
+        <Card className="border-amber-500 bg-amber-50 dark:bg-amber-900/20 dark:border-amber-700 shadow-lg">
+          <CardHeader>
+            <CardTitle className="flex items-center text-amber-800 dark:text-amber-400">
+              <AlertTriangle className="mr-2 h-6 w-6" />
+              Verify Your Email Address
+            </CardTitle>
+            <CardDescription className="text-amber-700 dark:text-amber-500">
+              Your account is not yet verified. Please check your inbox for a verification link to ensure full account functionality.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <p className="text-sm text-amber-600 dark:text-amber-600 mb-4">If you didn't receive the email or it has expired, you can request a new one.</p>
+            <div className="flex flex-wrap gap-3">
+              <Button onClick={handleResendVerification} disabled={isResending || isRefreshing} size="sm" variant="default" className="bg-amber-600 hover:bg-amber-700 text-white">
+                {isResending ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+                Resend Verification Email
+              </Button>
+              <Button onClick={handleRefreshStatus} variant="secondary" disabled={isRefreshing || isResending} size="sm">
+                {isRefreshing ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <RefreshCw className="mr-2 h-4 w-4" />}
+                I've Verified, Refresh Status
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
       <Card className="shadow-xl">
         <CardHeader className="bg-gradient-to-br from-primary/5 via-background to-accent/5 dark:from-primary/10 dark:via-background dark:to-accent/10">
           <div className="flex flex-col sm:flex-row items-center space-y-4 sm:space-y-0 sm:space-x-6">
@@ -171,6 +230,7 @@ export default function StudentProfilePage() {
             <Mail className="w-5 h-5 text-primary" />
             <span className="text-muted-foreground">Email:</span>
             <span>{userProfile.email}</span>
+            {!userProfile.isEmailVerified && <Badge variant="destructive" className="ml-2">Unverified</Badge>}
           </div>
           {displayedCollegeName && (
             <div className="flex items-center space-x-3">

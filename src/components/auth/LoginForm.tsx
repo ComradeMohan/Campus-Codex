@@ -169,79 +169,33 @@ export function LoginForm() {
 
       if (userDocSnap.exists()) {
         const userProfileData = userDocSnap.data() as UserProfile;
+
+        // User can log in regardless of verification status.
+        // The profile page will handle prompting for verification.
+        await refreshUserProfile();
         
-        // For faculty, allow login even if Firebase Auth emailVerified is false,
-        // as their isEmailVerified is set to true in Firestore by admin.
-        if (userProfileData.role === 'faculty') {
-          await refreshUserProfile();
-          router.push('/faculty/dashboard');
-          toast({ title: 'Login Successful', description: 'Welcome to your faculty dashboard!' });
-          setIsLoading(false);
-          return;
-        }
-        
-        // For other roles (student, admin, super-admin), Firebase Auth emailVerified must be true.
-        if (!user.emailVerified) {
-            try {
-                await sendEmailVerification(user);
-                toast({
-                    title: 'Email Not Verified',
-                    description: 'Your email address is not yet verified. A new verification link has been sent. Please check your inbox and spam/junk folder to verify.',
-                    variant: 'destructive',
-                    duration: 8000,
-                });
-            } catch (verificationError: any) {
-                console.error('Error resending verification email:', verificationError);
-                let verificationErrorMessage = 'Please verify your email to log in. Could not resend verification email at this time. Check your spam/junk folder for the original link.';
-                if (verificationError.code === 'auth/too-many-requests') {
-                    verificationErrorMessage = 'Too many verification email requests have been sent to this address recently. Please check your existing emails (including spam/junk) or try again later.';
-                }
-                toast({
-                    title: 'Email Not Verified',
-                    description: verificationErrorMessage,
-                    variant: 'destructive',
-                    duration: 8000,
-                });
-            }
-            setIsLoading(false);
-            return; 
-        }
-        
-        // If email is verified by Firebase Auth (and not faculty), proceed.
-        await refreshUserProfile(); 
         if (userProfileData.role === 'admin') {
           router.push('/admin/dashboard');
         } else if (userProfileData.role === 'student') {
-          router.push('/student/labs');
-        } else if (userProfileData.role === 'super-admin'){
-            router.push('/main-admin/dashboard');
-        }
-         else {
-          router.push('/'); 
+          router.push('/student/dashboard');
+        } else if (userProfileData.role === 'faculty') {
+          router.push('/faculty/dashboard');
+        } else if (userProfileData.role === 'super-admin') {
+          router.push('/main-admin/dashboard');
+        } else {
+          router.push('/');
         }
         toast({ title: 'Login Successful', description: 'Welcome back!' });
 
       } else {
-        // Email might be verified by Firebase Auth, but no Firestore profile exists.
-        // This could happen if registration was interrupted OR if it's an admin logging in for the first time
-        // after super-admin approval but before magic link has fully processed.
-        // The magic link flow handles new admin profile creation.
-        // If a user reaches here with a verified email but no profile, it's an anomaly.
-        if(user.emailVerified){
-             toast({
-                title: 'Profile Incomplete',
-                description: 'Your account exists but your profile is not fully set up. If you are a new college admin, please use the link sent to your email after approval. Otherwise, contact support.',
-                variant: 'destructive',
-                duration: 8000,
-            });
-        } else {
-            // This path should ideally not be hit if the above email verification check for non-faculty is working.
-             toast({
-                title: 'Login Error',
-                description: 'User profile not found. Please complete registration or verify your email. Check spam/junk for verification email.',
-                variant: 'destructive',
-            });
-        }
+        // This case handles users who might have authenticated but don't have a profile document.
+        // This is an anomaly and they should be notified.
+        toast({
+          title: 'Profile Incomplete',
+          description: 'Your account exists but your profile is not fully set up. Please contact support.',
+          variant: 'destructive',
+          duration: 8000,
+        });
       }
     } catch (error: any) {
       console.error('Login error:', error);
