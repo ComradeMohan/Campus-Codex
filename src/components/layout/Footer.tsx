@@ -1,3 +1,4 @@
+
 import Link from 'next/link';
 import { CodeXml } from 'lucide-react';
 import { siteConfig } from '@/config/site';
@@ -45,6 +46,7 @@ export function Footer() {
         </div>
         <div className="mt-8 pt-8 border-t border-border/40 text-center text-sm text-muted-foreground">
           <p>&copy; {new Date().getFullYear()} {siteConfig.name}. All rights reserved.</p>
+          <p className="mt-2 italic">Built by students, for students — with the power of AI</p>
         </div>
       </div>
     </footer>
