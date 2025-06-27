@@ -18,7 +18,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { useToast } from '@/hooks/use-toast';
 import { signInWithEmailAndPassword, isSignInWithEmailLink, signInWithEmailLink, sendPasswordResetEmail, type Auth, sendEmailVerification } from 'firebase/auth';
 import { auth, db } from '@/lib/firebase';
-import { doc, getDoc, setDoc, serverTimestamp, collection, addDoc, updateDoc, query, where, limit } from 'firebase/firestore'; 
+import { doc, getDoc, setDoc, serverTimestamp, collection, getDocs, addDoc, updateDoc, query, where, limit } from 'firebase/firestore'; 
 import type { UserProfile } from '@/types';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
