@@ -169,11 +169,10 @@ export function LoginForm() {
 
       if (userDocSnap.exists()) {
         const userProfileData = userDocSnap.data() as UserProfile;
-
-        // User can log in regardless of verification status.
-        // The profile page will handle prompting for verification.
         await refreshUserProfile();
         
+        toast({ title: 'Login Successful!', description: 'Redirecting to your dashboard...' });
+
         if (userProfileData.role === 'admin') {
           router.push('/admin/dashboard');
         } else if (userProfileData.role === 'student') {
@@ -185,17 +184,15 @@ export function LoginForm() {
         } else {
           router.push('/');
         }
-        toast({ title: 'Login Successful', description: 'Welcome back!' });
-
+        // No need to set isLoading to false here, the redirect will unmount the component
       } else {
-        // This case handles users who might have authenticated but don't have a profile document.
-        // This is an anomaly and they should be notified.
         toast({
           title: 'Profile Incomplete',
           description: 'Your account exists but your profile is not fully set up. Please contact support.',
           variant: 'destructive',
           duration: 8000,
         });
+        setIsLoading(false);
       }
     } catch (error: any) {
       console.error('Login error:', error);
@@ -210,7 +207,6 @@ export function LoginForm() {
         description: errorMessage,
         variant: 'destructive',
       });
-    } finally {
       setIsLoading(false);
     }
   }
