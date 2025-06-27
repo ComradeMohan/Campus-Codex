@@ -10,7 +10,7 @@ export function CTASection() {
   const [ref, isInView] = useInView({ threshold: 0.3, triggerOnce: true });
 
   return (
-    <section className="py-20 md:py-32 bg-gradient-to-r from-primary via-primary/90 to-primary/80 text-primary-foreground overflow-hidden">
+    <section className="py-20 md:py-32 bg-gradient-to-r from-primary via-primary/90 to-primary/80 text-primary-foreground">
       <div
         ref={ref}
         className={cn(

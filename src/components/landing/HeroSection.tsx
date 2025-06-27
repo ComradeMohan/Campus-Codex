@@ -8,7 +8,7 @@ export function HeroSection() {
       className="py-20 md:py-32 relative 
                  bg-gradient-to-br from-background to-secondary
                  dark:bg-[url('https://i.ibb.co/pjQXjTHW/ab261348324ec2f390f6662641e238d9.jpg')] 
-                 dark:bg-cover dark:bg-center dark:bg-no-repeat overflow-hidden"
+                 dark:bg-cover dark:bg-center dark:bg-no-repeat"
     >
       <div className="absolute inset-0 bg-black/70 z-0 hidden dark:block"></div>
       <div className="container px-4 md:px-6 relative z-10">

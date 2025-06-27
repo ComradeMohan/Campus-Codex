@@ -41,7 +41,7 @@ export function TestimonialsSection() {
   const [cardsRef, areCardsInView] = useInView({ threshold: 0.1, triggerOnce: true });
 
   return (
-    <section className="py-16 md:py-24 bg-muted/30 dark:bg-background overflow-hidden">
+    <section className="py-16 md:py-24 bg-muted/30 dark:bg-background">
       <div className="container px-4 md:px-6">
         <div 
           ref={titleRef}

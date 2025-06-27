@@ -10,7 +10,7 @@ export function FeaturesSection() {
   const [cardsRef, areCardsInView] = useInView({ threshold: 0.1, triggerOnce: true });
 
   return (
-    <section id="features" className="py-16 md:py-24 bg-background overflow-hidden">
+    <section id="features" className="py-16 md:py-24 bg-background">
       <div className="container px-4 md:px-6">
         <div
           ref={titleRef}
