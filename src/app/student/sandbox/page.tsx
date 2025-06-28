@@ -22,7 +22,7 @@ import type { ProgrammingLanguage, SavedProgram } from '@/types';
 import { cn } from '@/lib/utils';
 import * as LucideIcons from 'lucide-react';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { useIsMobile } from '@/hooks/use-is-mobile';
+import { useIsMobile } from '@/hooks/use-mobile';
 
 
 const MIN_BOTTOM_PANEL_HEIGHT = 100; 
@@ -798,7 +798,7 @@ export default function StudentSandboxPage() {
                 isOpen={isAIChatOpen}
                 onToggle={toggleAIChat}
                 currentLanguageName={selectedLanguage.name}
-                currentQuestionText={"Assistance for your code in the sandbox."} 
+                currentQuestionText={"Assistance for your code in the sandbox."}
                 getCurrentCodeSnippet={getCurrentCodeForAI}
             />
         )}
