@@ -699,7 +699,7 @@ export default function StudentSandboxPage() {
           <span className="hidden sm:inline">Run</span>
            <span className="sm:hidden">Run</span>
         </Button>
-         {!isMobile && selectedLanguage && (
+         {selectedLanguage && (
             <Button variant="outline" size="sm" onClick={toggleAIChat} className="h-9 text-xs md:text-sm">
                <Sparkles className="h-4 w-4 mr-1.5" /> AI Assistant
             </Button>
