@@ -3,20 +3,13 @@
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { ArrowRight } from 'lucide-react';
-import { useInView } from '@/hooks/use-in-view';
 import { cn } from '@/lib/utils';
 
 export function CTASection() {
-  const [ref, isInView] = useInView({ threshold: 0.3, triggerOnce: true });
-
   return (
     <section className="py-20 md:py-32 bg-gradient-to-r from-primary via-primary/90 to-primary/80 text-primary-foreground">
       <div
-        ref={ref}
-        className={cn(
-          "container px-4 md:px-6 text-center opacity-0",
-          isInView && "animate-in fade-in zoom-in-95 duration-1000"
-        )}
+        className="container px-4 md:px-6 text-center"
       >
         <h2 className="text-3xl font-bold tracking-tight sm:text-4xl md:text-5xl font-headline text-white">
           Ready to Transform Your Coding Education?

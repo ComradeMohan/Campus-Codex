@@ -3,7 +3,6 @@
 import { Card, CardContent, CardHeader, CardFooter, CardTitle, CardDescription } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import Image from "next/image";
-import { useInView } from "@/hooks/use-in-view";
 import { cn } from "@/lib/utils";
 
 const testimonials = [
@@ -37,18 +36,11 @@ const testimonials = [
 ];
 
 export function TestimonialsSection() {
-  const [titleRef, isTitleInView] = useInView({ threshold: 0.5, triggerOnce: true });
-  const [cardsRef, areCardsInView] = useInView({ threshold: 0.1, triggerOnce: true });
-
   return (
     <section className="py-16 md:py-24 bg-muted/30 dark:bg-background">
       <div className="container px-4 md:px-6">
         <div 
-          ref={titleRef}
-          className={cn(
-            "text-center mb-12 opacity-0",
-            isTitleInView && "animate-in fade-in slide-in-from-top-8 duration-700"
-          )}
+          className="text-center mb-12"
         >
           <h2 className="text-3xl font-bold tracking-tight sm:text-4xl md:text-5xl font-headline">
             Trusted by Leading Institutions
@@ -58,17 +50,11 @@ export function TestimonialsSection() {
           </p>
         </div>
         <div 
-          ref={cardsRef}
           className="grid grid-cols-1 gap-8 md:grid-cols-2 lg:grid-cols-3"
         >
           {testimonials.map((testimonial, index) => (
             <div 
               key={index}
-              className={cn(
-                "opacity-0",
-                areCardsInView && "animate-in fade-in slide-in-from-bottom-8 duration-700"
-              )}
-              style={{ animationDelay: `${150 * index}ms`, animationFillMode: 'backwards' }}
             >
               <Card className="shadow-lg hover:shadow-xl transition-shadow duration-300 ease-in-out bg-card flex flex-col h-full">
                 <CardHeader className="pb-4">
