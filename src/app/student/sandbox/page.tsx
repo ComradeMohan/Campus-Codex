@@ -96,6 +96,8 @@ main();
 `;
   } else if (lowerLang === 'java') {
     return `// Welcome to the Sandbox! Start coding in Java.
+// The online compiler executes the main method of a public class named "Main".
+// Ensure your primary class is named Main and is public.
 // Use the "Sample Input" tab below to provide input for your program.
 // Read input using a Scanner for System.in.
 

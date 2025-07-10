@@ -211,7 +211,7 @@ export default function StudentPracticePage() {
         } else if (languageForEditorAndExecution.name.toLowerCase() === 'javascript') {
           initialCode += `// Your JavaScript code here\nfunction main() {\n    // In a Node.js environment for competitive programming, you might read from process.stdin\n    // For example, using 'readline' module if available in the execution sandbox.\n    // console.log("Hello from JavaScript!");\n}\n\nmain();\n`;
         } else if (languageForEditorAndExecution.name.toLowerCase() === 'java') {
-          initialCode += `import java.util.Scanner;\n\npublic class Main {\n    public static void main(String[] args) {\n        // Scanner scanner = new Scanner(System.in);\n        // String input = scanner.nextLine();\n        // System.out.println("Processing: " + input);\n        // scanner.close();\n    }\n}\n`;
+          initialCode += `import java.util.Scanner;\n\n// The online compiler executes the main method of a public class named "Main".\n// Ensure your primary class is named Main and is public.\npublic class Main {\n    public static void main(String[] args) {\n        // Scanner scanner = new Scanner(System.in);\n        // String input = scanner.nextLine();\n        // System.out.println("Processing: " + input);\n        // scanner.close();\n    }\n}\n`;
         } else {
              initialCode += `// Code for ${languageForEditorAndExecution.name}\n`;
         }
@@ -410,7 +410,7 @@ export default function StudentPracticePage() {
 
   const handlePrevQuestion = () => {
     if (currentQuestionIndex > 0) {
-      setCurrentQuestionIndex(prev => prev - 1);
+      setCurrentQuestionIndex(prev => prev + 1);
     }
   };
 
@@ -547,7 +547,7 @@ export default function StudentPracticePage() {
         <Card className="shadow-lg">
           <CardHeader className="py-3 px-4 md:p-6">
             <CardTitle className="flex items-center gap-2 text-md md:text-lg">
-                <PackageSearch className="h-5 w-5 md:h-6 md:w-6"/>
+                <PackageSearch className="h-5 w-5 md:h-6 md:h-6"/>
                 No Questions Yet
             </CardTitle>
           </CardHeader>
