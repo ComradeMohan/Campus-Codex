@@ -227,7 +227,7 @@ export default function StudentSandboxPage() {
     }
   };
 
-  const setupCollaborationListener = useCallback((programUserId: string, programId: string) => {
+  const setupCollaborationListener = useCallback((programUserId: string, programId: string, availableLangs: ProgrammingLanguage[]) => {
     if (collaborationListenerRef.current) {
         collaborationListenerRef.current();
     }
@@ -235,7 +235,7 @@ export default function StudentSandboxPage() {
     collaborationListenerRef.current = onSnapshot(programDocRef, (docSnap) => {
         if (docSnap.exists()) {
             const programData = docSnap.data() as SavedProgram;
-            loadProgramIntoEditor(programData, programmingLanguages);
+            loadProgramIntoEditor(programData, availableLangs);
         } else {
              if (collaborationListenerRef.current) {
                 collaborationListenerRef.current();
@@ -250,7 +250,7 @@ export default function StudentSandboxPage() {
         setIsCollaborating(false);
     });
     setIsCollaborating(true);
-  }, [toast, loadProgramIntoEditor, programmingLanguages]);
+  }, [toast, loadProgramIntoEditor]);
 
   const handleLoadProgram = useCallback((program: SavedProgram, isShared: boolean = false, isLive: boolean = false) => {
     if (collaborationListenerRef.current) {
@@ -262,7 +262,7 @@ export default function StudentSandboxPage() {
     setActiveProgramId(program.id); 
 
     if (isLive && program.userId) {
-        setupCollaborationListener(program.userId, program.id);
+        setupCollaborationListener(program.userId, program.id, programmingLanguages);
     } else {
         loadProgramIntoEditor(program, programmingLanguages);
     }
@@ -338,7 +338,7 @@ export default function StudentSandboxPage() {
 
         if (shareUserId && shareProgramId) {
             if (isCollaboration) {
-                 setupCollaborationListener(shareUserId, shareProgramId);
+                 setupCollaborationListener(shareUserId, shareProgramId, actualProgrammingLangs);
                  setActiveProgramId(shareProgramId);
                  toast({ title: "Collaborative Session Started", description: `You are now editing a shared program. Changes will be synced.` });
             } else {
