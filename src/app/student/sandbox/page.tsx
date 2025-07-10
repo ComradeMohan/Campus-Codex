@@ -4,7 +4,7 @@
 import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { db } from '@/lib/firebase';
-import { collection, addDoc, getDocs, query, orderBy, serverTimestamp, doc, updateDoc, deleteDoc, FieldValue, getDoc } from 'firebase/firestore';
+import { collection, addDoc, getDocs, query, orderBy, serverTimestamp, doc, updateDoc, deleteDoc, FieldValue, getDoc, onSnapshot, Unsubscribe } from 'firebase/firestore';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -17,7 +17,7 @@ import { Sheet, SheetContent, SheetTrigger, SheetClose } from '@/components/ui/s
 import { MonacoCodeEditor } from '@/components/editor/MonacoCodeEditor';
 import { LabAIChatAssistant } from '@/components/student/LabAIChatAssistant';
 import { useToast } from '@/hooks/use-toast';
-import { Loader2, Save, Play, Trash2, PlusCircle, FileCode, Terminal, AlertTriangle, ClipboardType, Share2, PanelLeftOpen, X, GripHorizontal, Sparkles } from 'lucide-react';
+import { Loader2, Save, Play, Trash2, PlusCircle, FileCode, Terminal, AlertTriangle, ClipboardType, Share, PanelLeftOpen, X, GripHorizontal, Sparkles } from 'lucide-react';
 import type { ProgrammingLanguage, SavedProgram } from '@/types';
 import { cn } from '@/lib/utils';
 import * as LucideIcons from 'lucide-react';
@@ -25,14 +25,14 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { useIsMobile } from '@/hooks/use-mobile';
 
 
-const MIN_BOTTOM_PANEL_HEIGHT = 100; 
-const DEFAULT_BOTTOM_PANEL_HEIGHT = 250; 
+const MIN_BOTTOM_PANEL_HEIGHT = 100;
+const DEFAULT_BOTTOM_PANEL_HEIGHT = 250;
 
 const getIconComponent = (iconName?: string): React.FC<React.SVGProps<SVGSVGElement>> => {
   if (iconName && LucideIcons[iconName as keyof typeof LucideIcons]) {
     return LucideIcons[iconName as keyof typeof LucideIcons] as React.FC<React.SVGProps<SVGSVGElement>>;
   }
-  return FileCode; 
+  return FileCode;
 };
 
 const getDefaultCodeForLanguage = (langName?: string): string => {
@@ -142,8 +142,6 @@ export default function StudentSandboxPage() {
   const searchParams = useSearchParams();
   const isMobile = useIsMobile();
   
-  const sharedProgramHandled = useRef(false);
-
   const [programmingLanguages, setProgrammingLanguages] = useState<ProgrammingLanguage[]>([]);
   const [savedPrograms, setSavedPrograms] = useState<SavedProgram[]>([]);
   
@@ -151,6 +149,8 @@ export default function StudentSandboxPage() {
   const [currentProgramTitle, setCurrentProgramTitle] = useState('');
   const [currentCode, setCurrentCode] = useState<string>('');
   const [selectedLanguage, setSelectedLanguage] = useState<ProgrammingLanguage | null>(null);
+  const [isCollaborating, setIsCollaborating] = useState(false);
+  const collaborationListenerRef = useRef<Unsubscribe | null>(null);
   
   const [sampleInput, setSampleInput] = useState('');
   const [output, setOutput] = useState('');
@@ -161,7 +161,6 @@ export default function StudentSandboxPage() {
 
 
   const [isLoadingPageData, setIsLoadingPageData] = useState(true);
-  const [isLoadingSharedProgram, setIsLoadingSharedProgram] = useState(false);
   const [isExecuting, setIsExecuting] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [programToDelete, setProgramToDelete] = useState<SavedProgram | null>(null);
@@ -171,9 +170,11 @@ export default function StudentSandboxPage() {
   const startYRef = useRef(0);
   const initialHeightRef = useRef(0);
   const sandboxContainerRef = useRef<HTMLDivElement>(null);
+  const codeUpdateTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
-  const loadProgramIntoEditor = useCallback((programData: Partial<SavedProgram>, availableLangs: ProgrammingLanguage[], isShared = false) => {
-    setCurrentProgramTitle(isShared ? `[Shared] ${programData.title || 'Untitled'}` : programData.title || '');
+
+  const loadProgramIntoEditor = useCallback((programData: Partial<SavedProgram>, availableLangs: ProgrammingLanguage[]) => {
+    setCurrentProgramTitle(programData.title || '');
     setCurrentCode(programData.code || '');
     setSampleInput(programData.lastInput || '');
     setIsAIChatOpen(false); 
@@ -208,14 +209,77 @@ export default function StudentSandboxPage() {
     setActiveTab("input");
   }, [toast]);
 
+  const handleEditorChange = (newCode: string | undefined) => {
+    if (newCode === undefined || newCode === currentCode) return;
+    setCurrentCode(newCode);
 
-  const handleLoadProgram = useCallback((program: SavedProgram) => {
-    setActiveProgramId(program.id);
-    loadProgramIntoEditor(program, programmingLanguages, false);
+    if (isCollaborating && activeProgramId && userProfile) {
+        if (codeUpdateTimeoutRef.current) {
+            clearTimeout(codeUpdateTimeoutRef.current);
+        }
+        codeUpdateTimeoutRef.current = setTimeout(() => {
+            const programDocRef = doc(db, 'users', userProfile.uid, 'savedPrograms', activeProgramId);
+            updateDoc(programDocRef, { code: newCode }).catch(err => console.error("Error syncing code:", err));
+        }, 500); // Debounce updates by 500ms
+    }
+  };
+
+  const setupCollaborationListener = useCallback((programUserId: string, programId: string) => {
+    if (collaborationListenerRef.current) {
+        collaborationListenerRef.current();
+    }
+    const programDocRef = doc(db, 'users', programUserId, 'savedPrograms', programId);
+    collaborationListenerRef.current = onSnapshot(programDocRef, (docSnap) => {
+        if (docSnap.exists()) {
+            const programData = docSnap.data() as SavedProgram;
+            if (programData.code !== currentCode) {
+                setCurrentCode(programData.code || '');
+                toast({
+                    title: "Code Updated",
+                    description: `The code was updated by another collaborator.`,
+                    variant: "default"
+                });
+            }
+        } else {
+             if (collaborationListenerRef.current) {
+                collaborationListenerRef.current();
+                collaborationListenerRef.current = null;
+            }
+            setIsCollaborating(false);
+            toast({ title: "Collaboration Ended", description: "The shared program may have been deleted.", variant: "destructive" });
+        }
+    }, (error) => {
+        console.error("Collaboration listener error:", error);
+        toast({ title: "Collaboration Error", description: "Lost connection to the shared session.", variant: "destructive"});
+        setIsCollaborating(false);
+    });
+    setIsCollaborating(true);
+  }, [currentCode, toast]);
+
+  const handleLoadProgram = useCallback((program: SavedProgram, isShared: boolean = false) => {
+    if (collaborationListenerRef.current) {
+        collaborationListenerRef.current();
+        collaborationListenerRef.current = null;
+    }
+    
+    if (isShared && program.userId) {
+        setupCollaborationListener(program.userId, program.id);
+        setActiveProgramId(program.id); 
+    } else {
+        setIsCollaborating(false);
+        setActiveProgramId(program.id);
+    }
+    loadProgramIntoEditor(program, programmingLanguages);
     setIsMobileSidebarOpen(false);
-  }, [loadProgramIntoEditor, programmingLanguages]);
+  }, [loadProgramIntoEditor, programmingLanguages, setupCollaborationListener]);
+
 
   const handleNewProgram = useCallback(() => {
+     if (collaborationListenerRef.current) {
+        collaborationListenerRef.current();
+        collaborationListenerRef.current = null;
+    }
+    setIsCollaborating(false);
     setActiveProgramId(null);
     const langForNewProgram = selectedLanguage || (programmingLanguages.length > 0 ? programmingLanguages[0] : null);
 
@@ -273,25 +337,21 @@ export default function StudentSandboxPage() {
         const shareUserId = searchParams.get('shareUserId');
         const shareProgramId = searchParams.get('shareProgramId');
 
-        if (shareUserId && shareProgramId && !sharedProgramHandled.current) {
-            sharedProgramHandled.current = true;
-            setIsLoadingSharedProgram(true);
+        if (shareUserId && shareProgramId) {
             router.replace('/student/sandbox', { scroll: false }); 
 
             const programDocRef = doc(db, 'users', shareUserId, 'savedPrograms', shareProgramId);
             const programSnap = await getDoc(programDocRef);
             
             if (programSnap.exists()) {
-                const sharedProgramData = programSnap.data() as SavedProgram;
-                loadProgramIntoEditor(sharedProgramData, actualProgrammingLangs, true);
-                setActiveProgramId(null);
-                toast({ title: "Shared Program Loaded", description: `Viewing "${sharedProgramData.title}". You can save it as your own copy.` });
+                const sharedProgramData = {id: programSnap.id, ...programSnap.data(), userId: shareUserId} as SavedProgram;
+                handleLoadProgram(sharedProgramData, true);
+                toast({ title: "Collaborative Session Started", description: `You are now editing "${sharedProgramData.title}". Changes will be synced.` });
             } else {
                 toast({ title: "Error", description: "Shared program not found or access denied.", variant: "destructive" });
                 if (fetchedPrograms.length > 0) handleLoadProgram(fetchedPrograms[0]);
                 else handleNewProgram();
             }
-            setIsLoadingSharedProgram(false);
         } else if (!activeProgramId) {
             if (fetchedPrograms.length > 0) handleLoadProgram(fetchedPrograms[0]);
             else handleNewProgram();
@@ -324,7 +384,7 @@ export default function StudentSandboxPage() {
 
     setIsSaving(true);
     const programDataToSave: Omit<SavedProgram, 'id' | 'createdAt' | 'updatedAt' | 'userId'> & {updatedAt: FieldValue, userId: string, createdAt?: FieldValue} = {
-      title: currentProgramTitle.trim().replace(/^\[Shared\]\s*/, ''),
+      title: currentProgramTitle.trim(),
       code: currentCode,
       languageName: selectedLanguage.name,
       languageId: selectedLanguage.id,
@@ -467,7 +527,7 @@ export default function StudentSandboxPage() {
     const shareUrl = `${window.location.origin}/student/sandbox?shareUserId=${program.userId}&shareProgramId=${program.id}`;
     navigator.clipboard.writeText(shareUrl)
       .then(() => {
-        toast({title: "Link Copied!", description: "Share link copied to clipboard."});
+        toast({title: "Link Copied!", description: "Share link copied to clipboard. Anyone with the link can view and edit."});
       })
       .catch(err => {
         console.error("Failed to copy share link: ", err);
@@ -579,7 +639,7 @@ export default function StudentSandboxPage() {
                             disabled={isSaving || isExecuting}
                             title="Share Program"
                         >
-                            <Share2 className="h-3.5 w-3.5 text-blue-500" />
+                            <Share className="h-3.5 w-3.5 text-blue-500" />
                         </Button>
                         <AlertDialog onOpenChange={(open) => !open && setProgramToDelete(null)}>
                             <AlertDialogTrigger asChild>
@@ -627,12 +687,12 @@ export default function StudentSandboxPage() {
   );
 
 
-  if (authLoading || isLoadingPageData || isLoadingSharedProgram) {
+  if (authLoading || isLoadingPageData) {
     return (
       <div className="flex h-[calc(100vh-theme(spacing.16))] items-center justify-center">
         <Loader2 className="h-12 w-12 animate-spin text-primary" />
         <span className="ml-3 text-lg">
-            {isLoadingSharedProgram ? "Loading Shared Program..." : "Loading Sandbox..."}
+            Loading Sandbox...
         </span>
       </div>
     );
@@ -711,7 +771,7 @@ export default function StudentSandboxPage() {
             <MonacoCodeEditor
               language={selectedLanguage?.name || 'plaintext'}
               value={currentCode}
-              onChange={(code) => setCurrentCode(code || '')}
+              onChange={handleEditorChange}
               height="100%" 
               options={{ 
                 readOnly: isSaving || isExecuting || !selectedLanguage || (programmingLanguages.length === 0 && !selectedLanguage),
@@ -794,7 +854,7 @@ export default function StudentSandboxPage() {
                 onToggle={toggleAIChat}
                 currentLanguageName={selectedLanguage.name}
                 currentQuestionText={"Assistance for your code in the sandbox."}
-                getCurrentCodeSnippet={getCurrentCodeForAI}
+                getCurrentCodeSnippet={() => currentCode}
             />
         )}
       </div>
