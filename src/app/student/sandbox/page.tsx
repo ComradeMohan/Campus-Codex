@@ -447,19 +447,12 @@ export default function StudentSandboxPage() {
 
       const activeProgram = savedPrograms.find(p => p.id === activeProgramId);
       
-      // If there is an active program AND its language is the one we just selected
       if (activeProgram && activeProgram.languageId === newSelectedLang.id) {
-        // Reload the code from the saved program
         setCurrentCode(activeProgram.code || getDefaultCodeForLanguage(newSelectedLang.name));
       } else {
-        // Otherwise, load the default template for the newly selected language.
-        // This handles cases where:
-        // 1. We are in "New Program" mode (no activeProgramId).
-        // 2. We are viewing an active program but have selected a different language for it.
         setCurrentCode(getDefaultCodeForLanguage(newSelectedLang.name));
       }
       
-      // Reset output panels
       setOutput(''); 
       setErrorOutput('');
       setActiveTab("input");
