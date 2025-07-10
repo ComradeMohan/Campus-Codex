@@ -515,9 +515,19 @@ export default function StudentSandboxPage() {
         setErrorOutput('');
       }
       if (activeProgramId && userProfile?.uid && !isCollaborating) {
-        const programDocRef = doc(db, 'users', userProfile.uid, 'savedPrograms', activeProgramId);
-        await updateDoc(programDocRef, { lastInput: sampleInput, updatedAt: serverTimestamp() });
-         setSavedPrograms(prev => prev.map(p => p.id === activeProgramId ? { ...p, lastInput: sampleInput, updatedAt: new Date() } : p).sort((a,b) => (b.updatedAt as Date).valueOf() - (a.updatedAt as Date).valueOf()));
+        try {
+            const programDocRef = doc(db, 'users', userProfile.uid, 'savedPrograms', activeProgramId);
+            // Check if document exists before updating
+            const docSnap = await getDoc(programDocRef);
+            if (docSnap.exists()) {
+                await updateDoc(programDocRef, { lastInput: sampleInput, updatedAt: serverTimestamp() });
+                setSavedPrograms(prev => prev.map(p => p.id === activeProgramId ? { ...p, lastInput: sampleInput, updatedAt: new Date() } : p).sort((a,b) => (b.updatedAt as Date).valueOf() - (a.updatedAt as Date).valueOf()));
+            } else {
+                console.warn("Attempted to update lastInput on a non-existent document.");
+            }
+        } catch (updateError) {
+            console.error("Error updating lastInput:", updateError);
+        }
       }
 
     } catch (error: any) {
