@@ -174,10 +174,13 @@ export default function StudentSandboxPage() {
   const editorRef = useRef<any>(null); // To store editor instance
 
 
-  const loadProgramIntoEditor = useCallback((programData: Partial<SavedProgram>, availableLangs: ProgrammingLanguage[]) => {
+  const loadProgramIntoEditor = useCallback((programData: Partial<SavedProgram>, availableLangs: ProgrammingLanguage[], isLiveUpdate = false) => {
     setCurrentProgramTitle(programData.title || '');
     setSampleInput(programData.lastInput || '');
-    setIsAIChatOpen(false); 
+    
+    if (!isLiveUpdate) {
+        setIsAIChatOpen(false); 
+    }
 
     let languageToLoad: ProgrammingLanguage | null = null;
 
@@ -194,12 +197,13 @@ export default function StudentSandboxPage() {
                     ? getDefaultCodeForLanguage(languageToLoad?.name)
                     : programData.code;
 
-    // Only update if the code is actually different to avoid cursor jumps
-    if (newCode !== currentCode) {
+    // In live collaboration, always accept the incoming code.
+    // Otherwise, only update if the code is different to avoid cursor jumps.
+    if (isLiveUpdate || newCode !== currentCode) {
         setCurrentCode(newCode);
     }
     
-    if (!languageToLoad && programData.languageName && (programData.languageName !== "Placements" && programData.languageName !== "Aptitude")) {
+    if (!isLiveUpdate && !languageToLoad && programData.languageName && (programData.languageName !== "Placements" && programData.languageName !== "Aptitude")) {
          toast({
             title: "Language Mismatch",
             description: `The language "${programData.languageName}" this program was saved/shared with is not currently available for solving. Code loaded as plaintext.`,
@@ -207,9 +211,11 @@ export default function StudentSandboxPage() {
         });
     }
 
-    setOutput('');
-    setErrorOutput('');
-    setActiveTab("input");
+    if (!isLiveUpdate) {
+        setOutput('');
+        setErrorOutput('');
+        setActiveTab("input");
+    }
   }, [toast, currentCode]);
 
   const handleEditorChange = (newCode: string | undefined) => {
@@ -220,9 +226,14 @@ export default function StudentSandboxPage() {
         if (codeUpdateTimeoutRef.current) {
             clearTimeout(codeUpdateTimeoutRef.current);
         }
-        codeUpdateTimeoutRef.current = setTimeout(() => {
-            const programDocRef = doc(db, 'users', userProfile.uid, 'savedPrograms', activeProgramId);
-            updateDoc(programDocRef, { code: newCode }).catch(err => console.error("Error syncing code:", err));
+        codeUpdateTimeoutRef.current = setTimeout(async () => {
+            if (activeProgramId && userProfile.uid) { // Ensure user ID is available
+                 const savedProgramRef = doc(db, 'users', userProfile.uid, 'savedPrograms', activeProgramId);
+                 const docSnap = await getDoc(savedProgramRef);
+                 if (docSnap.exists() && docSnap.data().userId === userProfile.uid) {
+                     updateDoc(savedProgramRef, { code: newCode }).catch(err => console.error("Error syncing code:", err));
+                 }
+            }
         }, 500); // Debounce updates by 500ms
     }
   };
@@ -235,7 +246,7 @@ export default function StudentSandboxPage() {
     collaborationListenerRef.current = onSnapshot(programDocRef, (docSnap) => {
         if (docSnap.exists()) {
             const programData = docSnap.data() as SavedProgram;
-            loadProgramIntoEditor(programData, availableLangs);
+            loadProgramIntoEditor(programData, availableLangs, true);
         } else {
              if (collaborationListenerRef.current) {
                 collaborationListenerRef.current();
@@ -337,21 +348,21 @@ export default function StudentSandboxPage() {
         router.replace('/student/sandbox', { scroll: false }); // Clean URL after processing params
 
         if (shareUserId && shareProgramId) {
-            if (isCollaboration) {
-                 setupCollaborationListener(shareUserId, shareProgramId, actualProgrammingLangs);
-                 setActiveProgramId(shareProgramId);
-                 toast({ title: "Collaborative Session Started", description: `You are now editing a shared program. Changes will be synced.` });
-            } else {
-                 const programDocRef = doc(db, 'users', shareUserId, 'savedPrograms', shareProgramId);
-                 const programSnap = await getDoc(programDocRef);
-                 if (programSnap.exists()) {
-                    const sharedProgramData = {id: programSnap.id, ...programSnap.data(), userId: shareUserId} as SavedProgram;
+             const programDocRef = doc(db, 'users', shareUserId, 'savedPrograms', shareProgramId);
+             const programSnap = await getDoc(programDocRef);
+             if (programSnap.exists()) {
+                const sharedProgramData = {id: programSnap.id, ...programSnap.data(), userId: shareUserId} as SavedProgram;
+                if (isCollaboration) {
+                    setupCollaborationListener(shareUserId, shareProgramId, actualProgrammingLangs);
+                    setActiveProgramId(shareProgramId);
+                    toast({ title: "Collaborative Session Started", description: `You are now editing a shared program. Changes will be synced.` });
+                } else {
                     handleLoadProgram(sharedProgramData, true, false);
                     toast({ title: "Program Loaded", description: `You are viewing a shared copy of "${sharedProgramData.title}". Save it to create your own editable version.` });
-                } else {
-                    toast({ title: "Error", description: "Shared program not found or access denied.", variant: "destructive" });
-                    if (fetchedPrograms.length > 0) handleLoadProgram(fetchedPrograms[0]); else handleNewProgram();
                 }
+            } else {
+                toast({ title: "Error", description: "Shared program not found or access denied.", variant: "destructive" });
+                if (fetchedPrograms.length > 0) handleLoadProgram(fetchedPrograms[0]); else handleNewProgram();
             }
         } else if (!activeProgramId) {
             if (fetchedPrograms.length > 0) handleLoadProgram(fetchedPrograms[0]); else handleNewProgram();
@@ -639,7 +650,7 @@ export default function StudentSandboxPage() {
                         onClick={() => !(isSaving || isExecuting) && handleLoadProgram(program, false, isCollaborating)}
                         role="button"
                         tabIndex={isSaving || isExecuting ? -1 : 0}
-                        onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { if (!(isSaving || isExecuting)) handleLoadProgram(program); } }}
+                        onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { if (!(isSaving || isExecuting)) handleLoadProgram(program, false, isCollaborating); } }}
                         title={program.title} 
                       >
                         <ProgramIcon className="h-4 w-4 shrink-0" />
@@ -759,7 +770,7 @@ export default function StudentSandboxPage() {
         <Select
           value={selectedLanguage?.id || ''}
           onValueChange={handleLanguageChange}
-          disabled={isSaving || isExecuting || programmingLanguages.length === 0}
+          disabled={isSaving || isExecuting || programmingLanguages.length === 0 || isCollaborating}
         >
           <SelectTrigger className="w-auto md:w-[160px] h-9 bg-background text-xs md:text-sm">
             <SelectValue placeholder="Language" />
@@ -801,7 +812,7 @@ export default function StudentSandboxPage() {
               onMount={(editor) => { editorRef.current = editor; }}
               height="100%" 
               options={{ 
-                readOnly: isSaving || isExecuting || !selectedLanguage || (programmingLanguages.length === 0 && !selectedLanguage),
+                readOnly: isSaving || isExecuting || !selectedLanguage || (programmingLanguages.length === 0 && !selectedLanguage) || (isCollaborating && userProfile?.uid !== savedPrograms.find(p => p.id === activeProgramId)?.userId),
                 minimap: { enabled: true, scale: 1 },
                 wordWrap: 'on',
                 fontSize: 13,
@@ -888,3 +899,4 @@ export default function StudentSandboxPage() {
     </div>
   );
 }
+
