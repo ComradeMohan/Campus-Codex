@@ -17,7 +17,7 @@ import { Sheet, SheetContent, SheetTrigger, SheetClose } from '@/components/ui/s
 import { MonacoCodeEditor } from '@/components/editor/MonacoCodeEditor';
 import { LabAIChatAssistant } from '@/components/student/LabAIChatAssistant';
 import { useToast } from '@/hooks/use-toast';
-import { Loader2, Save, Play, Trash2, PlusCircle, FileCode, Terminal, AlertTriangle, ClipboardType, Share, PanelLeftOpen, X, GripHorizontal, Sparkles } from 'lucide-react';
+import { Loader2, Save, Play, Trash2, PlusCircle, FileCode, Terminal, AlertTriangle, ClipboardType, Share2, PanelLeftOpen, X, GripHorizontal, Sparkles, Users } from 'lucide-react';
 import type { ProgrammingLanguage, SavedProgram } from '@/types';
 import { cn } from '@/lib/utils';
 import * as LucideIcons from 'lucide-react';
@@ -171,6 +171,7 @@ export default function StudentSandboxPage() {
   const initialHeightRef = useRef(0);
   const sandboxContainerRef = useRef<HTMLDivElement>(null);
   const codeUpdateTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const editorRef = useRef<any>(null); // To store editor instance
 
 
   const loadProgramIntoEditor = useCallback((programData: Partial<SavedProgram>, availableLangs: ProgrammingLanguage[]) => {
@@ -233,10 +234,26 @@ export default function StudentSandboxPage() {
         if (docSnap.exists()) {
             const programData = docSnap.data() as SavedProgram;
             if (programData.code !== currentCode) {
-                setCurrentCode(programData.code || '');
+                 const editor = editorRef.current;
+                if (editor) {
+                    const model = editor.getModel();
+                    if (model) {
+                         // This ensures we push an undo stop, so the user can undo the remote change if they want.
+                        model.pushEditOperations(
+                            [],
+                            [{ range: model.getFullModelRange(), text: programData.code || '' }],
+                            () => null
+                        );
+                    } else {
+                         setCurrentCode(programData.code || '');
+                    }
+                } else {
+                     setCurrentCode(programData.code || '');
+                }
+
                 toast({
                     title: "Code Updated",
-                    description: `The code was updated by another collaborator.`,
+                    description: `The code was updated by a collaborator.`,
                     variant: "default"
                 });
             }
@@ -334,8 +351,9 @@ export default function StudentSandboxPage() {
             return;
         }
 
-        const shareUserId = searchParams.get('shareUserId');
-        const shareProgramId = searchParams.get('shareProgramId');
+        const shareUserId = searchParams.get('userId');
+        const shareProgramId = searchParams.get('programId');
+        const isCollaboration = searchParams.get('live') === 'true';
 
         if (shareUserId && shareProgramId) {
             router.replace('/student/sandbox', { scroll: false }); 
@@ -345,8 +363,12 @@ export default function StudentSandboxPage() {
             
             if (programSnap.exists()) {
                 const sharedProgramData = {id: programSnap.id, ...programSnap.data(), userId: shareUserId} as SavedProgram;
-                handleLoadProgram(sharedProgramData, true);
-                toast({ title: "Collaborative Session Started", description: `You are now editing "${sharedProgramData.title}". Changes will be synced.` });
+                handleLoadProgram(sharedProgramData, isCollaboration);
+                 if (isCollaboration) {
+                    toast({ title: "Collaborative Session Started", description: `You are now editing "${sharedProgramData.title}". Changes will be synced.` });
+                } else {
+                    toast({ title: "Program Loaded", description: `You are viewing a shared copy of "${sharedProgramData.title}". Save it to create your own editable version.` });
+                }
             } else {
                 toast({ title: "Error", description: "Shared program not found or access denied.", variant: "destructive" });
                 if (fetchedPrograms.length > 0) handleLoadProgram(fetchedPrograms[0]);
@@ -395,19 +417,27 @@ export default function StudentSandboxPage() {
     };
 
     try {
-      if (activeProgramId) {
+      if (activeProgramId && !isCollaborating) { // Only allow saving if not in collab mode or if it's your own program
         const programDocRef = doc(db, 'users', userProfile.uid, 'savedPrograms', activeProgramId);
         await updateDoc(programDocRef, programDataToSave);
         setSavedPrograms(prev => prev.map(p => p.id === activeProgramId ? { ...p, ...programDataToSave, id: activeProgramId, updatedAt: new Date() } : p).sort((a,b) => (b.updatedAt as Date).valueOf() - (a.updatedAt as Date).valueOf()));
         toast({ title: "Program Updated!", description: `"${programDataToSave.title}" has been updated.` });
       } else {
+        // If collaborating or new, create a new saved program for the current user
         programDataToSave.createdAt = serverTimestamp();
         const programsCollectionRef = collection(db, 'users', userProfile.uid, 'savedPrograms');
         const newDocRef = await addDoc(programsCollectionRef, programDataToSave);
         const newProgram = { ...programDataToSave, id: newDocRef.id, createdAt: new Date(), updatedAt: new Date() } as SavedProgram;
+        
         setActiveProgramId(newDocRef.id);
         setSavedPrograms(prev => [newProgram, ...prev].sort((a,b) => (b.updatedAt as Date).valueOf() - (a.updatedAt as Date).valueOf()));
-        toast({ title: "Program Saved!", description: `"${programDataToSave.title}" has been saved.` });
+        setIsCollaborating(false); // New saved program is not collaborative
+        if (collaborationListenerRef.current) {
+            collaborationListenerRef.current();
+            collaborationListenerRef.current = null;
+        }
+        
+        toast({ title: "Program Saved!", description: `A new program "${programDataToSave.title}" has been saved.` });
       }
     } catch (error) {
       console.error("Error saving program:", error);
@@ -415,7 +445,7 @@ export default function StudentSandboxPage() {
     } finally {
       setIsSaving(false);
     }
-  }, [userProfile, currentProgramTitle, selectedLanguage, currentCode, sampleInput, activeProgramId, toast]);
+  }, [userProfile, currentProgramTitle, selectedLanguage, currentCode, sampleInput, activeProgramId, toast, isCollaborating]);
 
   const handleDeleteProgram = useCallback(async () => {
     if (!programToDelete || !userProfile?.uid) return;
@@ -484,7 +514,7 @@ export default function StudentSandboxPage() {
         setOutput(displayedOutput);
         setErrorOutput('');
       }
-      if (activeProgramId && userProfile?.uid) {
+      if (activeProgramId && userProfile?.uid && !isCollaborating) {
         const programDocRef = doc(db, 'users', userProfile.uid, 'savedPrograms', activeProgramId);
         await updateDoc(programDocRef, { lastInput: sampleInput, updatedAt: serverTimestamp() });
          setSavedPrograms(prev => prev.map(p => p.id === activeProgramId ? { ...p, lastInput: sampleInput, updatedAt: new Date() } : p).sort((a,b) => (b.updatedAt as Date).valueOf() - (a.updatedAt as Date).valueOf()));
@@ -498,7 +528,7 @@ export default function StudentSandboxPage() {
     } finally {
       setIsExecuting(false);
     }
-  }, [selectedLanguage, currentCode, sampleInput, toast, activeProgramId, userProfile]);
+  }, [selectedLanguage, currentCode, sampleInput, toast, activeProgramId, userProfile, isCollaborating]);
   
   const handleLanguageChange = useCallback((langId: string) => {
     const newSelectedLang = programmingLanguages.find(l => l.id === langId);
@@ -519,15 +549,15 @@ export default function StudentSandboxPage() {
     }
   }, [programmingLanguages, savedPrograms, activeProgramId]);
 
-  const handleShareProgram = useCallback((program: SavedProgram) => {
+  const handleShareProgram = useCallback((program: SavedProgram, live: boolean) => {
     if (!program.userId || !program.id) {
-      toast({title: "Error", description: "Cannot generate share link for this program.", variant: "destructive"});
+      toast({title: "Error", description: "Cannot generate link for this program.", variant: "destructive"});
       return;
     }
-    const shareUrl = `${window.location.origin}/student/sandbox?shareUserId=${program.userId}&shareProgramId=${program.id}`;
+    const shareUrl = `${window.location.origin}/student/sandbox?userId=${program.userId}&programId=${program.id}${live ? '&live=true' : ''}`;
     navigator.clipboard.writeText(shareUrl)
       .then(() => {
-        toast({title: "Link Copied!", description: "Share link copied to clipboard. Anyone with the link can view and edit."});
+        toast({title: "Link Copied!", description: `Share link for ${live ? 'live collaboration' : 'viewing'} copied to clipboard.`});
       })
       .catch(err => {
         console.error("Failed to copy share link: ", err);
@@ -613,13 +643,13 @@ export default function StudentSandboxPage() {
                       key={program.id} 
                       className={cn(
                         "group flex items-center rounded-sm hover:bg-muted/50", 
-                        activeProgramId === program.id && "bg-primary/10"
+                        activeProgramId === program.id && (isCollaborating ? "bg-purple-500/10" : "bg-primary/10")
                       )}
                     >
                       <div 
                         className={cn(
                             "flex flex-1 items-center gap-1.5 p-1.5 cursor-pointer text-xs min-w-0", 
-                            activeProgramId === program.id && "text-primary font-medium"
+                            activeProgramId === program.id && (isCollaborating ? "text-purple-600 font-medium" : "text-primary font-medium")
                         )}
                         onClick={() => !(isSaving || isExecuting) && handleLoadProgram(program)}
                         role="button"
@@ -629,17 +659,28 @@ export default function StudentSandboxPage() {
                       >
                         <ProgramIcon className="h-4 w-4 shrink-0" />
                         <span className="truncate" title={program.title}>{program.title}</span> 
+                        {isCollaborating && activeProgramId === program.id && <Users className="h-3 w-3 shrink-0 ml-auto text-purple-600"/>}
                       </div>
                       <div className="flex shrink-0 items-center pr-1"> 
+                         <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-6 w-6 opacity-60 group-hover:opacity-100 focus:opacity-100 p-1"
+                            onClick={(e) => { e.stopPropagation(); handleShareProgram(program, true); }}
+                            disabled={isSaving || isExecuting}
+                            title="Collaborate (Live Edit)"
+                        >
+                            <Users className="h-3.5 w-3.5 text-purple-500" />
+                        </Button>
                         <Button
                             variant="ghost"
                             size="icon"
                             className="h-6 w-6 opacity-60 group-hover:opacity-100 focus:opacity-100 p-1"
-                            onClick={(e) => { e.stopPropagation(); handleShareProgram(program); }}
+                            onClick={(e) => { e.stopPropagation(); handleShareProgram(program, false); }}
                             disabled={isSaving || isExecuting}
-                            title="Share Program"
+                            title="Share (Read-only link)"
                         >
-                            <Share className="h-3.5 w-3.5 text-blue-500" />
+                            <Share2 className="h-3.5 w-3.5 text-blue-500" />
                         </Button>
                         <AlertDialog onOpenChange={(open) => !open && setProgramToDelete(null)}>
                             <AlertDialogTrigger asChild>
@@ -746,7 +787,7 @@ export default function StudentSandboxPage() {
         </Select>
         <Button onClick={handleSaveProgram} size="sm" className="h-9 text-xs md:text-sm" disabled={isSaving || isExecuting || !currentProgramTitle.trim() || !selectedLanguage || isSandboxDisabled}>
           {isSaving ? <Loader2 className="animate-spin h-4 w-4 mr-1" /> : <Save className="h-4 w-4 mr-1" />}
-          <span className="hidden sm:inline">{activeProgramId ? 'Update' : 'Save'}</span>
+          <span className="hidden sm:inline">{activeProgramId && !isCollaborating ? 'Update' : 'Save'}</span>
           <span className="sm:hidden">Save</span>
         </Button>
         <Button onClick={handleRunCode} size="sm" className="h-9 text-xs md:text-sm" variant="outline" disabled={isSaving || isExecuting || !currentCode.trim() || !selectedLanguage || isSandboxDisabled}>
@@ -772,6 +813,7 @@ export default function StudentSandboxPage() {
               language={selectedLanguage?.name || 'plaintext'}
               value={currentCode}
               onChange={handleEditorChange}
+              onMount={(editor) => { editorRef.current = editor; }}
               height="100%" 
               options={{ 
                 readOnly: isSaving || isExecuting || !selectedLanguage || (programmingLanguages.length === 0 && !selectedLanguage),

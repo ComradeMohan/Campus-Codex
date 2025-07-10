@@ -2,14 +2,15 @@
 'use client';
 
 import type { editor } from 'monaco-editor';
-import Editor, { type OnChange } from '@monaco-editor/react';
+import Editor, { type OnChange, type OnMount } from '@monaco-editor/react';
 import React, { useState, useEffect } from 'react';
 import { Loader2 } from 'lucide-react';
 
 interface MonacoCodeEditorProps {
   language: string;
   value: string;
-  onChange: (value: string | undefined) => void;
+  onChange: OnChange;
+  onMount?: OnMount;
   height?: string | number;
   options?: editor.IStandaloneEditorConstructionOptions;
 }
@@ -33,6 +34,7 @@ export function MonacoCodeEditor({
   language,
   value,
   onChange,
+  onMount,
   height = '60vh', // Default height
   options,
 }: MonacoCodeEditorProps) {
@@ -85,6 +87,7 @@ export function MonacoCodeEditor({
       theme={editorTheme}
       value={value}
       onChange={onChange}
+      onMount={onMount}
       options={defaultOptions}
       loading={<Loader2 className="h-12 w-12 animate-spin text-primary" />}
     />
