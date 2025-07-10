@@ -17,7 +17,7 @@ import { Sheet, SheetContent, SheetTrigger, SheetClose } from '@/components/ui/s
 import { MonacoCodeEditor } from '@/components/editor/MonacoCodeEditor';
 import { LabAIChatAssistant } from '@/components/student/LabAIChatAssistant';
 import { useToast } from '@/hooks/use-toast';
-import { Loader2, Save, Play, Trash2, PlusCircle, FileCode, Terminal, AlertTriangle, ClipboardType, Share2, PanelLeftOpen, X, GripHorizontal, Sparkles, Users } from 'lucide-react';
+import { Loader2, Save, Play, Trash2, PlusCircle, FileCode, Terminal, AlertTriangle, ClipboardType, Share, PanelLeftOpen, X, GripHorizontal, Sparkles, Users } from 'lucide-react';
 import type { ProgrammingLanguage, SavedProgram } from '@/types';
 import { cn } from '@/lib/utils';
 import * as LucideIcons from 'lucide-react';
@@ -176,7 +176,6 @@ export default function StudentSandboxPage() {
 
   const loadProgramIntoEditor = useCallback((programData: Partial<SavedProgram>, availableLangs: ProgrammingLanguage[]) => {
     setCurrentProgramTitle(programData.title || '');
-    setCurrentCode(programData.code || '');
     setSampleInput(programData.lastInput || '');
     setIsAIChatOpen(false); 
 
@@ -191,10 +190,13 @@ export default function StudentSandboxPage() {
     
     setSelectedLanguage(languageToLoad);
 
-    if (programData.code === undefined || programData.code === '') {
-        setCurrentCode(getDefaultCodeForLanguage(languageToLoad?.name));
-    } else {
-        setCurrentCode(programData.code || getDefaultCodeForLanguage(languageToLoad?.name));
+    const newCode = programData.code === undefined || programData.code === '' 
+                    ? getDefaultCodeForLanguage(languageToLoad?.name)
+                    : programData.code;
+
+    // Only update if the code is actually different to avoid cursor jumps
+    if (newCode !== currentCode) {
+        setCurrentCode(newCode);
     }
     
     if (!languageToLoad && programData.languageName && (programData.languageName !== "Placements" && programData.languageName !== "Aptitude")) {
@@ -208,7 +210,7 @@ export default function StudentSandboxPage() {
     setOutput('');
     setErrorOutput('');
     setActiveTab("input");
-  }, [toast]);
+  }, [toast, currentCode]);
 
   const handleEditorChange = (newCode: string | undefined) => {
     if (newCode === undefined || newCode === currentCode) return;
@@ -233,30 +235,7 @@ export default function StudentSandboxPage() {
     collaborationListenerRef.current = onSnapshot(programDocRef, (docSnap) => {
         if (docSnap.exists()) {
             const programData = docSnap.data() as SavedProgram;
-            if (programData.code !== currentCode) {
-                 const editor = editorRef.current;
-                if (editor) {
-                    const model = editor.getModel();
-                    if (model) {
-                         // This ensures we push an undo stop, so the user can undo the remote change if they want.
-                        model.pushEditOperations(
-                            [],
-                            [{ range: model.getFullModelRange(), text: programData.code || '' }],
-                            () => null
-                        );
-                    } else {
-                         setCurrentCode(programData.code || '');
-                    }
-                } else {
-                     setCurrentCode(programData.code || '');
-                }
-
-                toast({
-                    title: "Code Updated",
-                    description: `The code was updated by a collaborator.`,
-                    variant: "default"
-                });
-            }
+            loadProgramIntoEditor(programData, programmingLanguages);
         } else {
              if (collaborationListenerRef.current) {
                 collaborationListenerRef.current();
@@ -271,22 +250,22 @@ export default function StudentSandboxPage() {
         setIsCollaborating(false);
     });
     setIsCollaborating(true);
-  }, [currentCode, toast]);
+  }, [toast, loadProgramIntoEditor, programmingLanguages]);
 
-  const handleLoadProgram = useCallback((program: SavedProgram, isShared: boolean = false) => {
+  const handleLoadProgram = useCallback((program: SavedProgram, isShared: boolean = false, isLive: boolean = false) => {
     if (collaborationListenerRef.current) {
         collaborationListenerRef.current();
         collaborationListenerRef.current = null;
     }
     
-    if (isShared && program.userId) {
+    setIsCollaborating(false);
+    setActiveProgramId(program.id); 
+
+    if (isLive && program.userId) {
         setupCollaborationListener(program.userId, program.id);
-        setActiveProgramId(program.id); 
     } else {
-        setIsCollaborating(false);
-        setActiveProgramId(program.id);
+        loadProgramIntoEditor(program, programmingLanguages);
     }
-    loadProgramIntoEditor(program, programmingLanguages);
     setIsMobileSidebarOpen(false);
   }, [loadProgramIntoEditor, programmingLanguages, setupCollaborationListener]);
 
@@ -355,28 +334,27 @@ export default function StudentSandboxPage() {
         const shareProgramId = searchParams.get('programId');
         const isCollaboration = searchParams.get('live') === 'true';
 
-        if (shareUserId && shareProgramId) {
-            router.replace('/student/sandbox', { scroll: false }); 
+        router.replace('/student/sandbox', { scroll: false }); // Clean URL after processing params
 
+        if (shareUserId && shareProgramId) {
             const programDocRef = doc(db, 'users', shareUserId, 'savedPrograms', shareProgramId);
-            const programSnap = await getDoc(programDocRef);
-            
-            if (programSnap.exists()) {
-                const sharedProgramData = {id: programSnap.id, ...programSnap.data(), userId: shareUserId} as SavedProgram;
-                handleLoadProgram(sharedProgramData, isCollaboration);
-                 if (isCollaboration) {
-                    toast({ title: "Collaborative Session Started", description: `You are now editing "${sharedProgramData.title}". Changes will be synced.` });
-                } else {
-                    toast({ title: "Program Loaded", description: `You are viewing a shared copy of "${sharedProgramData.title}". Save it to create your own editable version.` });
-                }
+            if (isCollaboration) {
+                 setupCollaborationListener(shareUserId, shareProgramId);
+                 setActiveProgramId(shareProgramId);
+                 toast({ title: "Collaborative Session Started", description: `You are now editing a shared program. Changes will be synced.` });
             } else {
-                toast({ title: "Error", description: "Shared program not found or access denied.", variant: "destructive" });
-                if (fetchedPrograms.length > 0) handleLoadProgram(fetchedPrograms[0]);
-                else handleNewProgram();
+                 const programSnap = await getDoc(programDocRef);
+                 if (programSnap.exists()) {
+                    const sharedProgramData = {id: programSnap.id, ...programSnap.data(), userId: shareUserId} as SavedProgram;
+                    handleLoadProgram(sharedProgramData, true, false);
+                    toast({ title: "Program Loaded", description: `You are viewing a shared copy of "${sharedProgramData.title}". Save it to create your own editable version.` });
+                } else {
+                    toast({ title: "Error", description: "Shared program not found or access denied.", variant: "destructive" });
+                    if (fetchedPrograms.length > 0) handleLoadProgram(fetchedPrograms[0]); else handleNewProgram();
+                }
             }
         } else if (!activeProgramId) {
-            if (fetchedPrograms.length > 0) handleLoadProgram(fetchedPrograms[0]);
-            else handleNewProgram();
+            if (fetchedPrograms.length > 0) handleLoadProgram(fetchedPrograms[0]); else handleNewProgram();
         }
         setIsLoadingPageData(false);
     };
@@ -661,7 +639,7 @@ export default function StudentSandboxPage() {
                             "flex flex-1 items-center gap-1.5 p-1.5 cursor-pointer text-xs min-w-0", 
                             activeProgramId === program.id && (isCollaborating ? "text-purple-600 font-medium" : "text-primary font-medium")
                         )}
-                        onClick={() => !(isSaving || isExecuting) && handleLoadProgram(program)}
+                        onClick={() => !(isSaving || isExecuting) && handleLoadProgram(program, false, isCollaborating)}
                         role="button"
                         tabIndex={isSaving || isExecuting ? -1 : 0}
                         onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { if (!(isSaving || isExecuting)) handleLoadProgram(program); } }}
@@ -690,7 +668,7 @@ export default function StudentSandboxPage() {
                             disabled={isSaving || isExecuting}
                             title="Share (Read-only link)"
                         >
-                            <Share2 className="h-3.5 w-3.5 text-blue-500" />
+                            <Share className="h-3.5 w-3.5 text-blue-500" />
                         </Button>
                         <AlertDialog onOpenChange={(open) => !open && setProgramToDelete(null)}>
                             <AlertDialogTrigger asChild>
