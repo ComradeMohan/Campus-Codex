@@ -3,6 +3,7 @@ import type { Metadata, Viewport } from 'next';
 import Script from 'next/script';
 import { Toaster } from '@/components/ui/toaster';
 import { AuthProvider } from '@/contexts/AuthContext';
+import { CustomCursor } from '@/components/ui/CustomCursor';
 import './globals.css';
 
 const GA_MEASUREMENT_ID = process.env.NEXT_PUBLIC_GA_MEASUREMENT_ID || "G-CVD1KGT6GM"; // Updated ID
@@ -84,6 +85,7 @@ export default function RootLayout({
         )}
       </head>
       <body className="font-body antialiased">
+        <CustomCursor />
         <AuthProvider>
           {children}
           <Toaster />
