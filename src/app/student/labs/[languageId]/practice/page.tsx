@@ -410,7 +410,7 @@ export default function StudentPracticePage() {
 
   const handlePrevQuestion = () => {
     if (currentQuestionIndex > 0) {
-      setCurrentQuestionIndex(prev => prev + 1);
+      setCurrentQuestionIndex(prev => prev - 1);
     }
   };
 
@@ -715,3 +715,5 @@ export default function StudentPracticePage() {
     </div>
   );
 }
+
+    
