@@ -4,7 +4,7 @@
 import React, { useState, useCallback } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { db } from '@/lib/firebase';
-import { collection, query, where, getDocs, writeBatch, serverTimestamp } from 'firebase/firestore';
+import { collection, query, where, getDocs, writeBatch, serverTimestamp, doc } from 'firebase/firestore';
 import type { Question } from '@/types';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -116,7 +116,7 @@ export default function SeedDatabasePage() {
       let count = 0;
 
       questionsData.questions.forEach(q => {
-        const docRef = collection(questionsRef).doc(); // Generate a new doc ref in the collection
+        const docRef = doc(questionsRef); // Generate a new doc ref in the collection
         const newQuestion: Omit<Question, 'id'> = {
             languageId: javaLanguageId,
             languageName: "Java",
