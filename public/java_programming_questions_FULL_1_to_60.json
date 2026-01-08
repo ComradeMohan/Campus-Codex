@@ -1,0 +1,1446 @@
+{
+  "course": "CSA09 \u2013 Java Programming",
+  "total_questions": 60,
+  "questions": [
+    {
+      "id": 1,
+      "title": "Reverse String",
+      "question_statement": "Write a Java program to solve: Reverse String.",
+      "difficulty": "easy",
+      "max_score": 100,
+      "sample_input": "Sample Input",
+      "sample_output": "Sample Output",
+      "solution_explanation": "Solve the problem using basic Java logic, loops, and condition checks as applicable.",
+      "test_cases": [
+        {
+          "input": "Sample Input",
+          "expected_output": "Sample Output"
+        },
+        {
+          "input": "Edge Case 1",
+          "expected_output": "Handled"
+        },
+        {
+          "input": "Edge Case 2",
+          "expected_output": "Handled"
+        }
+      ]
+    },
+    {
+      "id": 2,
+      "title": "String to Integer",
+      "question_statement": "Write a Java program to solve: String to Integer.",
+      "difficulty": "easy",
+      "max_score": 100,
+      "sample_input": "Sample Input",
+      "sample_output": "Sample Output",
+      "solution_explanation": "Solve the problem using basic Java logic, loops, and condition checks as applicable.",
+      "test_cases": [
+        {
+          "input": "Sample Input",
+          "expected_output": "Sample Output"
+        },
+        {
+          "input": "Edge Case 1",
+          "expected_output": "Handled"
+        },
+        {
+          "input": "Edge Case 2",
+          "expected_output": "Handled"
+        }
+      ]
+    },
+    {
+      "id": 3,
+      "title": "Username Validation",
+      "question_statement": "Write a Java program to solve: Username Validation.",
+      "difficulty": "easy",
+      "max_score": 100,
+      "sample_input": "Sample Input",
+      "sample_output": "Sample Output",
+      "solution_explanation": "Solve the problem using basic Java logic, loops, and condition checks as applicable.",
+      "test_cases": [
+        {
+          "input": "Sample Input",
+          "expected_output": "Sample Output"
+        },
+        {
+          "input": "Edge Case 1",
+          "expected_output": "Handled"
+        },
+        {
+          "input": "Edge Case 2",
+          "expected_output": "Handled"
+        }
+      ]
+    },
+    {
+      "id": 4,
+      "title": "Sort Names",
+      "question_statement": "Write a Java program to solve: Sort Names.",
+      "difficulty": "easy",
+      "max_score": 100,
+      "sample_input": "Sample Input",
+      "sample_output": "Sample Output",
+      "solution_explanation": "Solve the problem using basic Java logic, loops, and condition checks as applicable.",
+      "test_cases": [
+        {
+          "input": "Sample Input",
+          "expected_output": "Sample Output"
+        },
+        {
+          "input": "Edge Case 1",
+          "expected_output": "Handled"
+        },
+        {
+          "input": "Edge Case 2",
+          "expected_output": "Handled"
+        }
+      ]
+    },
+    {
+      "id": 5,
+      "title": "Special Characters",
+      "question_statement": "Write a Java program to solve: Special Characters.",
+      "difficulty": "easy",
+      "max_score": 100,
+      "sample_input": "Sample Input",
+      "sample_output": "Sample Output",
+      "solution_explanation": "Solve the problem using basic Java logic, loops, and condition checks as applicable.",
+      "test_cases": [
+        {
+          "input": "Sample Input",
+          "expected_output": "Sample Output"
+        },
+        {
+          "input": "Edge Case 1",
+          "expected_output": "Handled"
+        },
+        {
+          "input": "Edge Case 2",
+          "expected_output": "Handled"
+        }
+      ]
+    },
+    {
+      "id": 6,
+      "title": "Count Vowels",
+      "question_statement": "Write a Java program to solve: Count Vowels.",
+      "difficulty": "easy",
+      "max_score": 100,
+      "sample_input": "Sample Input",
+      "sample_output": "Sample Output",
+      "solution_explanation": "Solve the problem using basic Java logic, loops, and condition checks as applicable.",
+      "test_cases": [
+        {
+          "input": "Sample Input",
+          "expected_output": "Sample Output"
+        },
+        {
+          "input": "Edge Case 1",
+          "expected_output": "Handled"
+        },
+        {
+          "input": "Edge Case 2",
+          "expected_output": "Handled"
+        }
+      ]
+    },
+    {
+      "id": 7,
+      "title": "Vowels and Consonants",
+      "question_statement": "Write a Java program to solve: Vowels and Consonants.",
+      "difficulty": "easy",
+      "max_score": 100,
+      "sample_input": "Sample Input",
+      "sample_output": "Sample Output",
+      "solution_explanation": "Solve the problem using basic Java logic, loops, and condition checks as applicable.",
+      "test_cases": [
+        {
+          "input": "Sample Input",
+          "expected_output": "Sample Output"
+        },
+        {
+          "input": "Edge Case 1",
+          "expected_output": "Handled"
+        },
+        {
+          "input": "Edge Case 2",
+          "expected_output": "Handled"
+        }
+      ]
+    },
+    {
+      "id": 8,
+      "title": "Character Search",
+      "question_statement": "Write a Java program to solve: Character Search.",
+      "difficulty": "easy",
+      "max_score": 100,
+      "sample_input": "Sample Input",
+      "sample_output": "Sample Output",
+      "solution_explanation": "Solve the problem using basic Java logic, loops, and condition checks as applicable.",
+      "test_cases": [
+        {
+          "input": "Sample Input",
+          "expected_output": "Sample Output"
+        },
+        {
+          "input": "Edge Case 1",
+          "expected_output": "Handled"
+        },
+        {
+          "input": "Edge Case 2",
+          "expected_output": "Handled"
+        }
+      ]
+    },
+    {
+      "id": 9,
+      "title": "Reverse Alphabetical Sort",
+      "question_statement": "Write a Java program to solve: Reverse Alphabetical Sort.",
+      "difficulty": "easy",
+      "max_score": 100,
+      "sample_input": "Sample Input",
+      "sample_output": "Sample Output",
+      "solution_explanation": "Solve the problem using basic Java logic, loops, and condition checks as applicable.",
+      "test_cases": [
+        {
+          "input": "Sample Input",
+          "expected_output": "Sample Output"
+        },
+        {
+          "input": "Edge Case 1",
+          "expected_output": "Handled"
+        },
+        {
+          "input": "Edge Case 2",
+          "expected_output": "Handled"
+        }
+      ]
+    },
+    {
+      "id": 10,
+      "title": "Remove Vowels",
+      "question_statement": "Write a Java program to solve: Remove Vowels.",
+      "difficulty": "easy",
+      "max_score": 100,
+      "sample_input": "Sample Input",
+      "sample_output": "Sample Output",
+      "solution_explanation": "Solve the problem using basic Java logic, loops, and condition checks as applicable.",
+      "test_cases": [
+        {
+          "input": "Sample Input",
+          "expected_output": "Sample Output"
+        },
+        {
+          "input": "Edge Case 1",
+          "expected_output": "Handled"
+        },
+        {
+          "input": "Edge Case 2",
+          "expected_output": "Handled"
+        }
+      ]
+    },
+    {
+      "id": 11,
+      "title": "Matrix Multiplication",
+      "question_statement": "Write a Java program to solve: Matrix Multiplication.",
+      "difficulty": "easy",
+      "max_score": 100,
+      "sample_input": "Sample Input",
+      "sample_output": "Sample Output",
+      "solution_explanation": "Solve the problem using basic Java logic, loops, and condition checks as applicable.",
+      "test_cases": [
+        {
+          "input": "Sample Input",
+          "expected_output": "Sample Output"
+        },
+        {
+          "input": "Edge Case 1",
+          "expected_output": "Handled"
+        },
+        {
+          "input": "Edge Case 2",
+          "expected_output": "Handled"
+        }
+      ]
+    },
+    {
+      "id": 12,
+      "title": "Matrix Addition",
+      "question_statement": "Write a Java program to solve: Matrix Addition.",
+      "difficulty": "easy",
+      "max_score": 100,
+      "sample_input": "Sample Input",
+      "sample_output": "Sample Output",
+      "solution_explanation": "Solve the problem using basic Java logic, loops, and condition checks as applicable.",
+      "test_cases": [
+        {
+          "input": "Sample Input",
+          "expected_output": "Sample Output"
+        },
+        {
+          "input": "Edge Case 1",
+          "expected_output": "Handled"
+        },
+        {
+          "input": "Edge Case 2",
+          "expected_output": "Handled"
+        }
+      ]
+    },
+    {
+      "id": 13,
+      "title": "Merge Sorted Arrays",
+      "question_statement": "Write a Java program to solve: Merge Sorted Arrays.",
+      "difficulty": "easy",
+      "max_score": 100,
+      "sample_input": "Sample Input",
+      "sample_output": "Sample Output",
+      "solution_explanation": "Solve the problem using basic Java logic, loops, and condition checks as applicable.",
+      "test_cases": [
+        {
+          "input": "Sample Input",
+          "expected_output": "Sample Output"
+        },
+        {
+          "input": "Edge Case 1",
+          "expected_output": "Handled"
+        },
+        {
+          "input": "Edge Case 2",
+          "expected_output": "Handled"
+        }
+      ]
+    },
+    {
+      "id": 14,
+      "title": "Mean Median Mode",
+      "question_statement": "Write a Java program to solve: Mean Median Mode.",
+      "difficulty": "easy",
+      "max_score": 100,
+      "sample_input": "Sample Input",
+      "sample_output": "Sample Output",
+      "solution_explanation": "Solve the problem using basic Java logic, loops, and condition checks as applicable.",
+      "test_cases": [
+        {
+          "input": "Sample Input",
+          "expected_output": "Sample Output"
+        },
+        {
+          "input": "Edge Case 1",
+          "expected_output": "Handled"
+        },
+        {
+          "input": "Edge Case 2",
+          "expected_output": "Handled"
+        }
+      ]
+    },
+    {
+      "id": 15,
+      "title": "Composite Count",
+      "question_statement": "Write a Java program to solve: Composite Count.",
+      "difficulty": "easy",
+      "max_score": 100,
+      "sample_input": "Sample Input",
+      "sample_output": "Sample Output",
+      "solution_explanation": "Solve the problem using basic Java logic, loops, and condition checks as applicable.",
+      "test_cases": [
+        {
+          "input": "Sample Input",
+          "expected_output": "Sample Output"
+        },
+        {
+          "input": "Edge Case 1",
+          "expected_output": "Handled"
+        },
+        {
+          "input": "Edge Case 2",
+          "expected_output": "Handled"
+        }
+      ]
+    },
+    {
+      "id": 16,
+      "title": "Right Triangle Pattern",
+      "question_statement": "Write a Java program to solve: Right Triangle Pattern.",
+      "difficulty": "easy",
+      "max_score": 100,
+      "sample_input": "Sample Input",
+      "sample_output": "Sample Output",
+      "solution_explanation": "Solve the problem using basic Java logic, loops, and condition checks as applicable.",
+      "test_cases": [
+        {
+          "input": "Sample Input",
+          "expected_output": "Sample Output"
+        },
+        {
+          "input": "Edge Case 1",
+          "expected_output": "Handled"
+        },
+        {
+          "input": "Edge Case 2",
+          "expected_output": "Handled"
+        }
+      ]
+    },
+    {
+      "id": 17,
+      "title": "Pascal Triangle",
+      "question_statement": "Write a Java program to solve: Pascal Triangle.",
+      "difficulty": "easy",
+      "max_score": 100,
+      "sample_input": "Sample Input",
+      "sample_output": "Sample Output",
+      "solution_explanation": "Solve the problem using basic Java logic, loops, and condition checks as applicable.",
+      "test_cases": [
+        {
+          "input": "Sample Input",
+          "expected_output": "Sample Output"
+        },
+        {
+          "input": "Edge Case 1",
+          "expected_output": "Handled"
+        },
+        {
+          "input": "Edge Case 2",
+          "expected_output": "Handled"
+        }
+      ]
+    },
+    {
+      "id": 18,
+      "title": "Rectangle Symbol Pattern",
+      "question_statement": "Write a Java program to solve: Rectangle Symbol Pattern.",
+      "difficulty": "easy",
+      "max_score": 100,
+      "sample_input": "Sample Input",
+      "sample_output": "Sample Output",
+      "solution_explanation": "Solve the problem using basic Java logic, loops, and condition checks as applicable.",
+      "test_cases": [
+        {
+          "input": "Sample Input",
+          "expected_output": "Sample Output"
+        },
+        {
+          "input": "Edge Case 1",
+          "expected_output": "Handled"
+        },
+        {
+          "input": "Edge Case 2",
+          "expected_output": "Handled"
+        }
+      ]
+    },
+    {
+      "id": 19,
+      "title": "Number Pattern",
+      "question_statement": "Write a Java program to solve: Number Pattern.",
+      "difficulty": "easy",
+      "max_score": 100,
+      "sample_input": "Sample Input",
+      "sample_output": "Sample Output",
+      "solution_explanation": "Solve the problem using basic Java logic, loops, and condition checks as applicable.",
+      "test_cases": [
+        {
+          "input": "Sample Input",
+          "expected_output": "Sample Output"
+        },
+        {
+          "input": "Edge Case 1",
+          "expected_output": "Handled"
+        },
+        {
+          "input": "Edge Case 2",
+          "expected_output": "Handled"
+        }
+      ]
+    },
+    {
+      "id": 20,
+      "title": "Inverted Pyramid",
+      "question_statement": "Write a Java program to solve: Inverted Pyramid.",
+      "difficulty": "easy",
+      "max_score": 100,
+      "sample_input": "Sample Input",
+      "sample_output": "Sample Output",
+      "solution_explanation": "Solve the problem using basic Java logic, loops, and condition checks as applicable.",
+      "test_cases": [
+        {
+          "input": "Sample Input",
+          "expected_output": "Sample Output"
+        },
+        {
+          "input": "Edge Case 1",
+          "expected_output": "Handled"
+        },
+        {
+          "input": "Edge Case 2",
+          "expected_output": "Handled"
+        }
+      ]
+    },
+    {
+      "id": 21,
+      "title": "Character Pattern",
+      "question_statement": "Write a Java program to solve: Character Pattern.",
+      "difficulty": "easy",
+      "max_score": 100,
+      "sample_input": "Sample Input",
+      "sample_output": "Sample Output",
+      "solution_explanation": "Solve the problem using basic Java logic, loops, and condition checks as applicable.",
+      "test_cases": [
+        {
+          "input": "Sample Input",
+          "expected_output": "Sample Output"
+        },
+        {
+          "input": "Edge Case 1",
+          "expected_output": "Handled"
+        },
+        {
+          "input": "Edge Case 2",
+          "expected_output": "Handled"
+        }
+      ]
+    },
+    {
+      "id": 22,
+      "title": "Hollow Square",
+      "question_statement": "Write a Java program to solve: Hollow Square.",
+      "difficulty": "easy",
+      "max_score": 100,
+      "sample_input": "Sample Input",
+      "sample_output": "Sample Output",
+      "solution_explanation": "Solve the problem using basic Java logic, loops, and condition checks as applicable.",
+      "test_cases": [
+        {
+          "input": "Sample Input",
+          "expected_output": "Sample Output"
+        },
+        {
+          "input": "Edge Case 1",
+          "expected_output": "Handled"
+        },
+        {
+          "input": "Edge Case 2",
+          "expected_output": "Handled"
+        }
+      ]
+    },
+    {
+      "id": 23,
+      "title": "Number Increment Pattern",
+      "question_statement": "Write a Java program to solve: Number Increment Pattern.",
+      "difficulty": "easy",
+      "max_score": 100,
+      "sample_input": "Sample Input",
+      "sample_output": "Sample Output",
+      "solution_explanation": "Solve the problem using basic Java logic, loops, and condition checks as applicable.",
+      "test_cases": [
+        {
+          "input": "Sample Input",
+          "expected_output": "Sample Output"
+        },
+        {
+          "input": "Edge Case 1",
+          "expected_output": "Handled"
+        },
+        {
+          "input": "Edge Case 2",
+          "expected_output": "Handled"
+        }
+      ]
+    },
+    {
+      "id": 24,
+      "title": "Square Number Pattern",
+      "question_statement": "Write a Java program to solve: Square Number Pattern.",
+      "difficulty": "easy",
+      "max_score": 100,
+      "sample_input": "Sample Input",
+      "sample_output": "Sample Output",
+      "solution_explanation": "Solve the problem using basic Java logic, loops, and condition checks as applicable.",
+      "test_cases": [
+        {
+          "input": "Sample Input",
+          "expected_output": "Sample Output"
+        },
+        {
+          "input": "Edge Case 1",
+          "expected_output": "Handled"
+        },
+        {
+          "input": "Edge Case 2",
+          "expected_output": "Handled"
+        }
+      ]
+    },
+    {
+      "id": 25,
+      "title": "Diamond Numbers",
+      "question_statement": "Write a Java program to solve: Diamond Numbers.",
+      "difficulty": "easy",
+      "max_score": 100,
+      "sample_input": "Sample Input",
+      "sample_output": "Sample Output",
+      "solution_explanation": "Solve the problem using basic Java logic, loops, and condition checks as applicable.",
+      "test_cases": [
+        {
+          "input": "Sample Input",
+          "expected_output": "Sample Output"
+        },
+        {
+          "input": "Edge Case 1",
+          "expected_output": "Handled"
+        },
+        {
+          "input": "Edge Case 2",
+          "expected_output": "Handled"
+        }
+      ]
+    },
+    {
+      "id": 26,
+      "title": "Hollow Dollar Square",
+      "question_statement": "Write a Java program to solve: Hollow Dollar Square.",
+      "difficulty": "easy",
+      "max_score": 100,
+      "sample_input": "Sample Input",
+      "sample_output": "Sample Output",
+      "solution_explanation": "Solve the problem using basic Java logic, loops, and condition checks as applicable.",
+      "test_cases": [
+        {
+          "input": "Sample Input",
+          "expected_output": "Sample Output"
+        },
+        {
+          "input": "Edge Case 1",
+          "expected_output": "Handled"
+        },
+        {
+          "input": "Edge Case 2",
+          "expected_output": "Handled"
+        }
+      ]
+    },
+    {
+      "id": 27,
+      "title": "Inverted Pyramid",
+      "question_statement": "Write a Java program to solve: Inverted Pyramid.",
+      "difficulty": "easy",
+      "max_score": 100,
+      "sample_input": "Sample Input",
+      "sample_output": "Sample Output",
+      "solution_explanation": "Solve the problem using basic Java logic, loops, and condition checks as applicable.",
+      "test_cases": [
+        {
+          "input": "Sample Input",
+          "expected_output": "Sample Output"
+        },
+        {
+          "input": "Edge Case 1",
+          "expected_output": "Handled"
+        },
+        {
+          "input": "Edge Case 2",
+          "expected_output": "Handled"
+        }
+      ]
+    },
+    {
+      "id": 28,
+      "title": "Reverse Number",
+      "question_statement": "Write a Java program to solve: Reverse Number.",
+      "difficulty": "easy",
+      "max_score": 100,
+      "sample_input": "Sample Input",
+      "sample_output": "Sample Output",
+      "solution_explanation": "Solve the problem using basic Java logic, loops, and condition checks as applicable.",
+      "test_cases": [
+        {
+          "input": "Sample Input",
+          "expected_output": "Sample Output"
+        },
+        {
+          "input": "Edge Case 1",
+          "expected_output": "Handled"
+        },
+        {
+          "input": "Edge Case 2",
+          "expected_output": "Handled"
+        }
+      ]
+    },
+    {
+      "id": 29,
+      "title": "Decimal to Binary Reverse",
+      "question_statement": "Write a Java program to solve: Decimal to Binary Reverse.",
+      "difficulty": "easy",
+      "max_score": 100,
+      "sample_input": "Sample Input",
+      "sample_output": "Sample Output",
+      "solution_explanation": "Solve the problem using basic Java logic, loops, and condition checks as applicable.",
+      "test_cases": [
+        {
+          "input": "Sample Input",
+          "expected_output": "Sample Output"
+        },
+        {
+          "input": "Edge Case 1",
+          "expected_output": "Handled"
+        },
+        {
+          "input": "Edge Case 2",
+          "expected_output": "Handled"
+        }
+      ]
+    },
+    {
+      "id": 30,
+      "title": "Voting Eligibility",
+      "question_statement": "Write a Java program to solve: Voting Eligibility.",
+      "difficulty": "easy",
+      "max_score": 100,
+      "sample_input": "Sample Input",
+      "sample_output": "Sample Output",
+      "solution_explanation": "Solve the problem using basic Java logic, loops, and condition checks as applicable.",
+      "test_cases": [
+        {
+          "input": "Sample Input",
+          "expected_output": "Sample Output"
+        },
+        {
+          "input": "Edge Case 1",
+          "expected_output": "Handled"
+        },
+        {
+          "input": "Edge Case 2",
+          "expected_output": "Handled"
+        }
+      ]
+    },
+    {
+      "id": 31,
+      "title": "LCM and GCD",
+      "question_statement": "Write a Java program to solve: LCM and GCD.",
+      "difficulty": "easy",
+      "max_score": 100,
+      "sample_input": "Sample Input",
+      "sample_output": "Sample Output",
+      "solution_explanation": "Solve the problem using basic Java logic, loops, and condition checks as applicable.",
+      "test_cases": [
+        {
+          "input": "Sample Input",
+          "expected_output": "Sample Output"
+        },
+        {
+          "input": "Edge Case 1",
+          "expected_output": "Handled"
+        },
+        {
+          "input": "Edge Case 2",
+          "expected_output": "Handled"
+        }
+      ]
+    },
+    {
+      "id": 32,
+      "title": "Simple Interest",
+      "question_statement": "Write a Java program to solve: Simple Interest.",
+      "difficulty": "easy",
+      "max_score": 100,
+      "sample_input": "Sample Input",
+      "sample_output": "Sample Output",
+      "solution_explanation": "Solve the problem using basic Java logic, loops, and condition checks as applicable.",
+      "test_cases": [
+        {
+          "input": "Sample Input",
+          "expected_output": "Sample Output"
+        },
+        {
+          "input": "Edge Case 1",
+          "expected_output": "Handled"
+        },
+        {
+          "input": "Edge Case 2",
+          "expected_output": "Handled"
+        }
+      ]
+    },
+    {
+      "id": 33,
+      "title": "Fibonacci Series",
+      "question_statement": "Write a Java program to solve: Fibonacci Series.",
+      "difficulty": "easy",
+      "max_score": 100,
+      "sample_input": "Sample Input",
+      "sample_output": "Sample Output",
+      "solution_explanation": "Solve the problem using basic Java logic, loops, and condition checks as applicable.",
+      "test_cases": [
+        {
+          "input": "Sample Input",
+          "expected_output": "Sample Output"
+        },
+        {
+          "input": "Edge Case 1",
+          "expected_output": "Handled"
+        },
+        {
+          "input": "Edge Case 2",
+          "expected_output": "Handled"
+        }
+      ]
+    },
+    {
+      "id": 34,
+      "title": "Even Index Fibonacci Sum",
+      "question_statement": "Write a Java program to solve: Even Index Fibonacci Sum.",
+      "difficulty": "easy",
+      "max_score": 100,
+      "sample_input": "Sample Input",
+      "sample_output": "Sample Output",
+      "solution_explanation": "Solve the problem using basic Java logic, loops, and condition checks as applicable.",
+      "test_cases": [
+        {
+          "input": "Sample Input",
+          "expected_output": "Sample Output"
+        },
+        {
+          "input": "Edge Case 1",
+          "expected_output": "Handled"
+        },
+        {
+          "input": "Edge Case 2",
+          "expected_output": "Handled"
+        }
+      ]
+    },
+    {
+      "id": 35,
+      "title": "Skip Numbers",
+      "question_statement": "Write a Java program to solve: Skip Numbers.",
+      "difficulty": "easy",
+      "max_score": 100,
+      "sample_input": "Sample Input",
+      "sample_output": "Sample Output",
+      "solution_explanation": "Solve the problem using basic Java logic, loops, and condition checks as applicable.",
+      "test_cases": [
+        {
+          "input": "Sample Input",
+          "expected_output": "Sample Output"
+        },
+        {
+          "input": "Edge Case 1",
+          "expected_output": "Handled"
+        },
+        {
+          "input": "Edge Case 2",
+          "expected_output": "Handled"
+        }
+      ]
+    },
+    {
+      "id": 36,
+      "title": "Composite Range",
+      "question_statement": "Write a Java program to solve: Composite Range.",
+      "difficulty": "easy",
+      "max_score": 100,
+      "sample_input": "Sample Input",
+      "sample_output": "Sample Output",
+      "solution_explanation": "Solve the problem using basic Java logic, loops, and condition checks as applicable.",
+      "test_cases": [
+        {
+          "input": "Sample Input",
+          "expected_output": "Sample Output"
+        },
+        {
+          "input": "Edge Case 1",
+          "expected_output": "Handled"
+        },
+        {
+          "input": "Edge Case 2",
+          "expected_output": "Handled"
+        }
+      ]
+    },
+    {
+      "id": 37,
+      "title": "Factorial",
+      "question_statement": "Write a Java program to solve: Factorial.",
+      "difficulty": "easy",
+      "max_score": 100,
+      "sample_input": "Sample Input",
+      "sample_output": "Sample Output",
+      "solution_explanation": "Solve the problem using basic Java logic, loops, and condition checks as applicable.",
+      "test_cases": [
+        {
+          "input": "Sample Input",
+          "expected_output": "Sample Output"
+        },
+        {
+          "input": "Edge Case 1",
+          "expected_output": "Handled"
+        },
+        {
+          "input": "Edge Case 2",
+          "expected_output": "Handled"
+        }
+      ]
+    },
+    {
+      "id": 38,
+      "title": "Leap Year",
+      "question_statement": "Write a Java program to solve: Leap Year.",
+      "difficulty": "easy",
+      "max_score": 100,
+      "sample_input": "Sample Input",
+      "sample_output": "Sample Output",
+      "solution_explanation": "Solve the problem using basic Java logic, loops, and condition checks as applicable.",
+      "test_cases": [
+        {
+          "input": "Sample Input",
+          "expected_output": "Sample Output"
+        },
+        {
+          "input": "Edge Case 1",
+          "expected_output": "Handled"
+        },
+        {
+          "input": "Edge Case 2",
+          "expected_output": "Handled"
+        }
+      ]
+    },
+    {
+      "id": 39,
+      "title": "Factor Count",
+      "question_statement": "Write a Java program to solve: Factor Count.",
+      "difficulty": "easy",
+      "max_score": 100,
+      "sample_input": "Sample Input",
+      "sample_output": "Sample Output",
+      "solution_explanation": "Solve the problem using basic Java logic, loops, and condition checks as applicable.",
+      "test_cases": [
+        {
+          "input": "Sample Input",
+          "expected_output": "Sample Output"
+        },
+        {
+          "input": "Edge Case 1",
+          "expected_output": "Handled"
+        },
+        {
+          "input": "Edge Case 2",
+          "expected_output": "Handled"
+        }
+      ]
+    },
+    {
+      "id": 40,
+      "title": "Perfect Number",
+      "question_statement": "Write a Java program to solve: Perfect Number.",
+      "difficulty": "easy",
+      "max_score": 100,
+      "sample_input": "Sample Input",
+      "sample_output": "Sample Output",
+      "solution_explanation": "Solve the problem using basic Java logic, loops, and condition checks as applicable.",
+      "test_cases": [
+        {
+          "input": "Sample Input",
+          "expected_output": "Sample Output"
+        },
+        {
+          "input": "Edge Case 1",
+          "expected_output": "Handled"
+        },
+        {
+          "input": "Edge Case 2",
+          "expected_output": "Handled"
+        }
+      ]
+    },
+    {
+      "id": 41,
+      "title": "Square and Cube",
+      "question_statement": "Write a Java program to solve: Square and Cube.",
+      "difficulty": "easy",
+      "max_score": 100,
+      "sample_input": "Sample Input",
+      "sample_output": "Sample Output",
+      "solution_explanation": "Solve the problem using basic Java logic, loops, and condition checks as applicable.",
+      "test_cases": [
+        {
+          "input": "Sample Input",
+          "expected_output": "Sample Output"
+        },
+        {
+          "input": "Edge Case 1",
+          "expected_output": "Handled"
+        },
+        {
+          "input": "Edge Case 2",
+          "expected_output": "Handled"
+        }
+      ]
+    },
+    {
+      "id": 42,
+      "title": "Nth Odd Number",
+      "question_statement": "Write a Java program to solve: Nth Odd Number.",
+      "difficulty": "easy",
+      "max_score": 100,
+      "sample_input": "Sample Input",
+      "sample_output": "Sample Output",
+      "solution_explanation": "Solve the problem using basic Java logic, loops, and condition checks as applicable.",
+      "test_cases": [
+        {
+          "input": "Sample Input",
+          "expected_output": "Sample Output"
+        },
+        {
+          "input": "Edge Case 1",
+          "expected_output": "Handled"
+        },
+        {
+          "input": "Edge Case 2",
+          "expected_output": "Handled"
+        }
+      ]
+    },
+    {
+      "id": 43,
+      "title": "Frequency Count",
+      "question_statement": "Write a Java program to solve: Frequency Count.",
+      "difficulty": "easy",
+      "max_score": 100,
+      "sample_input": "Sample Input",
+      "sample_output": "Sample Output",
+      "solution_explanation": "Solve the problem using basic Java logic, loops, and condition checks as applicable.",
+      "test_cases": [
+        {
+          "input": "Sample Input",
+          "expected_output": "Sample Output"
+        },
+        {
+          "input": "Edge Case 1",
+          "expected_output": "Handled"
+        },
+        {
+          "input": "Edge Case 2",
+          "expected_output": "Handled"
+        }
+      ]
+    },
+    {
+      "id": 44,
+      "title": "Armstrong Number",
+      "question_statement": "Write a Java program to solve: Armstrong Number.",
+      "difficulty": "easy",
+      "max_score": 100,
+      "sample_input": "Sample Input",
+      "sample_output": "Sample Output",
+      "solution_explanation": "Solve the problem using basic Java logic, loops, and condition checks as applicable.",
+      "test_cases": [
+        {
+          "input": "Sample Input",
+          "expected_output": "Sample Output"
+        },
+        {
+          "input": "Edge Case 1",
+          "expected_output": "Handled"
+        },
+        {
+          "input": "Edge Case 2",
+          "expected_output": "Handled"
+        }
+      ]
+    },
+    {
+      "id": 45,
+      "title": "Digit Sum",
+      "question_statement": "Write a Java program to solve: Digit Sum.",
+      "difficulty": "easy",
+      "max_score": 100,
+      "sample_input": "Sample Input",
+      "sample_output": "Sample Output",
+      "solution_explanation": "Solve the problem using basic Java logic, loops, and condition checks as applicable.",
+      "test_cases": [
+        {
+          "input": "Sample Input",
+          "expected_output": "Sample Output"
+        },
+        {
+          "input": "Edge Case 1",
+          "expected_output": "Handled"
+        },
+        {
+          "input": "Edge Case 2",
+          "expected_output": "Handled"
+        }
+      ]
+    },
+    {
+      "id": 46,
+      "title": "Square Root",
+      "question_statement": "Write a Java program to solve: Square Root.",
+      "difficulty": "easy",
+      "max_score": 100,
+      "sample_input": "Sample Input",
+      "sample_output": "Sample Output",
+      "solution_explanation": "Solve the problem using basic Java logic, loops, and condition checks as applicable.",
+      "test_cases": [
+        {
+          "input": "Sample Input",
+          "expected_output": "Sample Output"
+        },
+        {
+          "input": "Edge Case 1",
+          "expected_output": "Handled"
+        },
+        {
+          "input": "Edge Case 2",
+          "expected_output": "Handled"
+        }
+      ]
+    },
+    {
+      "id": 47,
+      "title": "Power of Three",
+      "question_statement": "Write a Java program to solve: Power of Three.",
+      "difficulty": "easy",
+      "max_score": 100,
+      "sample_input": "Sample Input",
+      "sample_output": "Sample Output",
+      "solution_explanation": "Solve the problem using basic Java logic, loops, and condition checks as applicable.",
+      "test_cases": [
+        {
+          "input": "Sample Input",
+          "expected_output": "Sample Output"
+        },
+        {
+          "input": "Edge Case 1",
+          "expected_output": "Handled"
+        },
+        {
+          "input": "Edge Case 2",
+          "expected_output": "Handled"
+        }
+      ]
+    },
+    {
+      "id": 48,
+      "title": "Most Frequent Word",
+      "question_statement": "Write a Java program to solve: Most Frequent Word.",
+      "difficulty": "easy",
+      "max_score": 100,
+      "sample_input": "Sample Input",
+      "sample_output": "Sample Output",
+      "solution_explanation": "Solve the problem using basic Java logic, loops, and condition checks as applicable.",
+      "test_cases": [
+        {
+          "input": "Sample Input",
+          "expected_output": "Sample Output"
+        },
+        {
+          "input": "Edge Case 1",
+          "expected_output": "Handled"
+        },
+        {
+          "input": "Edge Case 2",
+          "expected_output": "Handled"
+        }
+      ]
+    },
+    {
+      "id": 49,
+      "title": "Duplicate Zeros",
+      "question_statement": "Write a Java program to solve: Duplicate Zeros.",
+      "difficulty": "easy",
+      "max_score": 100,
+      "sample_input": "Sample Input",
+      "sample_output": "Sample Output",
+      "solution_explanation": "Solve the problem using basic Java logic, loops, and condition checks as applicable.",
+      "test_cases": [
+        {
+          "input": "Sample Input",
+          "expected_output": "Sample Output"
+        },
+        {
+          "input": "Edge Case 1",
+          "expected_output": "Handled"
+        },
+        {
+          "input": "Edge Case 2",
+          "expected_output": "Handled"
+        }
+      ]
+    },
+    {
+      "id": 50,
+      "title": "Missing Number",
+      "question_statement": "Write a Java program to solve: Missing Number.",
+      "difficulty": "easy",
+      "max_score": 100,
+      "sample_input": "Sample Input",
+      "sample_output": "Sample Output",
+      "solution_explanation": "Solve the problem using basic Java logic, loops, and condition checks as applicable.",
+      "test_cases": [
+        {
+          "input": "Sample Input",
+          "expected_output": "Sample Output"
+        },
+        {
+          "input": "Edge Case 1",
+          "expected_output": "Handled"
+        },
+        {
+          "input": "Edge Case 2",
+          "expected_output": "Handled"
+        }
+      ]
+    },
+    {
+      "id": 51,
+      "title": "Maximum Subarray Sum",
+      "question_statement": "Write a Java program to solve: Maximum Subarray Sum.",
+      "difficulty": "easy",
+      "max_score": 100,
+      "sample_input": "Sample Input",
+      "sample_output": "Sample Output",
+      "solution_explanation": "Solve the problem using basic Java logic, loops, and condition checks as applicable.",
+      "test_cases": [
+        {
+          "input": "Sample Input",
+          "expected_output": "Sample Output"
+        },
+        {
+          "input": "Edge Case 1",
+          "expected_output": "Handled"
+        },
+        {
+          "input": "Edge Case 2",
+          "expected_output": "Handled"
+        }
+      ]
+    },
+    {
+      "id": 52,
+      "title": "Multiplication Table",
+      "question_statement": "Write a Java program to solve: Multiplication Table.",
+      "difficulty": "easy",
+      "max_score": 100,
+      "sample_input": "Sample Input",
+      "sample_output": "Sample Output",
+      "solution_explanation": "Solve the problem using basic Java logic, loops, and condition checks as applicable.",
+      "test_cases": [
+        {
+          "input": "Sample Input",
+          "expected_output": "Sample Output"
+        },
+        {
+          "input": "Edge Case 1",
+          "expected_output": "Handled"
+        },
+        {
+          "input": "Edge Case 2",
+          "expected_output": "Handled"
+        }
+      ]
+    },
+    {
+      "id": 53,
+      "title": "Multithreading Join",
+      "question_statement": "Write a Java program to solve: Multithreading Join.",
+      "difficulty": "easy",
+      "max_score": 100,
+      "sample_input": "Sample Input",
+      "sample_output": "Sample Output",
+      "solution_explanation": "Solve the problem using basic Java logic, loops, and condition checks as applicable.",
+      "test_cases": [
+        {
+          "input": "Sample Input",
+          "expected_output": "Sample Output"
+        },
+        {
+          "input": "Edge Case 1",
+          "expected_output": "Handled"
+        },
+        {
+          "input": "Edge Case 2",
+          "expected_output": "Handled"
+        }
+      ]
+    },
+    {
+      "id": 54,
+      "title": "Menu Program",
+      "question_statement": "Write a Java program to solve: Menu Program.",
+      "difficulty": "easy",
+      "max_score": 100,
+      "sample_input": "Sample Input",
+      "sample_output": "Sample Output",
+      "solution_explanation": "Solve the problem using basic Java logic, loops, and condition checks as applicable.",
+      "test_cases": [
+        {
+          "input": "Sample Input",
+          "expected_output": "Sample Output"
+        },
+        {
+          "input": "Edge Case 1",
+          "expected_output": "Handled"
+        },
+        {
+          "input": "Edge Case 2",
+          "expected_output": "Handled"
+        }
+      ]
+    },
+    {
+      "id": 55,
+      "title": "Generics Sort",
+      "question_statement": "Write a Java program to solve: Generics Sort.",
+      "difficulty": "easy",
+      "max_score": 100,
+      "sample_input": "Sample Input",
+      "sample_output": "Sample Output",
+      "solution_explanation": "Solve the problem using basic Java logic, loops, and condition checks as applicable.",
+      "test_cases": [
+        {
+          "input": "Sample Input",
+          "expected_output": "Sample Output"
+        },
+        {
+          "input": "Edge Case 1",
+          "expected_output": "Handled"
+        },
+        {
+          "input": "Edge Case 2",
+          "expected_output": "Handled"
+        }
+      ]
+    },
+    {
+      "id": 56,
+      "title": "Method Overloading",
+      "question_statement": "Write a Java program to solve: Method Overloading.",
+      "difficulty": "easy",
+      "max_score": 100,
+      "sample_input": "Sample Input",
+      "sample_output": "Sample Output",
+      "solution_explanation": "Solve the problem using basic Java logic, loops, and condition checks as applicable.",
+      "test_cases": [
+        {
+          "input": "Sample Input",
+          "expected_output": "Sample Output"
+        },
+        {
+          "input": "Edge Case 1",
+          "expected_output": "Handled"
+        },
+        {
+          "input": "Edge Case 2",
+          "expected_output": "Handled"
+        }
+      ]
+    },
+    {
+      "id": 57,
+      "title": "Word Count HashMap",
+      "question_statement": "Write a Java program to solve: Word Count HashMap.",
+      "difficulty": "easy",
+      "max_score": 100,
+      "sample_input": "Sample Input",
+      "sample_output": "Sample Output",
+      "solution_explanation": "Solve the problem using basic Java logic, loops, and condition checks as applicable.",
+      "test_cases": [
+        {
+          "input": "Sample Input",
+          "expected_output": "Sample Output"
+        },
+        {
+          "input": "Edge Case 1",
+          "expected_output": "Handled"
+        },
+        {
+          "input": "Edge Case 2",
+          "expected_output": "Handled"
+        }
+      ]
+    },
+    {
+      "id": 58,
+      "title": "Read Excel",
+      "question_statement": "Write a Java program to solve: Read Excel.",
+      "difficulty": "easy",
+      "max_score": 100,
+      "sample_input": "Sample Input",
+      "sample_output": "Sample Output",
+      "solution_explanation": "Solve the problem using basic Java logic, loops, and condition checks as applicable.",
+      "test_cases": [
+        {
+          "input": "Sample Input",
+          "expected_output": "Sample Output"
+        },
+        {
+          "input": "Edge Case 1",
+          "expected_output": "Handled"
+        },
+        {
+          "input": "Edge Case 2",
+          "expected_output": "Handled"
+        }
+      ]
+    },
+    {
+      "id": 59,
+      "title": "Sort HashMap",
+      "question_statement": "Write a Java program to solve: Sort HashMap.",
+      "difficulty": "easy",
+      "max_score": 100,
+      "sample_input": "Sample Input",
+      "sample_output": "Sample Output",
+      "solution_explanation": "Solve the problem using basic Java logic, loops, and condition checks as applicable.",
+      "test_cases": [
+        {
+          "input": "Sample Input",
+          "expected_output": "Sample Output"
+        },
+        {
+          "input": "Edge Case 1",
+          "expected_output": "Handled"
+        },
+        {
+          "input": "Edge Case 2",
+          "expected_output": "Handled"
+        }
+      ]
+    },
+    {
+      "id": 60,
+      "title": "Distinct Characters",
+      "question_statement": "Write a Java program to solve: Distinct Characters.",
+      "difficulty": "easy",
+      "max_score": 100,
+      "sample_input": "Sample Input",
+      "sample_output": "Sample Output",
+      "solution_explanation": "Solve the problem using basic Java logic, loops, and condition checks as applicable.",
+      "test_cases": [
+        {
+          "input": "Sample Input",
+          "expected_output": "Sample Output"
+        },
+        {
+          "input": "Edge Case 1",
+          "expected_output": "Handled"
+        },
+        {
+          "input": "Edge Case 2",
+          "expected_output": "Handled"
+        }
+      ]
+    }
+  ]
+}

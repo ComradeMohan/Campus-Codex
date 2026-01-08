@@ -2,7 +2,7 @@
 'use client';
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { BarChart3, Users, Settings, BookOpen, UserCog, Loader2, SlidersHorizontal, ExternalLink, Send } from "lucide-react";
+import { BarChart3, Users, Settings, BookOpen, UserCog, Loader2, SlidersHorizontal, ExternalLink, Send, Database } from "lucide-react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/contexts/AuthContext";
@@ -75,6 +75,19 @@ export default function AdminDashboardPage() {
           <p>This is your central hub for overseeing all aspects of the Campus Codex platform. Use the sections below to navigate to different management areas.</p>
         </CardContent>
       </Card>
+      
+      {/* Temporary Seeding Utility Button */}
+       <Card className="border-amber-500 bg-amber-50">
+        <CardHeader>
+            <CardTitle className="flex items-center text-amber-800"><Database className="mr-2 h-5 w-5" /> Temporary DB Seed Utility</CardTitle>
+        </CardHeader>
+        <CardContent>
+            <p className="text-sm text-amber-700 mb-3">Click the button below to seed the database with the provided Java questions. This is a one-time operation.</p>
+            <Button asChild variant="secondary">
+                <Link href="/admin/seed">Go to Seeding Page</Link>
+            </Button>
+        </CardContent>
+       </Card>
 
       <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
         {dashboardItems.sort((a,b) => a.title.localeCompare(b.title)).map((item) => (
