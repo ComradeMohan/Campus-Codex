@@ -1,6 +1,6 @@
 
 import type { NavItem, FeatureItem } from '@/types';
-import { Code, FileText, BarChart3, Settings, Linkedin, Github, BookOpen, ShieldCheck, Briefcase, ExternalLink } from 'lucide-react';
+import { Code, FileText, BarChart3, Settings, Linkedin, Github, BookOpen, ShieldCheck, Briefcase, ExternalLink, ScrollText } from 'lucide-react';
 
 export const siteConfig = {
   name: "Campus Codex",
@@ -17,6 +17,13 @@ export const siteConfig = {
     { label: "Features", href: "/#features" },
     { label: "Register", href: "/register/student" }, // Default to student registration
     { label: "Login", href: "/login" },
+  ] as NavItem[],
+  footerNavItems: [
+    { label: "Contact Us", href: "/contact-us" },
+    { label: "Privacy Policy", href: "/privacy-policy" },
+    { label: "Terms & Conditions", href: "/terms-and-conditions" },
+    { label: "Disclaimer", href: "/disclaimer" },
+    { label: "Takedown Policy", href: "/takedown-policy" },
   ] as NavItem[],
   featureItems: [
     {

@@ -19,7 +19,7 @@ export function Footer() {
           <div>
             <h3 className="text-lg font-semibold mb-4 font-headline">Quick Links</h3>
             <ul className="space-y-2">
-              {siteConfig.navItems.map((item) => (
+              {siteConfig.footerNavItems.map((item) => (
                 <li key={item.label}>
                   <Button variant="link" asChild className="p-0 h-auto text-muted-foreground hover:text-primary">
                     <Link href={item.href}>{item.label}</Link>
