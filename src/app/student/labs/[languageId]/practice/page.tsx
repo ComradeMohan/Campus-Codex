@@ -116,30 +116,19 @@ export default function StudentPracticePage() {
          toast({ title: "Question Not Found", description: `The requested question could not be loaded for ${langData.name}.`, variant: "destructive" });
       }else {
         let totalScoreCalc = 0;
-        // If it's single question mode, total score is just that question's score for progress bar context (or 0 if no progress bar needed)
-        // For multiple questions, sum them up.
-        if (!questionIdFromQuery) {
-            const allQuestionsForLanguageRef = collection(db, 'colleges', userProfile.collegeId, 'languages', languageId, 'questions');
-            const allQuestionsSnap = await getDocs(allQuestionsForLanguageRef);
-            allQuestionsSnap.forEach(qDoc => {
-                const question = qDoc.data() as QuestionType;
-                totalScoreCalc += question.maxScore || 100;
-            });
-        } else if (fetchedQuestions.length > 0) {
-             // If single question mode, total score for the language progress bar still refers to all questions in that language.
-            const allQuestionsForLanguageRef = collection(db, 'colleges', userProfile.collegeId, 'languages', languageId, 'questions');
-            const allQuestionsSnap = await getDocs(allQuestionsForLanguageRef);
-            allQuestionsSnap.forEach(qDoc => {
-                const question = qDoc.data() as QuestionType;
-                totalScoreCalc += question.maxScore || 100;
-            });
-        }
+        // If single question mode, total score for the language progress bar still refers to all questions in that language.
+        const allQuestionsForLanguageRef = collection(db, 'colleges', userProfile.collegeId, 'languages', languageId, 'questions');
+        const allQuestionsSnap = await getDocs(allQuestionsForLanguageRef);
+        allQuestionsSnap.forEach(qDoc => {
+            const question = qDoc.data() as QuestionType;
+            totalScoreCalc += question.maxScore || 100;
+        });
         setTotalPossibleLanguageScore(totalScoreCalc);
       }
       setQuestions(fetchedQuestions);
       setCurrentQuestionIndex(0); // Always start at the first (or only) question
 
-      // For now, progress is always tracked at the language level. Course-specific progress is a future enhancement.
+      // For now, progress is always tracked at the language level. Course-specific progress is future.
       const enrollmentRef = doc(db, 'users', userProfile.uid, 'enrolledLanguages', languageId);
       const enrollmentSnap = await getDoc(enrollmentRef);
       if (enrollmentSnap.exists()) {
@@ -229,7 +218,7 @@ export default function StudentPracticePage() {
         setExecutionError(null);
         setCompileError(null);
     } else if (language && questions.length === 0 && !isLoadingPageData) {
-        const defaultNoQCode = `// No questions available for ${language.name} yet.\n`;
+        const defaultNoQCode = `# No questions available for ${language.name} yet.\n`;
         studentCodeRef.current = defaultNoQCode;
         setEditorDisplayCode(defaultNoQCode);
         setOutput('');
@@ -254,7 +243,7 @@ export default function StudentPracticePage() {
         return;
     }
     setIsExecutingCode(true);
-    setOutput(`Executing your code (${executionType} mode) using ${languageForEditorAndExecution.name}...\n`);
+    setOutput(`Executing your code (${executionType} mode) using ${languageForEditorAndExecution.name}...`);
     setTestResults([]);
     setExecutionError(null);
     setCompileError(null);
@@ -279,24 +268,25 @@ export default function StudentPracticePage() {
             body: JSON.stringify(payload),
         });
 
+        const result = await response.json();
+        
         if (!response.ok) {
-            const errorData = await response.json().catch(() => ({ message: "Failed to process the request. Server returned an error." }));
-            const serverErrorMessage = errorData.executionError || errorData.message || `Server error: ${response.status}`;
+            const serverErrorMessage = result.executionError || result.compileError || result.message || `Server error: ${response.status}`;
             throw new Error(serverErrorMessage);
         }
-
-        const result = await response.json();
 
         setOutput(result.generalOutput || '');
         setTestResults(result.testCaseResults || []);
         if (result.compileError) {
           setCompileError(result.compileError);
+          setOutput(''); // Clear general output if there's a compile error
           if (executionType === 'run') {
             toast({ title: "Compilation Error", description: "Please fix the errors in your code.", variant: "destructive"});
           }
         }
         if (result.executionError) {
           setExecutionError(result.executionError);
+          setOutput(''); // Clear general output if there's a runtime error
            if (executionType === 'run' && !result.compileError) {
             toast({ title: "Runtime Error", description: "Your code encountered an error during sample execution.", variant: "destructive"});
           }
@@ -398,8 +388,9 @@ export default function StudentPracticePage() {
     } catch (error: any) {
         console.error(`Error ${executionType}ing code:`, error);
         const errorMessage = error.message || `Failed to ${executionType} code.`;
-        setOutput(prev => prev + `\nClient-side error during execution: ${errorMessage}`);
+        setCompileError(null);
         setExecutionError(`Client-side error: ${errorMessage}`);
+        setOutput('');
         toast({ title: `${executionType === 'run' ? 'Run' : 'Submission'} Error`, description: errorMessage, variant: "destructive" });
     } finally {
         setIsExecutingCode(false);
@@ -658,12 +649,24 @@ export default function StudentPracticePage() {
                         <pre className="whitespace-pre-wrap font-mono text-xs">{executionError}</pre>
                     </div>
                 )}
-                <pre
-                  className="font-mono text-xs md:text-sm bg-muted/50 p-3 md:p-4 rounded-md min-h-[100px] max-h-[200px] md:min-h-[150px] md:max-h-[300px] overflow-y-auto whitespace-pre-wrap"
-                  aria-live="polite"
-                >
-                  {output || "Code output and test results will appear here..."}
-                </pre>
+                
+                {isExecutingCode && !compileError && !executionError && (
+                     <pre className="font-mono text-xs md:text-sm bg-muted/50 p-3 md:p-4 rounded-md min-h-[100px] max-h-[200px] md:min-h-[150px] md:max-h-[300px] overflow-y-auto whitespace-pre-wrap">
+                        {output || "Executing..."}
+                     </pre>
+                )}
+
+                {!isExecutingCode && !compileError && !executionError && output && (
+                     <pre className="font-mono text-xs md:text-sm bg-muted/50 p-3 md:p-4 rounded-md min-h-[100px] max-h-[200px] md:min-h-[150px] md:max-h-[300px] overflow-y-auto whitespace-pre-wrap">
+                        {output}
+                     </pre>
+                )}
+
+                {!isExecutingCode && !compileError && !executionError && !output && testResults.length === 0 && (
+                     <pre className="font-mono text-xs md:text-sm bg-muted/50 p-3 md:p-4 rounded-md min-h-[100px] md:min-h-[150px]">
+                        Code output and test results will appear here...
+                     </pre>
+                )}
 
                 {testResults.length > 0 && !compileError && (
                   <div className="mt-3 space-y-2 md:space-y-3 max-h-[200px] md:max-h-[250px] overflow-y-auto">
@@ -681,8 +684,8 @@ export default function StudentPracticePage() {
                         <div className="text-xs space-y-1">
                           <div><strong className="text-muted-foreground">Input:</strong> <pre className="inline whitespace-pre-wrap font-mono bg-muted/30 p-0.5 md:p-1 rounded text-xs">{result.input}</pre></div>
                           <div><strong className="text-muted-foreground">Expected:</strong> <pre className="inline whitespace-pre-wrap font-mono bg-muted/30 p-0.5 md:p-1 rounded text-xs">{result.expectedOutput}</pre></div>
-                           {!result.passed && <div><strong className="text-muted-foreground">Actual:</strong> <pre className="inline whitespace-pre-wrap font-mono bg-muted/30 p-0.5 md:p-1 rounded text-xs">{result.actualOutput}</pre></div>}
-                           {result.error && <div className="text-red-600"><strong className="text-muted-foreground">Error Detail:</strong> <pre className="inline whitespace-pre-wrap font-mono bg-muted/30 p-0.5 md:p-1 rounded text-xs">{result.error}</pre></div>}
+                           {!result.passed && <div><strong className="text-muted-foreground">Actual:</strong> <pre className="inline whitespace-pre-wrap font-mono bg-muted/30 p-0.5 md:p-1 rounded text-xs">{result.actualOutput || '"" (No output)'}</pre></div>}
+                           {result.error && !result.passed && <div className="text-red-600"><strong className="text-muted-foreground">Error Detail:</strong> <pre className="inline whitespace-pre-wrap font-mono bg-muted/30 p-0.5 md:p-1 rounded text-xs">{result.error}</pre></div>}
                         </div>
                       </Card>
                     ))}
@@ -723,4 +726,3 @@ export default function StudentPracticePage() {
   );
 }
 
-    

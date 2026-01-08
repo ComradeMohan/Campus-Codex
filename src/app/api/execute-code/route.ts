@@ -237,16 +237,16 @@ async function executeWithMockAPI(body: ExecuteCodeRequestBody): Promise<Execute
   const { compileError: simulatedCompileError, executionError: simulatedExecutionError } = simulateErrors(code, language);
 
   if (simulatedCompileError) {
-    generalOutput += `Compilation failed.\n${simulatedCompileError}\n`;
+    generalOutput += `Compilation failed.\n`;
     return { generalOutput, testCaseResults: [], compileError: simulatedCompileError };
   }
   generalOutput += `Code compiled/interpreted successfully (simulation).\n`;
 
   if (simulatedExecutionError && executionType === 'run') {
-      generalOutput += `Execution encountered an error during sample run.\n${simulatedExecutionError}\n`;
+      generalOutput += `Execution encountered an error during sample run.\n`;
       currentTestResults.push({
         testCaseNumber: 'Sample', input: sampleInput || "N/A", expectedOutput: sampleOutput || "N/A",
-        actualOutput: `Error: ${simulatedExecutionError}`, passed: false, error: simulatedExecutionError,
+        actualOutput: `Error`, passed: false, error: simulatedExecutionError,
       });
       return { generalOutput, testCaseResults: currentTestResults, executionError: simulatedExecutionError };
   }
@@ -269,7 +269,7 @@ async function executeWithMockAPI(body: ExecuteCodeRequestBody): Promise<Execute
           firstExecutionErrorEncountered = simulatedExecutionError;
           currentTestResults.push({
             testCaseNumber: i + 1, input: tc.input, expectedOutput: tc.expectedOutput,
-            actualOutput: `Error: ${simulatedExecutionError}`, passed: false, error: simulatedExecutionError,
+            actualOutput: `Error`, passed: false, error: simulatedExecutionError,
           });
           generalOutput += `Test Case ${i+1} failed due to runtime error.\n`;
           break; 
@@ -281,7 +281,7 @@ async function executeWithMockAPI(body: ExecuteCodeRequestBody): Promise<Execute
         });
       }
       if (firstExecutionErrorEncountered) {
-          generalOutput += `Submission failed due to runtime error: ${firstExecutionErrorEncountered}\n`;
+          generalOutput += `Submission failed due to runtime error.\n`;
       } else {
           generalOutput += `All test cases processed (simulation).\n`;
       }
@@ -345,36 +345,35 @@ export async function POST(request: NextRequest) {
 
       let currentCompileError: string | undefined = undefined;
       let currentExecutionError: string | undefined = undefined;
-      let actualOutput = result.run.stdout || "";
+      let actualOutput = "";
 
-      if (result.compile && result.compile.code !== 0) {
-        currentCompileError = cleanErrorMessage(result.compile.stderr || result.compile.stdout || "Compilation failed");
-        actualOutput = currentCompileError; // Show compile error as primary output for run
-      } else if (result.run.code !== 0) {
-        currentExecutionError = cleanErrorMessage(result.run.stderr || result.run.stdout || "Runtime error");
-        actualOutput = currentExecutionError; // Show runtime error
+      if (result.compile && result.compile.stderr) {
+        currentCompileError = cleanErrorMessage(result.compile.stderr);
+      } else if (result.run.stderr) {
+        currentExecutionError = cleanErrorMessage(result.run.stderr);
       }
+      
+      actualOutput = result.run.stdout || "";
       
       const passed = sampleOutput !== undefined 
         ? (actualOutput.trim() === sampleOutput.trim() && !currentCompileError && !currentExecutionError) 
         : (!currentCompileError && !currentExecutionError);
+      
+      let finalGeneralOutput = `Compile Output:\n${result.compile?.stdout || 'OK'}\n\nRun Output:\n${actualOutput}`;
+      if (currentCompileError) finalGeneralOutput = ``;
+      if (currentExecutionError) finalGeneralOutput = `${actualOutput}`;
 
-      responseData.generalOutput = result.run.output || actualOutput || "";
-      if (result.compile?.output && result.compile.output.trim() !== "") {
-        responseData.generalOutput = `Compile Output:\n${cleanErrorMessage(result.compile.output)}\n\nRun Output:\n${responseData.generalOutput}`;
-      }
-
-
+      responseData.generalOutput = finalGeneralOutput;
       responseData.testCaseResults.push({
         testCaseNumber: 'Sample',
         input: sampleInput || "N/A",
-        expectedOutput: sampleOutput || "N/A", // sampleOutput is from request, not Piston
-        actualOutput: actualOutput,
+        expectedOutput: sampleOutput || "N/A",
+        actualOutput: actualOutput.trim(),
         passed: passed,
-        error: currentExecutionError || (currentCompileError ? "Compilation Failed" : undefined),
+        error: currentCompileError || currentExecutionError,
       });
       responseData.compileError = currentCompileError;
-      responseData.executionError = currentExecutionError && !currentCompileError ? currentExecutionError : undefined;
+      responseData.executionError = currentExecutionError;
 
     } else { // executionType === 'submit'
       responseData.generalOutput = `Processing submission with Piston API for ${langInfo.language} v${langInfo.version}...\n`;
@@ -396,7 +395,7 @@ export async function POST(request: NextRequest) {
             console.error(`Piston API Error (submit, TC ${i + 1}):`, errorText);
             responseData.testCaseResults.push({
               testCaseNumber: i + 1, input: tc.input, expectedOutput: tc.expectedOutput,
-              actualOutput: `Error: ${pistonResponseRaw.status}`, passed: false, error: `Piston API error: ${pistonResponseRaw.status}`,
+              actualOutput: `Error`, passed: false, error: `Piston API error: ${pistonResponseRaw.status}`,
             });
             if (i === 0) { // Critical error on first test case
               responseData.executionError = `Piston API error on first test case: ${pistonResponseRaw.status}`;
@@ -410,30 +409,28 @@ export async function POST(request: NextRequest) {
           let tcRuntimeError: string | undefined = undefined;
           let tcActualOutput = result.run.stdout || "";
 
-          if (result.compile && result.compile.code !== 0) {
-            tcCompileError = cleanErrorMessage(result.compile.stderr || result.compile.stdout || "Compilation failed");
-            if (!responseData.compileError) responseData.compileError = tcCompileError; // Set global compile error
-            tcActualOutput = tcCompileError;
-          } else if (result.run.code !== 0) {
-            tcRuntimeError = cleanErrorMessage(result.run.stderr || result.run.stdout || "Runtime error");
+          if (result.compile && result.compile.stderr) {
+            tcCompileError = cleanErrorMessage(result.compile.stderr);
+            if (!responseData.compileError) responseData.compileError = tcCompileError;
+          } else if (result.run.stderr) {
+            tcRuntimeError = cleanErrorMessage(result.run.stderr);
             if (i === 0 && !responseData.executionError && !responseData.compileError) responseData.executionError = tcRuntimeError;
-            tcActualOutput = tcRuntimeError;
           }
-
+          
           const passedThisTc = !tcCompileError && !tcRuntimeError && tcActualOutput.trim() === tc.expectedOutput.trim();
 
           responseData.testCaseResults.push({
             testCaseNumber: i + 1, input: tc.input, expectedOutput: tc.expectedOutput,
             actualOutput: tcActualOutput.trim(), passed: passedThisTc,
-            error: tcRuntimeError || (tcCompileError ? "Compilation Failed" : undefined),
+            error: tcCompileError || tcRuntimeError,
           });
 
           if (responseData.compileError) {
-            responseData.generalOutput += `Compilation failed on test case ${i + 1}: ${responseData.compileError}. Halting submission.\n`;
+            responseData.generalOutput += `Compilation failed on test case ${i + 1}. Halting submission.\n`;
             break;
           }
           if (i === 0 && responseData.executionError) {
-            responseData.generalOutput += `Execution error on first test case: ${responseData.executionError}. Halting submission.\n`;
+            responseData.generalOutput += `Execution error on first test case. Halting submission.\n`;
             break;
           }
         }
@@ -462,7 +459,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json(
       {
         executionError: `Server error processing code execution: ${error.message || 'Unknown error'}`,
-        generalOutput: `An unexpected error occurred: ${error.message || 'Unknown error'}`,
+        generalOutput: ``,
         testCaseResults: []
       },
       { status: 500 }
