@@ -29,7 +29,7 @@ const questionsData = {
     { "id": 10, "title": "Linear Search", "difficulty": "easy", "max_score": 100 },
     { "id": 11, "title": "Bubble Sort", "difficulty": "easy", "max_score": 100 },
     { "id": 12, "title": "Insertion Sort", "difficulty": "easy", "max_score": 100 },
-    { "id": 13, "title" ,"Selection Sort", "difficulty": "easy", "max_score": 100 },
+    { "id": 13, "title": "Selection Sort", "difficulty": "easy", "max_score": 100 },
     { "id": 14, "title": "Merge Sort", "difficulty": "medium", "max_score": 150 },
     { "id": 15, "title": "Quick Sort", "difficulty": "medium", "max_score": 150 },
     { "id": 16, "title": "Linked List Implementation", "difficulty": "medium", "max_score": 150 },
