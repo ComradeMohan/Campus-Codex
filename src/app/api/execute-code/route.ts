@@ -42,6 +42,15 @@ let cachedRuntimes: PistonRuntime[] | null = null;
 let lastRuntimeFetchTime: number = 0;
 const RUNTIME_CACHE_DURATION = 24 * 60 * 60 * 1000; // 24 hours
 
+// Helper to clean up error messages
+const cleanErrorMessage = (message: string): string => {
+  if (!message) return "";
+  // This regex looks for a common Piston path and removes it.
+  // Example: /piston/jobs/uuid/main.py:5: ... -> main.py:5: ...
+  return message.replace(/\/piston\/jobs\/[a-f0-9-]+-([a-f0-9]+-){3}[a-f0-9]+\//g, '');
+};
+
+
 async function getPistonRuntimes(): Promise<PistonRuntime[]> {
   const now = Date.now();
   if (cachedRuntimes && (now - lastRuntimeFetchTime < RUNTIME_CACHE_DURATION)) {
@@ -339,10 +348,10 @@ export async function POST(request: NextRequest) {
       let actualOutput = result.run.stdout || "";
 
       if (result.compile && result.compile.code !== 0) {
-        currentCompileError = result.compile.stderr || result.compile.stdout || "Compilation failed";
+        currentCompileError = cleanErrorMessage(result.compile.stderr || result.compile.stdout || "Compilation failed");
         actualOutput = currentCompileError; // Show compile error as primary output for run
       } else if (result.run.code !== 0) {
-        currentExecutionError = result.run.stderr || result.run.stdout || "Runtime error";
+        currentExecutionError = cleanErrorMessage(result.run.stderr || result.run.stdout || "Runtime error");
         actualOutput = currentExecutionError; // Show runtime error
       }
       
@@ -352,7 +361,7 @@ export async function POST(request: NextRequest) {
 
       responseData.generalOutput = result.run.output || actualOutput || "";
       if (result.compile?.output && result.compile.output.trim() !== "") {
-        responseData.generalOutput = `Compile Output:\n${result.compile.output}\n\nRun Output:\n${responseData.generalOutput}`;
+        responseData.generalOutput = `Compile Output:\n${cleanErrorMessage(result.compile.output)}\n\nRun Output:\n${responseData.generalOutput}`;
       }
 
 
@@ -402,11 +411,11 @@ export async function POST(request: NextRequest) {
           let tcActualOutput = result.run.stdout || "";
 
           if (result.compile && result.compile.code !== 0) {
-            tcCompileError = result.compile.stderr || result.compile.stdout || "Compilation failed";
+            tcCompileError = cleanErrorMessage(result.compile.stderr || result.compile.stdout || "Compilation failed");
             if (!responseData.compileError) responseData.compileError = tcCompileError; // Set global compile error
             tcActualOutput = tcCompileError;
           } else if (result.run.code !== 0) {
-            tcRuntimeError = result.run.stderr || result.run.stdout || "Runtime error";
+            tcRuntimeError = cleanErrorMessage(result.run.stderr || result.run.stdout || "Runtime error");
             if (i === 0 && !responseData.executionError && !responseData.compileError) responseData.executionError = tcRuntimeError;
             tcActualOutput = tcRuntimeError;
           }

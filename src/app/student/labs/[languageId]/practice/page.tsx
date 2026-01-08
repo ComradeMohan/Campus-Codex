@@ -190,48 +190,55 @@ export default function StudentPracticePage() {
 
   useEffect(() => {
     if (languageForEditorAndExecution && questions.length > 0 && questions[currentQuestionIndex]) {
-      const currentQ = questions[currentQuestionIndex];
-      let initialCode = `// Start writing your ${languageForEditorAndExecution.name} code here for Question ${currentQuestionIndex + 1}\n// ${currentQ.questionText.substring(0,50)}...\n\n`;
-      initialCode += `/*\nSample Input:\n${currentQ.sampleInput || 'N/A'}\n\nSample Output:\n${currentQ.sampleOutput || 'N/A'}\n*/\n\n`;
+        const currentQ = questions[currentQuestionIndex];
+        const isPython = languageForEditorAndExecution.name.toLowerCase() === 'python';
+        
+        let initialCode = isPython 
+            ? `# Start writing your ${languageForEditorAndExecution.name} code here for Question ${currentQuestionIndex + 1}\n# ${currentQ.questionText.substring(0,50)}...\n\n`
+            : `// Start writing your ${languageForEditorAndExecution.name} code here for Question ${currentQuestionIndex + 1}\n// ${currentQ.questionText.substring(0,50)}...\n\n`;
 
-      const isPlacementCourse = language?.name === PLACEMENTS_COURSE_NAME;
-      // Progress is currently tracked at the language level, not course level.
-      const completedQuestionData = enrollmentProgress?.completedQuestions?.[currentQ.id];
-      
-      let savedCode = completedQuestionData?.submittedCode;
-      if (isPlacementCourse && completedQuestionData && completedQuestionData.solvedWithLanguage !== selectedSolveLanguage?.name) {
-          savedCode = undefined;
-      }
+        initialCode += isPython
+            ? `"""\nSample Input:\n${currentQ.sampleInput || 'N/A'}\n\nSample Output:\n${currentQ.sampleOutput || 'N/A'}\n"""\n\n`
+            : `/*\nSample Input:\n${currentQ.sampleInput || 'N/A'}\n\nSample Output:\n${currentQ.sampleOutput || 'N/A'}\n*/\n\n`;
 
-      if (savedCode) {
-        initialCode = savedCode;
-      } else {
-        if (languageForEditorAndExecution.name.toLowerCase() === 'python') {
-          initialCode += `# Your Python code here\ndef main():\n    # Read input if necessary, for example:\n    # line = input()\n    # print(f"Processing: {line}")\n    pass\n\nif __name__ == "__main__":\n    main()\n`;
-        } else if (languageForEditorAndExecution.name.toLowerCase() === 'javascript') {
-          initialCode += `// Your JavaScript code here\nfunction main() {\n    // In a Node.js environment for competitive programming, you might read from process.stdin\n    // For example, using 'readline' module if available in the execution sandbox.\n    // console.log("Hello from JavaScript!");\n}\n\nmain();\n`;
-        } else if (languageForEditorAndExecution.name.toLowerCase() === 'java') {
-          initialCode += `import java.util.Scanner;\n\n// The online compiler executes the main method of a public class named "Main".\n// Ensure your primary class is named Main and is public.\npublic class Main {\n    public static void main(String[] args) {\n        // Scanner scanner = new Scanner(System.in);\n        // String input = scanner.nextLine();\n        // System.out.println("Processing: " + input);\n        // scanner.close();\n    }\n}\n`;
-        } else {
-             initialCode += `// Code for ${languageForEditorAndExecution.name}\n`;
+        const isPlacementCourse = language?.name === PLACEMENTS_COURSE_NAME;
+        const completedQuestionData = enrollmentProgress?.completedQuestions?.[currentQ.id];
+        
+        let savedCode = completedQuestionData?.submittedCode;
+        if (isPlacementCourse && completedQuestionData && completedQuestionData.solvedWithLanguage !== selectedSolveLanguage?.name) {
+            savedCode = undefined;
         }
-      }
-      studentCodeRef.current = initialCode;
-      setEditorDisplayCode(initialCode);
-      setOutput('');
-      setTestResults([]);
-      setExecutionError(null);
-      setCompileError(null);
+
+        if (savedCode) {
+            initialCode = savedCode;
+        } else {
+            if (isPython) {
+                initialCode += `# Your Python code here\ndef main():\n    # Read input if necessary, for example:\n    # line = input()\n    # print(f"Processing: {line}")\n    pass\n\nif __name__ == "__main__":\n    main()\n`;
+            } else if (languageForEditorAndExecution.name.toLowerCase() === 'javascript') {
+                initialCode += `// Your JavaScript code here\nfunction main() {\n    // In a Node.js environment for competitive programming, you might read from process.stdin\n    // For example, using 'readline' module if available in the execution sandbox.\n    // console.log("Hello from JavaScript!");\n}\n\nmain();\n`;
+            } else if (languageForEditorAndExecution.name.toLowerCase() === 'java') {
+                initialCode += `import java.util.Scanner;\n\n// The online compiler executes the main method of a public class named "Main".\n// Ensure your primary class is named Main and is public.\npublic class Main {\n    public static void main(String[] args) {\n        // Scanner scanner = new Scanner(System.in);\n        // String input = scanner.nextLine();\n        // System.out.println("Processing: " + input);\n        // scanner.close();\n    }\n}\n`;
+            } else {
+                initialCode += `// Code for ${languageForEditorAndExecution.name}\n`;
+            }
+        }
+        studentCodeRef.current = initialCode;
+        setEditorDisplayCode(initialCode);
+        setOutput('');
+        setTestResults([]);
+        setExecutionError(null);
+        setCompileError(null);
     } else if (language && questions.length === 0 && !isLoadingPageData) {
-      const defaultNoQCode = `// No questions available for ${language.name} yet.\n`;
-      studentCodeRef.current = defaultNoQCode;
-      setEditorDisplayCode(defaultNoQCode);
-      setOutput('');
-      setTestResults([]);
-      setExecutionError(null);
-      setCompileError(null);
+        const defaultNoQCode = `// No questions available for ${language.name} yet.\n`;
+        studentCodeRef.current = defaultNoQCode;
+        setEditorDisplayCode(defaultNoQCode);
+        setOutput('');
+        setTestResults([]);
+        setExecutionError(null);
+        setCompileError(null);
     }
-  }, [currentQuestionIndex, questions, language, languageForEditorAndExecution, isLoadingPageData, enrollmentProgress, selectedSolveLanguage]);
+}, [currentQuestionIndex, questions, language, languageForEditorAndExecution, isLoadingPageData, enrollmentProgress, selectedSolveLanguage]);
+
 
   const handleEditorChange = (code: string | undefined) => {
     studentCodeRef.current = code || '';
@@ -640,13 +647,13 @@ export default function StudentPracticePage() {
               </CardHeader>
               <CardContent className="py-3 px-4 md:p-6">
                 {compileError && (
-                    <div className="mb-3 p-2 md:p-3 bg-destructive/10 border border-destructive text-destructive rounded-md text-xs md:text-sm">
+                    <div className="mb-3 p-2 md:p-3 bg-destructive/10 border border-destructive/50 text-destructive rounded-md text-xs md:text-sm">
                         <div className="flex items-center font-semibold mb-1"><AlertTriangle className="w-3.5 h-3.5 md:w-4 md:w-4 mr-2" />Compilation Error:</div>
                         <pre className="whitespace-pre-wrap font-mono text-xs">{compileError}</pre>
                     </div>
                 )}
                 {executionError && !compileError && (
-                     <div className="mb-3 p-2 md:p-3 bg-destructive/10 border border-destructive text-destructive rounded-md text-xs md:text-sm">
+                     <div className="mb-3 p-2 md:p-3 bg-destructive/10 border border-destructive/50 text-destructive rounded-md text-xs md:text-sm">
                         <div className="flex items-center font-semibold mb-1"><AlertTriangle className="w-3.5 h-3.5 md:w-4 md:w-4 mr-2" />Execution Error:</div>
                         <pre className="whitespace-pre-wrap font-mono text-xs">{executionError}</pre>
                     </div>
