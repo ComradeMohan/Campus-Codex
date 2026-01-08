@@ -1,0 +1,2335 @@
+{
+  "course": "Python Programming",
+  "source": "Python.pdf",
+  "total_questions": 97,
+  "questions": [
+    {
+      "id": 1,
+      "title": "Non-Prime Numbers in a Range",
+      "question_statement": "Write a Python program to solve the problem: Non-Prime Numbers in a Range.",
+      "difficulty": "easy",
+      "max_score": 100,
+      "sample_input": "Sample Input",
+      "sample_output": "Sample Output",
+      "solution_explanation": "Solve using standard Python control structures, loops, functions, and data structures.",
+      "test_cases": [
+        {
+          "input": "Sample Input",
+          "expected_output": "Sample Output"
+        },
+        {
+          "input": "Edge case input",
+          "expected_output": "Handled correctly"
+        },
+        {
+          "input": "Invalid input",
+          "expected_output": "Error / Graceful handling"
+        }
+      ]
+    },
+    {
+      "id": 2,
+      "title": "Leap Year Anniversary Adjustment",
+      "question_statement": "Write a Python program to solve the problem: Leap Year Anniversary Adjustment.",
+      "difficulty": "easy",
+      "max_score": 100,
+      "sample_input": "Sample Input",
+      "sample_output": "Sample Output",
+      "solution_explanation": "Solve using standard Python control structures, loops, functions, and data structures.",
+      "test_cases": [
+        {
+          "input": "Sample Input",
+          "expected_output": "Sample Output"
+        },
+        {
+          "input": "Edge case input",
+          "expected_output": "Handled correctly"
+        },
+        {
+          "input": "Invalid input",
+          "expected_output": "Error / Graceful handling"
+        }
+      ]
+    },
+    {
+      "id": 3,
+      "title": "Perfect Number Check",
+      "question_statement": "Write a Python program to solve the problem: Perfect Number Check.",
+      "difficulty": "easy",
+      "max_score": 100,
+      "sample_input": "Sample Input",
+      "sample_output": "Sample Output",
+      "solution_explanation": "Solve using standard Python control structures, loops, functions, and data structures.",
+      "test_cases": [
+        {
+          "input": "Sample Input",
+          "expected_output": "Sample Output"
+        },
+        {
+          "input": "Edge case input",
+          "expected_output": "Handled correctly"
+        },
+        {
+          "input": "Invalid input",
+          "expected_output": "Error / Graceful handling"
+        }
+      ]
+    },
+    {
+      "id": 4,
+      "title": "Pythagorean Triplets",
+      "question_statement": "Write a Python program to solve the problem: Pythagorean Triplets.",
+      "difficulty": "easy",
+      "max_score": 100,
+      "sample_input": "Sample Input",
+      "sample_output": "Sample Output",
+      "solution_explanation": "Solve using standard Python control structures, loops, functions, and data structures.",
+      "test_cases": [
+        {
+          "input": "Sample Input",
+          "expected_output": "Sample Output"
+        },
+        {
+          "input": "Edge case input",
+          "expected_output": "Handled correctly"
+        },
+        {
+          "input": "Invalid input",
+          "expected_output": "Error / Graceful handling"
+        }
+      ]
+    },
+    {
+      "id": 5,
+      "title": "Sum of Digits",
+      "question_statement": "Write a Python program to solve the problem: Sum of Digits.",
+      "difficulty": "easy",
+      "max_score": 100,
+      "sample_input": "Sample Input",
+      "sample_output": "Sample Output",
+      "solution_explanation": "Solve using standard Python control structures, loops, functions, and data structures.",
+      "test_cases": [
+        {
+          "input": "Sample Input",
+          "expected_output": "Sample Output"
+        },
+        {
+          "input": "Edge case input",
+          "expected_output": "Handled correctly"
+        },
+        {
+          "input": "Invalid input",
+          "expected_output": "Error / Graceful handling"
+        }
+      ]
+    },
+    {
+      "id": 6,
+      "title": "Armstrong Number",
+      "question_statement": "Write a Python program to solve the problem: Armstrong Number.",
+      "difficulty": "easy",
+      "max_score": 100,
+      "sample_input": "Sample Input",
+      "sample_output": "Sample Output",
+      "solution_explanation": "Solve using standard Python control structures, loops, functions, and data structures.",
+      "test_cases": [
+        {
+          "input": "Sample Input",
+          "expected_output": "Sample Output"
+        },
+        {
+          "input": "Edge case input",
+          "expected_output": "Handled correctly"
+        },
+        {
+          "input": "Invalid input",
+          "expected_output": "Error / Graceful handling"
+        }
+      ]
+    },
+    {
+      "id": 7,
+      "title": "Harshad Number",
+      "question_statement": "Write a Python program to solve the problem: Harshad Number.",
+      "difficulty": "easy",
+      "max_score": 100,
+      "sample_input": "Sample Input",
+      "sample_output": "Sample Output",
+      "solution_explanation": "Solve using standard Python control structures, loops, functions, and data structures.",
+      "test_cases": [
+        {
+          "input": "Sample Input",
+          "expected_output": "Sample Output"
+        },
+        {
+          "input": "Edge case input",
+          "expected_output": "Handled correctly"
+        },
+        {
+          "input": "Invalid input",
+          "expected_output": "Error / Graceful handling"
+        }
+      ]
+    },
+    {
+      "id": 8,
+      "title": "Happy Number",
+      "question_statement": "Write a Python program to solve the problem: Happy Number.",
+      "difficulty": "easy",
+      "max_score": 100,
+      "sample_input": "Sample Input",
+      "sample_output": "Sample Output",
+      "solution_explanation": "Solve using standard Python control structures, loops, functions, and data structures.",
+      "test_cases": [
+        {
+          "input": "Sample Input",
+          "expected_output": "Sample Output"
+        },
+        {
+          "input": "Edge case input",
+          "expected_output": "Handled correctly"
+        },
+        {
+          "input": "Invalid input",
+          "expected_output": "Error / Graceful handling"
+        }
+      ]
+    },
+    {
+      "id": 9,
+      "title": "Tech Number",
+      "question_statement": "Write a Python program to solve the problem: Tech Number.",
+      "difficulty": "easy",
+      "max_score": 100,
+      "sample_input": "Sample Input",
+      "sample_output": "Sample Output",
+      "solution_explanation": "Solve using standard Python control structures, loops, functions, and data structures.",
+      "test_cases": [
+        {
+          "input": "Sample Input",
+          "expected_output": "Sample Output"
+        },
+        {
+          "input": "Edge case input",
+          "expected_output": "Handled correctly"
+        },
+        {
+          "input": "Invalid input",
+          "expected_output": "Error / Graceful handling"
+        }
+      ]
+    },
+    {
+      "id": 10,
+      "title": "Simple Interest Calculator",
+      "question_statement": "Write a Python program to solve the problem: Simple Interest Calculator.",
+      "difficulty": "easy",
+      "max_score": 100,
+      "sample_input": "Sample Input",
+      "sample_output": "Sample Output",
+      "solution_explanation": "Solve using standard Python control structures, loops, functions, and data structures.",
+      "test_cases": [
+        {
+          "input": "Sample Input",
+          "expected_output": "Sample Output"
+        },
+        {
+          "input": "Edge case input",
+          "expected_output": "Handled correctly"
+        },
+        {
+          "input": "Invalid input",
+          "expected_output": "Error / Graceful handling"
+        }
+      ]
+    },
+    {
+      "id": 11,
+      "title": "Factors and First N Factors",
+      "question_statement": "Write a Python program to solve the problem: Factors and First N Factors.",
+      "difficulty": "easy",
+      "max_score": 100,
+      "sample_input": "Sample Input",
+      "sample_output": "Sample Output",
+      "solution_explanation": "Solve using standard Python control structures, loops, functions, and data structures.",
+      "test_cases": [
+        {
+          "input": "Sample Input",
+          "expected_output": "Sample Output"
+        },
+        {
+          "input": "Edge case input",
+          "expected_output": "Handled correctly"
+        },
+        {
+          "input": "Invalid input",
+          "expected_output": "Error / Graceful handling"
+        }
+      ]
+    },
+    {
+      "id": 12,
+      "title": "Nth Factor of a Number",
+      "question_statement": "Write a Python program to solve the problem: Nth Factor of a Number.",
+      "difficulty": "easy",
+      "max_score": 100,
+      "sample_input": "Sample Input",
+      "sample_output": "Sample Output",
+      "solution_explanation": "Solve using standard Python control structures, loops, functions, and data structures.",
+      "test_cases": [
+        {
+          "input": "Sample Input",
+          "expected_output": "Sample Output"
+        },
+        {
+          "input": "Edge case input",
+          "expected_output": "Handled correctly"
+        },
+        {
+          "input": "Invalid input",
+          "expected_output": "Error / Graceful handling"
+        }
+      ]
+    },
+    {
+      "id": 13,
+      "title": "Permutations of a Number",
+      "question_statement": "Write a Python program to solve the problem: Permutations of a Number.",
+      "difficulty": "easy",
+      "max_score": 100,
+      "sample_input": "Sample Input",
+      "sample_output": "Sample Output",
+      "solution_explanation": "Solve using standard Python control structures, loops, functions, and data structures.",
+      "test_cases": [
+        {
+          "input": "Sample Input",
+          "expected_output": "Sample Output"
+        },
+        {
+          "input": "Edge case input",
+          "expected_output": "Handled correctly"
+        },
+        {
+          "input": "Invalid input",
+          "expected_output": "Error / Graceful handling"
+        }
+      ]
+    },
+    {
+      "id": 14,
+      "title": "Square and Cube of Decimal",
+      "question_statement": "Write a Python program to solve the problem: Square and Cube of Decimal.",
+      "difficulty": "easy",
+      "max_score": 100,
+      "sample_input": "Sample Input",
+      "sample_output": "Sample Output",
+      "solution_explanation": "Solve using standard Python control structures, loops, functions, and data structures.",
+      "test_cases": [
+        {
+          "input": "Sample Input",
+          "expected_output": "Sample Output"
+        },
+        {
+          "input": "Edge case input",
+          "expected_output": "Handled correctly"
+        },
+        {
+          "input": "Invalid input",
+          "expected_output": "Error / Graceful handling"
+        }
+      ]
+    },
+    {
+      "id": 15,
+      "title": "Binary to Decimal/Octal/Hex",
+      "question_statement": "Write a Python program to solve the problem: Binary to Decimal/Octal/Hex.",
+      "difficulty": "easy",
+      "max_score": 100,
+      "sample_input": "Sample Input",
+      "sample_output": "Sample Output",
+      "solution_explanation": "Solve using standard Python control structures, loops, functions, and data structures.",
+      "test_cases": [
+        {
+          "input": "Sample Input",
+          "expected_output": "Sample Output"
+        },
+        {
+          "input": "Edge case input",
+          "expected_output": "Handled correctly"
+        },
+        {
+          "input": "Invalid input",
+          "expected_output": "Error / Graceful handling"
+        }
+      ]
+    },
+    {
+      "id": 16,
+      "title": "Add Binary Numbers",
+      "question_statement": "Write a Python program to solve the problem: Add Binary Numbers.",
+      "difficulty": "easy",
+      "max_score": 100,
+      "sample_input": "Sample Input",
+      "sample_output": "Sample Output",
+      "solution_explanation": "Solve using standard Python control structures, loops, functions, and data structures.",
+      "test_cases": [
+        {
+          "input": "Sample Input",
+          "expected_output": "Sample Output"
+        },
+        {
+          "input": "Edge case input",
+          "expected_output": "Handled correctly"
+        },
+        {
+          "input": "Invalid input",
+          "expected_output": "Error / Graceful handling"
+        }
+      ]
+    },
+    {
+      "id": 17,
+      "title": "Greatest Binary Number",
+      "question_statement": "Write a Python program to solve the problem: Greatest Binary Number.",
+      "difficulty": "easy",
+      "max_score": 100,
+      "sample_input": "Sample Input",
+      "sample_output": "Sample Output",
+      "solution_explanation": "Solve using standard Python control structures, loops, functions, and data structures.",
+      "test_cases": [
+        {
+          "input": "Sample Input",
+          "expected_output": "Sample Output"
+        },
+        {
+          "input": "Edge case input",
+          "expected_output": "Handled correctly"
+        },
+        {
+          "input": "Invalid input",
+          "expected_output": "Error / Graceful handling"
+        }
+      ]
+    },
+    {
+      "id": 18,
+      "title": "Matrix Multiplication",
+      "question_statement": "Write a Python program to solve the problem: Matrix Multiplication.",
+      "difficulty": "easy",
+      "max_score": 100,
+      "sample_input": "Sample Input",
+      "sample_output": "Sample Output",
+      "solution_explanation": "Solve using standard Python control structures, loops, functions, and data structures.",
+      "test_cases": [
+        {
+          "input": "Sample Input",
+          "expected_output": "Sample Output"
+        },
+        {
+          "input": "Edge case input",
+          "expected_output": "Handled correctly"
+        },
+        {
+          "input": "Invalid input",
+          "expected_output": "Error / Graceful handling"
+        }
+      ]
+    },
+    {
+      "id": 19,
+      "title": "Matrix Addition",
+      "question_statement": "Write a Python program to solve the problem: Matrix Addition.",
+      "difficulty": "easy",
+      "max_score": 100,
+      "sample_input": "Sample Input",
+      "sample_output": "Sample Output",
+      "solution_explanation": "Solve using standard Python control structures, loops, functions, and data structures.",
+      "test_cases": [
+        {
+          "input": "Sample Input",
+          "expected_output": "Sample Output"
+        },
+        {
+          "input": "Edge case input",
+          "expected_output": "Handled correctly"
+        },
+        {
+          "input": "Invalid input",
+          "expected_output": "Error / Graceful handling"
+        }
+      ]
+    },
+    {
+      "id": 20,
+      "title": "LCM and GCD",
+      "question_statement": "Write a Python program to solve the problem: LCM and GCD.",
+      "difficulty": "easy",
+      "max_score": 100,
+      "sample_input": "Sample Input",
+      "sample_output": "Sample Output",
+      "solution_explanation": "Solve using standard Python control structures, loops, functions, and data structures.",
+      "test_cases": [
+        {
+          "input": "Sample Input",
+          "expected_output": "Sample Output"
+        },
+        {
+          "input": "Edge case input",
+          "expected_output": "Handled correctly"
+        },
+        {
+          "input": "Invalid input",
+          "expected_output": "Error / Graceful handling"
+        }
+      ]
+    },
+    {
+      "id": 21,
+      "title": "Matrix Transpose",
+      "question_statement": "Write a Python program to solve the problem: Matrix Transpose.",
+      "difficulty": "easy",
+      "max_score": 100,
+      "sample_input": "Sample Input",
+      "sample_output": "Sample Output",
+      "solution_explanation": "Solve using standard Python control structures, loops, functions, and data structures.",
+      "test_cases": [
+        {
+          "input": "Sample Input",
+          "expected_output": "Sample Output"
+        },
+        {
+          "input": "Edge case input",
+          "expected_output": "Handled correctly"
+        },
+        {
+          "input": "Invalid input",
+          "expected_output": "Error / Graceful handling"
+        }
+      ]
+    },
+    {
+      "id": 22,
+      "title": "Row Column Diagonal Sum",
+      "question_statement": "Write a Python program to solve the problem: Row Column Diagonal Sum.",
+      "difficulty": "easy",
+      "max_score": 100,
+      "sample_input": "Sample Input",
+      "sample_output": "Sample Output",
+      "solution_explanation": "Solve using standard Python control structures, loops, functions, and data structures.",
+      "test_cases": [
+        {
+          "input": "Sample Input",
+          "expected_output": "Sample Output"
+        },
+        {
+          "input": "Edge case input",
+          "expected_output": "Handled correctly"
+        },
+        {
+          "input": "Invalid input",
+          "expected_output": "Error / Graceful handling"
+        }
+      ]
+    },
+    {
+      "id": 23,
+      "title": "Kth Smallest in Multiplication Table",
+      "question_statement": "Write a Python program to solve the problem: Kth Smallest in Multiplication Table.",
+      "difficulty": "easy",
+      "max_score": 100,
+      "sample_input": "Sample Input",
+      "sample_output": "Sample Output",
+      "solution_explanation": "Solve using standard Python control structures, loops, functions, and data structures.",
+      "test_cases": [
+        {
+          "input": "Sample Input",
+          "expected_output": "Sample Output"
+        },
+        {
+          "input": "Edge case input",
+          "expected_output": "Handled correctly"
+        },
+        {
+          "input": "Invalid input",
+          "expected_output": "Error / Graceful handling"
+        }
+      ]
+    },
+    {
+      "id": 24,
+      "title": "Boundary Elements of Matrix",
+      "question_statement": "Write a Python program to solve the problem: Boundary Elements of Matrix.",
+      "difficulty": "easy",
+      "max_score": 100,
+      "sample_input": "Sample Input",
+      "sample_output": "Sample Output",
+      "solution_explanation": "Solve using standard Python control structures, loops, functions, and data structures.",
+      "test_cases": [
+        {
+          "input": "Sample Input",
+          "expected_output": "Sample Output"
+        },
+        {
+          "input": "Edge case input",
+          "expected_output": "Handled correctly"
+        },
+        {
+          "input": "Invalid input",
+          "expected_output": "Error / Graceful handling"
+        }
+      ]
+    },
+    {
+      "id": 25,
+      "title": "Spiral Matrix Traversal",
+      "question_statement": "Write a Python program to solve the problem: Spiral Matrix Traversal.",
+      "difficulty": "easy",
+      "max_score": 100,
+      "sample_input": "Sample Input",
+      "sample_output": "Sample Output",
+      "solution_explanation": "Solve using standard Python control structures, loops, functions, and data structures.",
+      "test_cases": [
+        {
+          "input": "Sample Input",
+          "expected_output": "Sample Output"
+        },
+        {
+          "input": "Edge case input",
+          "expected_output": "Handled correctly"
+        },
+        {
+          "input": "Invalid input",
+          "expected_output": "Error / Graceful handling"
+        }
+      ]
+    },
+    {
+      "id": 26,
+      "title": "Sum of N Numbers",
+      "question_statement": "Write a Python program to solve the problem: Sum of N Numbers.",
+      "difficulty": "easy",
+      "max_score": 100,
+      "sample_input": "Sample Input",
+      "sample_output": "Sample Output",
+      "solution_explanation": "Solve using standard Python control structures, loops, functions, and data structures.",
+      "test_cases": [
+        {
+          "input": "Sample Input",
+          "expected_output": "Sample Output"
+        },
+        {
+          "input": "Edge case input",
+          "expected_output": "Handled correctly"
+        },
+        {
+          "input": "Invalid input",
+          "expected_output": "Error / Graceful handling"
+        }
+      ]
+    },
+    {
+      "id": 27,
+      "title": "Sum of Squares",
+      "question_statement": "Write a Python program to solve the problem: Sum of Squares.",
+      "difficulty": "easy",
+      "max_score": 100,
+      "sample_input": "Sample Input",
+      "sample_output": "Sample Output",
+      "solution_explanation": "Solve using standard Python control structures, loops, functions, and data structures.",
+      "test_cases": [
+        {
+          "input": "Sample Input",
+          "expected_output": "Sample Output"
+        },
+        {
+          "input": "Edge case input",
+          "expected_output": "Handled correctly"
+        },
+        {
+          "input": "Invalid input",
+          "expected_output": "Error / Graceful handling"
+        }
+      ]
+    },
+    {
+      "id": 28,
+      "title": "Factorial",
+      "question_statement": "Write a Python program to solve the problem: Factorial.",
+      "difficulty": "easy",
+      "max_score": 100,
+      "sample_input": "Sample Input",
+      "sample_output": "Sample Output",
+      "solution_explanation": "Solve using standard Python control structures, loops, functions, and data structures.",
+      "test_cases": [
+        {
+          "input": "Sample Input",
+          "expected_output": "Sample Output"
+        },
+        {
+          "input": "Edge case input",
+          "expected_output": "Handled correctly"
+        },
+        {
+          "input": "Invalid input",
+          "expected_output": "Error / Graceful handling"
+        }
+      ]
+    },
+    {
+      "id": 29,
+      "title": "Sum of Factorials",
+      "question_statement": "Write a Python program to solve the problem: Sum of Factorials.",
+      "difficulty": "easy",
+      "max_score": 100,
+      "sample_input": "Sample Input",
+      "sample_output": "Sample Output",
+      "solution_explanation": "Solve using standard Python control structures, loops, functions, and data structures.",
+      "test_cases": [
+        {
+          "input": "Sample Input",
+          "expected_output": "Sample Output"
+        },
+        {
+          "input": "Edge case input",
+          "expected_output": "Handled correctly"
+        },
+        {
+          "input": "Invalid input",
+          "expected_output": "Error / Graceful handling"
+        }
+      ]
+    },
+    {
+      "id": 30,
+      "title": "Difference of Square Sum",
+      "question_statement": "Write a Python program to solve the problem: Difference of Square Sum.",
+      "difficulty": "easy",
+      "max_score": 100,
+      "sample_input": "Sample Input",
+      "sample_output": "Sample Output",
+      "solution_explanation": "Solve using standard Python control structures, loops, functions, and data structures.",
+      "test_cases": [
+        {
+          "input": "Sample Input",
+          "expected_output": "Sample Output"
+        },
+        {
+          "input": "Edge case input",
+          "expected_output": "Handled correctly"
+        },
+        {
+          "input": "Invalid input",
+          "expected_output": "Error / Graceful handling"
+        }
+      ]
+    },
+    {
+      "id": 31,
+      "title": "Triangle Digit Sum",
+      "question_statement": "Write a Python program to solve the problem: Triangle Digit Sum.",
+      "difficulty": "easy",
+      "max_score": 100,
+      "sample_input": "Sample Input",
+      "sample_output": "Sample Output",
+      "solution_explanation": "Solve using standard Python control structures, loops, functions, and data structures.",
+      "test_cases": [
+        {
+          "input": "Sample Input",
+          "expected_output": "Sample Output"
+        },
+        {
+          "input": "Edge case input",
+          "expected_output": "Handled correctly"
+        },
+        {
+          "input": "Invalid input",
+          "expected_output": "Error / Graceful handling"
+        }
+      ]
+    },
+    {
+      "id": 32,
+      "title": "Fibonacci Series",
+      "question_statement": "Write a Python program to solve the problem: Fibonacci Series.",
+      "difficulty": "easy",
+      "max_score": 100,
+      "sample_input": "Sample Input",
+      "sample_output": "Sample Output",
+      "solution_explanation": "Solve using standard Python control structures, loops, functions, and data structures.",
+      "test_cases": [
+        {
+          "input": "Sample Input",
+          "expected_output": "Sample Output"
+        },
+        {
+          "input": "Edge case input",
+          "expected_output": "Handled correctly"
+        },
+        {
+          "input": "Invalid input",
+          "expected_output": "Error / Graceful handling"
+        }
+      ]
+    },
+    {
+      "id": 33,
+      "title": "Climbing Stairs",
+      "question_statement": "Write a Python program to solve the problem: Climbing Stairs.",
+      "difficulty": "easy",
+      "max_score": 100,
+      "sample_input": "Sample Input",
+      "sample_output": "Sample Output",
+      "solution_explanation": "Solve using standard Python control structures, loops, functions, and data structures.",
+      "test_cases": [
+        {
+          "input": "Sample Input",
+          "expected_output": "Sample Output"
+        },
+        {
+          "input": "Edge case input",
+          "expected_output": "Handled correctly"
+        },
+        {
+          "input": "Invalid input",
+          "expected_output": "Error / Graceful handling"
+        }
+      ]
+    },
+    {
+      "id": 34,
+      "title": "Vehicles and Children Logic",
+      "question_statement": "Write a Python program to solve the problem: Vehicles and Children Logic.",
+      "difficulty": "easy",
+      "max_score": 100,
+      "sample_input": "Sample Input",
+      "sample_output": "Sample Output",
+      "solution_explanation": "Solve using standard Python control structures, loops, functions, and data structures.",
+      "test_cases": [
+        {
+          "input": "Sample Input",
+          "expected_output": "Sample Output"
+        },
+        {
+          "input": "Edge case input",
+          "expected_output": "Handled correctly"
+        },
+        {
+          "input": "Invalid input",
+          "expected_output": "Error / Graceful handling"
+        }
+      ]
+    },
+    {
+      "id": 35,
+      "title": "Difference Between Dates",
+      "question_statement": "Write a Python program to solve the problem: Difference Between Dates.",
+      "difficulty": "easy",
+      "max_score": 100,
+      "sample_input": "Sample Input",
+      "sample_output": "Sample Output",
+      "solution_explanation": "Solve using standard Python control structures, loops, functions, and data structures.",
+      "test_cases": [
+        {
+          "input": "Sample Input",
+          "expected_output": "Sample Output"
+        },
+        {
+          "input": "Edge case input",
+          "expected_output": "Handled correctly"
+        },
+        {
+          "input": "Invalid input",
+          "expected_output": "Error / Graceful handling"
+        }
+      ]
+    },
+    {
+      "id": 36,
+      "title": "Calendar Operations",
+      "question_statement": "Write a Python program to solve the problem: Calendar Operations.",
+      "difficulty": "easy",
+      "max_score": 100,
+      "sample_input": "Sample Input",
+      "sample_output": "Sample Output",
+      "solution_explanation": "Solve using standard Python control structures, loops, functions, and data structures.",
+      "test_cases": [
+        {
+          "input": "Sample Input",
+          "expected_output": "Sample Output"
+        },
+        {
+          "input": "Edge case input",
+          "expected_output": "Handled correctly"
+        },
+        {
+          "input": "Invalid input",
+          "expected_output": "Error / Graceful handling"
+        }
+      ]
+    },
+    {
+      "id": 37,
+      "title": "Special Characters Count",
+      "question_statement": "Write a Python program to solve the problem: Special Characters Count.",
+      "difficulty": "easy",
+      "max_score": 100,
+      "sample_input": "Sample Input",
+      "sample_output": "Sample Output",
+      "solution_explanation": "Solve using standard Python control structures, loops, functions, and data structures.",
+      "test_cases": [
+        {
+          "input": "Sample Input",
+          "expected_output": "Sample Output"
+        },
+        {
+          "input": "Edge case input",
+          "expected_output": "Handled correctly"
+        },
+        {
+          "input": "Invalid input",
+          "expected_output": "Error / Graceful handling"
+        }
+      ]
+    },
+    {
+      "id": 38,
+      "title": "Vowels vs Consonants",
+      "question_statement": "Write a Python program to solve the problem: Vowels vs Consonants.",
+      "difficulty": "easy",
+      "max_score": 100,
+      "sample_input": "Sample Input",
+      "sample_output": "Sample Output",
+      "solution_explanation": "Solve using standard Python control structures, loops, functions, and data structures.",
+      "test_cases": [
+        {
+          "input": "Sample Input",
+          "expected_output": "Sample Output"
+        },
+        {
+          "input": "Edge case input",
+          "expected_output": "Handled correctly"
+        },
+        {
+          "input": "Invalid input",
+          "expected_output": "Error / Graceful handling"
+        }
+      ]
+    },
+    {
+      "id": 39,
+      "title": "String Index Match",
+      "question_statement": "Write a Python program to solve the problem: String Index Match.",
+      "difficulty": "easy",
+      "max_score": 100,
+      "sample_input": "Sample Input",
+      "sample_output": "Sample Output",
+      "solution_explanation": "Solve using standard Python control structures, loops, functions, and data structures.",
+      "test_cases": [
+        {
+          "input": "Sample Input",
+          "expected_output": "Sample Output"
+        },
+        {
+          "input": "Edge case input",
+          "expected_output": "Handled correctly"
+        },
+        {
+          "input": "Invalid input",
+          "expected_output": "Error / Graceful handling"
+        }
+      ]
+    },
+    {
+      "id": 40,
+      "title": "Words and Lines Count",
+      "question_statement": "Write a Python program to solve the problem: Words and Lines Count.",
+      "difficulty": "easy",
+      "max_score": 100,
+      "sample_input": "Sample Input",
+      "sample_output": "Sample Output",
+      "solution_explanation": "Solve using standard Python control structures, loops, functions, and data structures.",
+      "test_cases": [
+        {
+          "input": "Sample Input",
+          "expected_output": "Sample Output"
+        },
+        {
+          "input": "Edge case input",
+          "expected_output": "Handled correctly"
+        },
+        {
+          "input": "Invalid input",
+          "expected_output": "Error / Graceful handling"
+        }
+      ]
+    },
+    {
+      "id": 41,
+      "title": "Sentences Starting with B",
+      "question_statement": "Write a Python program to solve the problem: Sentences Starting with B.",
+      "difficulty": "easy",
+      "max_score": 100,
+      "sample_input": "Sample Input",
+      "sample_output": "Sample Output",
+      "solution_explanation": "Solve using standard Python control structures, loops, functions, and data structures.",
+      "test_cases": [
+        {
+          "input": "Sample Input",
+          "expected_output": "Sample Output"
+        },
+        {
+          "input": "Edge case input",
+          "expected_output": "Handled correctly"
+        },
+        {
+          "input": "Invalid input",
+          "expected_output": "Error / Graceful handling"
+        }
+      ]
+    },
+    {
+      "id": 42,
+      "title": "Character Search in String",
+      "question_statement": "Write a Python program to solve the problem: Character Search in String.",
+      "difficulty": "easy",
+      "max_score": 100,
+      "sample_input": "Sample Input",
+      "sample_output": "Sample Output",
+      "solution_explanation": "Solve using standard Python control structures, loops, functions, and data structures.",
+      "test_cases": [
+        {
+          "input": "Sample Input",
+          "expected_output": "Sample Output"
+        },
+        {
+          "input": "Edge case input",
+          "expected_output": "Handled correctly"
+        },
+        {
+          "input": "Invalid input",
+          "expected_output": "Error / Graceful handling"
+        }
+      ]
+    },
+    {
+      "id": 43,
+      "title": "Alphabetical Order String",
+      "question_statement": "Write a Python program to solve the problem: Alphabetical Order String.",
+      "difficulty": "easy",
+      "max_score": 100,
+      "sample_input": "Sample Input",
+      "sample_output": "Sample Output",
+      "solution_explanation": "Solve using standard Python control structures, loops, functions, and data structures.",
+      "test_cases": [
+        {
+          "input": "Sample Input",
+          "expected_output": "Sample Output"
+        },
+        {
+          "input": "Edge case input",
+          "expected_output": "Handled correctly"
+        },
+        {
+          "input": "Invalid input",
+          "expected_output": "Error / Graceful handling"
+        }
+      ]
+    },
+    {
+      "id": 44,
+      "title": "Repeated Characters",
+      "question_statement": "Write a Python program to solve the problem: Repeated Characters.",
+      "difficulty": "easy",
+      "max_score": 100,
+      "sample_input": "Sample Input",
+      "sample_output": "Sample Output",
+      "solution_explanation": "Solve using standard Python control structures, loops, functions, and data structures.",
+      "test_cases": [
+        {
+          "input": "Sample Input",
+          "expected_output": "Sample Output"
+        },
+        {
+          "input": "Edge case input",
+          "expected_output": "Handled correctly"
+        },
+        {
+          "input": "Invalid input",
+          "expected_output": "Error / Graceful handling"
+        }
+      ]
+    },
+    {
+      "id": 45,
+      "title": "Interleaving Strings",
+      "question_statement": "Write a Python program to solve the problem: Interleaving Strings.",
+      "difficulty": "easy",
+      "max_score": 100,
+      "sample_input": "Sample Input",
+      "sample_output": "Sample Output",
+      "solution_explanation": "Solve using standard Python control structures, loops, functions, and data structures.",
+      "test_cases": [
+        {
+          "input": "Sample Input",
+          "expected_output": "Sample Output"
+        },
+        {
+          "input": "Edge case input",
+          "expected_output": "Handled correctly"
+        },
+        {
+          "input": "Invalid input",
+          "expected_output": "Error / Graceful handling"
+        }
+      ]
+    },
+    {
+      "id": 46,
+      "title": "Remove Vowels",
+      "question_statement": "Write a Python program to solve the problem: Remove Vowels.",
+      "difficulty": "easy",
+      "max_score": 100,
+      "sample_input": "Sample Input",
+      "sample_output": "Sample Output",
+      "solution_explanation": "Solve using standard Python control structures, loops, functions, and data structures.",
+      "test_cases": [
+        {
+          "input": "Sample Input",
+          "expected_output": "Sample Output"
+        },
+        {
+          "input": "Edge case input",
+          "expected_output": "Handled correctly"
+        },
+        {
+          "input": "Invalid input",
+          "expected_output": "Error / Graceful handling"
+        }
+      ]
+    },
+    {
+      "id": 47,
+      "title": "Isomorphic Strings",
+      "question_statement": "Write a Python program to solve the problem: Isomorphic Strings.",
+      "difficulty": "easy",
+      "max_score": 100,
+      "sample_input": "Sample Input",
+      "sample_output": "Sample Output",
+      "solution_explanation": "Solve using standard Python control structures, loops, functions, and data structures.",
+      "test_cases": [
+        {
+          "input": "Sample Input",
+          "expected_output": "Sample Output"
+        },
+        {
+          "input": "Edge case input",
+          "expected_output": "Handled correctly"
+        },
+        {
+          "input": "Invalid input",
+          "expected_output": "Error / Graceful handling"
+        }
+      ]
+    },
+    {
+      "id": 48,
+      "title": "Vowel Strings Count",
+      "question_statement": "Write a Python program to solve the problem: Vowel Strings Count.",
+      "difficulty": "easy",
+      "max_score": 100,
+      "sample_input": "Sample Input",
+      "sample_output": "Sample Output",
+      "solution_explanation": "Solve using standard Python control structures, loops, functions, and data structures.",
+      "test_cases": [
+        {
+          "input": "Sample Input",
+          "expected_output": "Sample Output"
+        },
+        {
+          "input": "Edge case input",
+          "expected_output": "Handled correctly"
+        },
+        {
+          "input": "Invalid input",
+          "expected_output": "Error / Graceful handling"
+        }
+      ]
+    },
+    {
+      "id": 49,
+      "title": "Circular Distance String",
+      "question_statement": "Write a Python program to solve the problem: Circular Distance String.",
+      "difficulty": "easy",
+      "max_score": 100,
+      "sample_input": "Sample Input",
+      "sample_output": "Sample Output",
+      "solution_explanation": "Solve using standard Python control structures, loops, functions, and data structures.",
+      "test_cases": [
+        {
+          "input": "Sample Input",
+          "expected_output": "Sample Output"
+        },
+        {
+          "input": "Edge case input",
+          "expected_output": "Handled correctly"
+        },
+        {
+          "input": "Invalid input",
+          "expected_output": "Error / Graceful handling"
+        }
+      ]
+    },
+    {
+      "id": 50,
+      "title": "Remove Common Words",
+      "question_statement": "Write a Python program to solve the problem: Remove Common Words.",
+      "difficulty": "easy",
+      "max_score": 100,
+      "sample_input": "Sample Input",
+      "sample_output": "Sample Output",
+      "solution_explanation": "Solve using standard Python control structures, loops, functions, and data structures.",
+      "test_cases": [
+        {
+          "input": "Sample Input",
+          "expected_output": "Sample Output"
+        },
+        {
+          "input": "Edge case input",
+          "expected_output": "Handled correctly"
+        },
+        {
+          "input": "Invalid input",
+          "expected_output": "Error / Graceful handling"
+        }
+      ]
+    },
+    {
+      "id": 51,
+      "title": "Length of Last Word",
+      "question_statement": "Write a Python program to solve the problem: Length of Last Word.",
+      "difficulty": "easy",
+      "max_score": 100,
+      "sample_input": "Sample Input",
+      "sample_output": "Sample Output",
+      "solution_explanation": "Solve using standard Python control structures, loops, functions, and data structures.",
+      "test_cases": [
+        {
+          "input": "Sample Input",
+          "expected_output": "Sample Output"
+        },
+        {
+          "input": "Edge case input",
+          "expected_output": "Handled correctly"
+        },
+        {
+          "input": "Invalid input",
+          "expected_output": "Error / Graceful handling"
+        }
+      ]
+    },
+    {
+      "id": 52,
+      "title": "Longest Substring Frequency",
+      "question_statement": "Write a Python program to solve the problem: Longest Substring Frequency.",
+      "difficulty": "easy",
+      "max_score": 100,
+      "sample_input": "Sample Input",
+      "sample_output": "Sample Output",
+      "solution_explanation": "Solve using standard Python control structures, loops, functions, and data structures.",
+      "test_cases": [
+        {
+          "input": "Sample Input",
+          "expected_output": "Sample Output"
+        },
+        {
+          "input": "Edge case input",
+          "expected_output": "Handled correctly"
+        },
+        {
+          "input": "Invalid input",
+          "expected_output": "Error / Graceful handling"
+        }
+      ]
+    },
+    {
+      "id": 53,
+      "title": "Reverse Words",
+      "question_statement": "Write a Python program to solve the problem: Reverse Words.",
+      "difficulty": "easy",
+      "max_score": 100,
+      "sample_input": "Sample Input",
+      "sample_output": "Sample Output",
+      "solution_explanation": "Solve using standard Python control structures, loops, functions, and data structures.",
+      "test_cases": [
+        {
+          "input": "Sample Input",
+          "expected_output": "Sample Output"
+        },
+        {
+          "input": "Edge case input",
+          "expected_output": "Handled correctly"
+        },
+        {
+          "input": "Invalid input",
+          "expected_output": "Error / Graceful handling"
+        }
+      ]
+    },
+    {
+      "id": 54,
+      "title": "Mirror Number",
+      "question_statement": "Write a Python program to solve the problem: Mirror Number.",
+      "difficulty": "easy",
+      "max_score": 100,
+      "sample_input": "Sample Input",
+      "sample_output": "Sample Output",
+      "solution_explanation": "Solve using standard Python control structures, loops, functions, and data structures.",
+      "test_cases": [
+        {
+          "input": "Sample Input",
+          "expected_output": "Sample Output"
+        },
+        {
+          "input": "Edge case input",
+          "expected_output": "Handled correctly"
+        },
+        {
+          "input": "Invalid input",
+          "expected_output": "Error / Graceful handling"
+        }
+      ]
+    },
+    {
+      "id": 55,
+      "title": "Group Anagrams",
+      "question_statement": "Write a Python program to solve the problem: Group Anagrams.",
+      "difficulty": "easy",
+      "max_score": 100,
+      "sample_input": "Sample Input",
+      "sample_output": "Sample Output",
+      "solution_explanation": "Solve using standard Python control structures, loops, functions, and data structures.",
+      "test_cases": [
+        {
+          "input": "Sample Input",
+          "expected_output": "Sample Output"
+        },
+        {
+          "input": "Edge case input",
+          "expected_output": "Handled correctly"
+        },
+        {
+          "input": "Invalid input",
+          "expected_output": "Error / Graceful handling"
+        }
+      ]
+    },
+    {
+      "id": 56,
+      "title": "Initial Letters with Dot",
+      "question_statement": "Write a Python program to solve the problem: Initial Letters with Dot.",
+      "difficulty": "easy",
+      "max_score": 100,
+      "sample_input": "Sample Input",
+      "sample_output": "Sample Output",
+      "solution_explanation": "Solve using standard Python control structures, loops, functions, and data structures.",
+      "test_cases": [
+        {
+          "input": "Sample Input",
+          "expected_output": "Sample Output"
+        },
+        {
+          "input": "Edge case input",
+          "expected_output": "Handled correctly"
+        },
+        {
+          "input": "Invalid input",
+          "expected_output": "Error / Graceful handling"
+        }
+      ]
+    },
+    {
+      "id": 57,
+      "title": "Valid Palindrome",
+      "question_statement": "Write a Python program to solve the problem: Valid Palindrome.",
+      "difficulty": "easy",
+      "max_score": 100,
+      "sample_input": "Sample Input",
+      "sample_output": "Sample Output",
+      "solution_explanation": "Solve using standard Python control structures, loops, functions, and data structures.",
+      "test_cases": [
+        {
+          "input": "Sample Input",
+          "expected_output": "Sample Output"
+        },
+        {
+          "input": "Edge case input",
+          "expected_output": "Handled correctly"
+        },
+        {
+          "input": "Invalid input",
+          "expected_output": "Error / Graceful handling"
+        }
+      ]
+    },
+    {
+      "id": 58,
+      "title": "Delete Character",
+      "question_statement": "Write a Python program to solve the problem: Delete Character.",
+      "difficulty": "easy",
+      "max_score": 100,
+      "sample_input": "Sample Input",
+      "sample_output": "Sample Output",
+      "solution_explanation": "Solve using standard Python control structures, loops, functions, and data structures.",
+      "test_cases": [
+        {
+          "input": "Sample Input",
+          "expected_output": "Sample Output"
+        },
+        {
+          "input": "Edge case input",
+          "expected_output": "Handled correctly"
+        },
+        {
+          "input": "Invalid input",
+          "expected_output": "Error / Graceful handling"
+        }
+      ]
+    },
+    {
+      "id": 59,
+      "title": "Substring Search",
+      "question_statement": "Write a Python program to solve the problem: Substring Search.",
+      "difficulty": "easy",
+      "max_score": 100,
+      "sample_input": "Sample Input",
+      "sample_output": "Sample Output",
+      "solution_explanation": "Solve using standard Python control structures, loops, functions, and data structures.",
+      "test_cases": [
+        {
+          "input": "Sample Input",
+          "expected_output": "Sample Output"
+        },
+        {
+          "input": "Edge case input",
+          "expected_output": "Handled correctly"
+        },
+        {
+          "input": "Invalid input",
+          "expected_output": "Error / Graceful handling"
+        }
+      ]
+    },
+    {
+      "id": 60,
+      "title": "Expression Evaluation",
+      "question_statement": "Write a Python program to solve the problem: Expression Evaluation.",
+      "difficulty": "easy",
+      "max_score": 100,
+      "sample_input": "Sample Input",
+      "sample_output": "Sample Output",
+      "solution_explanation": "Solve using standard Python control structures, loops, functions, and data structures.",
+      "test_cases": [
+        {
+          "input": "Sample Input",
+          "expected_output": "Sample Output"
+        },
+        {
+          "input": "Edge case input",
+          "expected_output": "Handled correctly"
+        },
+        {
+          "input": "Invalid input",
+          "expected_output": "Error / Graceful handling"
+        }
+      ]
+    },
+    {
+      "id": 61,
+      "title": "Largest Palindrome Product",
+      "question_statement": "Write a Python program to solve the problem: Largest Palindrome Product.",
+      "difficulty": "easy",
+      "max_score": 100,
+      "sample_input": "Sample Input",
+      "sample_output": "Sample Output",
+      "solution_explanation": "Solve using standard Python control structures, loops, functions, and data structures.",
+      "test_cases": [
+        {
+          "input": "Sample Input",
+          "expected_output": "Sample Output"
+        },
+        {
+          "input": "Edge case input",
+          "expected_output": "Handled correctly"
+        },
+        {
+          "input": "Invalid input",
+          "expected_output": "Error / Graceful handling"
+        }
+      ]
+    },
+    {
+      "id": 62,
+      "title": "Remove K Digits",
+      "question_statement": "Write a Python program to solve the problem: Remove K Digits.",
+      "difficulty": "easy",
+      "max_score": 100,
+      "sample_input": "Sample Input",
+      "sample_output": "Sample Output",
+      "solution_explanation": "Solve using standard Python control structures, loops, functions, and data structures.",
+      "test_cases": [
+        {
+          "input": "Sample Input",
+          "expected_output": "Sample Output"
+        },
+        {
+          "input": "Edge case input",
+          "expected_output": "Handled correctly"
+        },
+        {
+          "input": "Invalid input",
+          "expected_output": "Error / Graceful handling"
+        }
+      ]
+    },
+    {
+      "id": 63,
+      "title": "Unicode Uppercase",
+      "question_statement": "Write a Python program to solve the problem: Unicode Uppercase.",
+      "difficulty": "easy",
+      "max_score": 100,
+      "sample_input": "Sample Input",
+      "sample_output": "Sample Output",
+      "solution_explanation": "Solve using standard Python control structures, loops, functions, and data structures.",
+      "test_cases": [
+        {
+          "input": "Sample Input",
+          "expected_output": "Sample Output"
+        },
+        {
+          "input": "Edge case input",
+          "expected_output": "Handled correctly"
+        },
+        {
+          "input": "Invalid input",
+          "expected_output": "Error / Graceful handling"
+        }
+      ]
+    },
+    {
+      "id": 64,
+      "title": "Edit Distance",
+      "question_statement": "Write a Python program to solve the problem: Edit Distance.",
+      "difficulty": "easy",
+      "max_score": 100,
+      "sample_input": "Sample Input",
+      "sample_output": "Sample Output",
+      "solution_explanation": "Solve using standard Python control structures, loops, functions, and data structures.",
+      "test_cases": [
+        {
+          "input": "Sample Input",
+          "expected_output": "Sample Output"
+        },
+        {
+          "input": "Edge case input",
+          "expected_output": "Handled correctly"
+        },
+        {
+          "input": "Invalid input",
+          "expected_output": "Error / Graceful handling"
+        }
+      ]
+    },
+    {
+      "id": 65,
+      "title": "Remove Duplicate List Items",
+      "question_statement": "Write a Python program to solve the problem: Remove Duplicate List Items.",
+      "difficulty": "easy",
+      "max_score": 100,
+      "sample_input": "Sample Input",
+      "sample_output": "Sample Output",
+      "solution_explanation": "Solve using standard Python control structures, loops, functions, and data structures.",
+      "test_cases": [
+        {
+          "input": "Sample Input",
+          "expected_output": "Sample Output"
+        },
+        {
+          "input": "Edge case input",
+          "expected_output": "Handled correctly"
+        },
+        {
+          "input": "Invalid input",
+          "expected_output": "Error / Graceful handling"
+        }
+      ]
+    },
+    {
+      "id": 66,
+      "title": "Mean Median Mode",
+      "question_statement": "Write a Python program to solve the problem: Mean Median Mode.",
+      "difficulty": "easy",
+      "max_score": 100,
+      "sample_input": "Sample Input",
+      "sample_output": "Sample Output",
+      "solution_explanation": "Solve using standard Python control structures, loops, functions, and data structures.",
+      "test_cases": [
+        {
+          "input": "Sample Input",
+          "expected_output": "Sample Output"
+        },
+        {
+          "input": "Edge case input",
+          "expected_output": "Handled correctly"
+        },
+        {
+          "input": "Invalid input",
+          "expected_output": "Error / Graceful handling"
+        }
+      ]
+    },
+    {
+      "id": 67,
+      "title": "Perfect Squares Range",
+      "question_statement": "Write a Python program to solve the problem: Perfect Squares Range.",
+      "difficulty": "easy",
+      "max_score": 100,
+      "sample_input": "Sample Input",
+      "sample_output": "Sample Output",
+      "solution_explanation": "Solve using standard Python control structures, loops, functions, and data structures.",
+      "test_cases": [
+        {
+          "input": "Sample Input",
+          "expected_output": "Sample Output"
+        },
+        {
+          "input": "Edge case input",
+          "expected_output": "Handled correctly"
+        },
+        {
+          "input": "Invalid input",
+          "expected_output": "Error / Graceful handling"
+        }
+      ]
+    },
+    {
+      "id": 68,
+      "title": "Nth Largest Number",
+      "question_statement": "Write a Python program to solve the problem: Nth Largest Number.",
+      "difficulty": "easy",
+      "max_score": 100,
+      "sample_input": "Sample Input",
+      "sample_output": "Sample Output",
+      "solution_explanation": "Solve using standard Python control structures, loops, functions, and data structures.",
+      "test_cases": [
+        {
+          "input": "Sample Input",
+          "expected_output": "Sample Output"
+        },
+        {
+          "input": "Edge case input",
+          "expected_output": "Handled correctly"
+        },
+        {
+          "input": "Invalid input",
+          "expected_output": "Error / Graceful handling"
+        }
+      ]
+    },
+    {
+      "id": 69,
+      "title": "Tuple of Number and Square",
+      "question_statement": "Write a Python program to solve the problem: Tuple of Number and Square.",
+      "difficulty": "easy",
+      "max_score": 100,
+      "sample_input": "Sample Input",
+      "sample_output": "Sample Output",
+      "solution_explanation": "Solve using standard Python control structures, loops, functions, and data structures.",
+      "test_cases": [
+        {
+          "input": "Sample Input",
+          "expected_output": "Sample Output"
+        },
+        {
+          "input": "Edge case input",
+          "expected_output": "Handled correctly"
+        },
+        {
+          "input": "Invalid input",
+          "expected_output": "Error / Graceful handling"
+        }
+      ]
+    },
+    {
+      "id": 70,
+      "title": "Composite Count in Array",
+      "question_statement": "Write a Python program to solve the problem: Composite Count in Array.",
+      "difficulty": "easy",
+      "max_score": 100,
+      "sample_input": "Sample Input",
+      "sample_output": "Sample Output",
+      "solution_explanation": "Solve using standard Python control structures, loops, functions, and data structures.",
+      "test_cases": [
+        {
+          "input": "Sample Input",
+          "expected_output": "Sample Output"
+        },
+        {
+          "input": "Edge case input",
+          "expected_output": "Handled correctly"
+        },
+        {
+          "input": "Invalid input",
+          "expected_output": "Error / Graceful handling"
+        }
+      ]
+    },
+    {
+      "id": 71,
+      "title": "Reverse Array",
+      "question_statement": "Write a Python program to solve the problem: Reverse Array.",
+      "difficulty": "easy",
+      "max_score": 100,
+      "sample_input": "Sample Input",
+      "sample_output": "Sample Output",
+      "solution_explanation": "Solve using standard Python control structures, loops, functions, and data structures.",
+      "test_cases": [
+        {
+          "input": "Sample Input",
+          "expected_output": "Sample Output"
+        },
+        {
+          "input": "Edge case input",
+          "expected_output": "Handled correctly"
+        },
+        {
+          "input": "Invalid input",
+          "expected_output": "Error / Graceful handling"
+        }
+      ]
+    },
+    {
+      "id": 72,
+      "title": "Prime Numbers in Array",
+      "question_statement": "Write a Python program to solve the problem: Prime Numbers in Array.",
+      "difficulty": "easy",
+      "max_score": 100,
+      "sample_input": "Sample Input",
+      "sample_output": "Sample Output",
+      "solution_explanation": "Solve using standard Python control structures, loops, functions, and data structures.",
+      "test_cases": [
+        {
+          "input": "Sample Input",
+          "expected_output": "Sample Output"
+        },
+        {
+          "input": "Edge case input",
+          "expected_output": "Handled correctly"
+        },
+        {
+          "input": "Invalid input",
+          "expected_output": "Error / Graceful handling"
+        }
+      ]
+    },
+    {
+      "id": 73,
+      "title": "Negative Numbers Count",
+      "question_statement": "Write a Python program to solve the problem: Negative Numbers Count.",
+      "difficulty": "easy",
+      "max_score": 100,
+      "sample_input": "Sample Input",
+      "sample_output": "Sample Output",
+      "solution_explanation": "Solve using standard Python control structures, loops, functions, and data structures.",
+      "test_cases": [
+        {
+          "input": "Sample Input",
+          "expected_output": "Sample Output"
+        },
+        {
+          "input": "Edge case input",
+          "expected_output": "Handled correctly"
+        },
+        {
+          "input": "Invalid input",
+          "expected_output": "Error / Graceful handling"
+        }
+      ]
+    },
+    {
+      "id": 74,
+      "title": "Mth Max and Nth Min",
+      "question_statement": "Write a Python program to solve the problem: Mth Max and Nth Min.",
+      "difficulty": "easy",
+      "max_score": 100,
+      "sample_input": "Sample Input",
+      "sample_output": "Sample Output",
+      "solution_explanation": "Solve using standard Python control structures, loops, functions, and data structures.",
+      "test_cases": [
+        {
+          "input": "Sample Input",
+          "expected_output": "Sample Output"
+        },
+        {
+          "input": "Edge case input",
+          "expected_output": "Handled correctly"
+        },
+        {
+          "input": "Invalid input",
+          "expected_output": "Error / Graceful handling"
+        }
+      ]
+    },
+    {
+      "id": 75,
+      "title": "Merge Sorted Lists",
+      "question_statement": "Write a Python program to solve the problem: Merge Sorted Lists.",
+      "difficulty": "easy",
+      "max_score": 100,
+      "sample_input": "Sample Input",
+      "sample_output": "Sample Output",
+      "solution_explanation": "Solve using standard Python control structures, loops, functions, and data structures.",
+      "test_cases": [
+        {
+          "input": "Sample Input",
+          "expected_output": "Sample Output"
+        },
+        {
+          "input": "Edge case input",
+          "expected_output": "Handled correctly"
+        },
+        {
+          "input": "Invalid input",
+          "expected_output": "Error / Graceful handling"
+        }
+      ]
+    },
+    {
+      "id": 76,
+      "title": "Peak Element",
+      "question_statement": "Write a Python program to solve the problem: Peak Element.",
+      "difficulty": "easy",
+      "max_score": 100,
+      "sample_input": "Sample Input",
+      "sample_output": "Sample Output",
+      "solution_explanation": "Solve using standard Python control structures, loops, functions, and data structures.",
+      "test_cases": [
+        {
+          "input": "Sample Input",
+          "expected_output": "Sample Output"
+        },
+        {
+          "input": "Edge case input",
+          "expected_output": "Handled correctly"
+        },
+        {
+          "input": "Invalid input",
+          "expected_output": "Error / Graceful handling"
+        }
+      ]
+    },
+    {
+      "id": 77,
+      "title": "Average Until -1",
+      "question_statement": "Write a Python program to solve the problem: Average Until -1.",
+      "difficulty": "easy",
+      "max_score": 100,
+      "sample_input": "Sample Input",
+      "sample_output": "Sample Output",
+      "solution_explanation": "Solve using standard Python control structures, loops, functions, and data structures.",
+      "test_cases": [
+        {
+          "input": "Sample Input",
+          "expected_output": "Sample Output"
+        },
+        {
+          "input": "Edge case input",
+          "expected_output": "Handled correctly"
+        },
+        {
+          "input": "Invalid input",
+          "expected_output": "Error / Graceful handling"
+        }
+      ]
+    },
+    {
+      "id": 78,
+      "title": "Sum Square Odd Even",
+      "question_statement": "Write a Python program to solve the problem: Sum Square Odd Even.",
+      "difficulty": "easy",
+      "max_score": 100,
+      "sample_input": "Sample Input",
+      "sample_output": "Sample Output",
+      "solution_explanation": "Solve using standard Python control structures, loops, functions, and data structures.",
+      "test_cases": [
+        {
+          "input": "Sample Input",
+          "expected_output": "Sample Output"
+        },
+        {
+          "input": "Edge case input",
+          "expected_output": "Handled correctly"
+        },
+        {
+          "input": "Invalid input",
+          "expected_output": "Error / Graceful handling"
+        }
+      ]
+    },
+    {
+      "id": 79,
+      "title": "Good Pairs",
+      "question_statement": "Write a Python program to solve the problem: Good Pairs.",
+      "difficulty": "easy",
+      "max_score": 100,
+      "sample_input": "Sample Input",
+      "sample_output": "Sample Output",
+      "solution_explanation": "Solve using standard Python control structures, loops, functions, and data structures.",
+      "test_cases": [
+        {
+          "input": "Sample Input",
+          "expected_output": "Sample Output"
+        },
+        {
+          "input": "Edge case input",
+          "expected_output": "Handled correctly"
+        },
+        {
+          "input": "Invalid input",
+          "expected_output": "Error / Graceful handling"
+        }
+      ]
+    },
+    {
+      "id": 80,
+      "title": "Smaller Numbers Count",
+      "question_statement": "Write a Python program to solve the problem: Smaller Numbers Count.",
+      "difficulty": "easy",
+      "max_score": 100,
+      "sample_input": "Sample Input",
+      "sample_output": "Sample Output",
+      "solution_explanation": "Solve using standard Python control structures, loops, functions, and data structures.",
+      "test_cases": [
+        {
+          "input": "Sample Input",
+          "expected_output": "Sample Output"
+        },
+        {
+          "input": "Edge case input",
+          "expected_output": "Handled correctly"
+        },
+        {
+          "input": "Invalid input",
+          "expected_output": "Error / Graceful handling"
+        }
+      ]
+    },
+    {
+      "id": 81,
+      "title": "Cruise Guests",
+      "question_statement": "Write a Python program to solve the problem: Cruise Guests.",
+      "difficulty": "easy",
+      "max_score": 100,
+      "sample_input": "Sample Input",
+      "sample_output": "Sample Output",
+      "solution_explanation": "Solve using standard Python control structures, loops, functions, and data structures.",
+      "test_cases": [
+        {
+          "input": "Sample Input",
+          "expected_output": "Sample Output"
+        },
+        {
+          "input": "Edge case input",
+          "expected_output": "Handled correctly"
+        },
+        {
+          "input": "Invalid input",
+          "expected_output": "Error / Graceful handling"
+        }
+      ]
+    },
+    {
+      "id": 82,
+      "title": "Unique Permutations",
+      "question_statement": "Write a Python program to solve the problem: Unique Permutations.",
+      "difficulty": "easy",
+      "max_score": 100,
+      "sample_input": "Sample Input",
+      "sample_output": "Sample Output",
+      "solution_explanation": "Solve using standard Python control structures, loops, functions, and data structures.",
+      "test_cases": [
+        {
+          "input": "Sample Input",
+          "expected_output": "Sample Output"
+        },
+        {
+          "input": "Edge case input",
+          "expected_output": "Handled correctly"
+        },
+        {
+          "input": "Invalid input",
+          "expected_output": "Error / Graceful handling"
+        }
+      ]
+    },
+    {
+      "id": 83,
+      "title": "FizzBuzz",
+      "question_statement": "Write a Python program to solve the problem: FizzBuzz.",
+      "difficulty": "easy",
+      "max_score": 100,
+      "sample_input": "Sample Input",
+      "sample_output": "Sample Output",
+      "solution_explanation": "Solve using standard Python control structures, loops, functions, and data structures.",
+      "test_cases": [
+        {
+          "input": "Sample Input",
+          "expected_output": "Sample Output"
+        },
+        {
+          "input": "Edge case input",
+          "expected_output": "Handled correctly"
+        },
+        {
+          "input": "Invalid input",
+          "expected_output": "Error / Graceful handling"
+        }
+      ]
+    },
+    {
+      "id": 84,
+      "title": "Remove Duplicates",
+      "question_statement": "Write a Python program to solve the problem: Remove Duplicates.",
+      "difficulty": "easy",
+      "max_score": 100,
+      "sample_input": "Sample Input",
+      "sample_output": "Sample Output",
+      "solution_explanation": "Solve using standard Python control structures, loops, functions, and data structures.",
+      "test_cases": [
+        {
+          "input": "Sample Input",
+          "expected_output": "Sample Output"
+        },
+        {
+          "input": "Edge case input",
+          "expected_output": "Handled correctly"
+        },
+        {
+          "input": "Invalid input",
+          "expected_output": "Error / Graceful handling"
+        }
+      ]
+    },
+    {
+      "id": 85,
+      "title": "Minimum in Rotated Array",
+      "question_statement": "Write a Python program to solve the problem: Minimum in Rotated Array.",
+      "difficulty": "easy",
+      "max_score": 100,
+      "sample_input": "Sample Input",
+      "sample_output": "Sample Output",
+      "solution_explanation": "Solve using standard Python control structures, loops, functions, and data structures.",
+      "test_cases": [
+        {
+          "input": "Sample Input",
+          "expected_output": "Sample Output"
+        },
+        {
+          "input": "Edge case input",
+          "expected_output": "Handled correctly"
+        },
+        {
+          "input": "Invalid input",
+          "expected_output": "Error / Graceful handling"
+        }
+      ]
+    },
+    {
+      "id": 86,
+      "title": "Target Range in Array",
+      "question_statement": "Write a Python program to solve the problem: Target Range in Array.",
+      "difficulty": "easy",
+      "max_score": 100,
+      "sample_input": "Sample Input",
+      "sample_output": "Sample Output",
+      "solution_explanation": "Solve using standard Python control structures, loops, functions, and data structures.",
+      "test_cases": [
+        {
+          "input": "Sample Input",
+          "expected_output": "Sample Output"
+        },
+        {
+          "input": "Edge case input",
+          "expected_output": "Handled correctly"
+        },
+        {
+          "input": "Invalid input",
+          "expected_output": "Error / Graceful handling"
+        }
+      ]
+    },
+    {
+      "id": 87,
+      "title": "Insert Element at Index",
+      "question_statement": "Write a Python program to solve the problem: Insert Element at Index.",
+      "difficulty": "easy",
+      "max_score": 100,
+      "sample_input": "Sample Input",
+      "sample_output": "Sample Output",
+      "solution_explanation": "Solve using standard Python control structures, loops, functions, and data structures.",
+      "test_cases": [
+        {
+          "input": "Sample Input",
+          "expected_output": "Sample Output"
+        },
+        {
+          "input": "Edge case input",
+          "expected_output": "Handled correctly"
+        },
+        {
+          "input": "Invalid input",
+          "expected_output": "Error / Graceful handling"
+        }
+      ]
+    },
+    {
+      "id": 88,
+      "title": "Day of the Week",
+      "question_statement": "Write a Python program to solve the problem: Day of the Week.",
+      "difficulty": "easy",
+      "max_score": 100,
+      "sample_input": "Sample Input",
+      "sample_output": "Sample Output",
+      "solution_explanation": "Solve using standard Python control structures, loops, functions, and data structures.",
+      "test_cases": [
+        {
+          "input": "Sample Input",
+          "expected_output": "Sample Output"
+        },
+        {
+          "input": "Edge case input",
+          "expected_output": "Handled correctly"
+        },
+        {
+          "input": "Invalid input",
+          "expected_output": "Error / Graceful handling"
+        }
+      ]
+    },
+    {
+      "id": 89,
+      "title": "MSB and LSB",
+      "question_statement": "Write a Python program to solve the problem: MSB and LSB.",
+      "difficulty": "easy",
+      "max_score": 100,
+      "sample_input": "Sample Input",
+      "sample_output": "Sample Output",
+      "solution_explanation": "Solve using standard Python control structures, loops, functions, and data structures.",
+      "test_cases": [
+        {
+          "input": "Sample Input",
+          "expected_output": "Sample Output"
+        },
+        {
+          "input": "Edge case input",
+          "expected_output": "Handled correctly"
+        },
+        {
+          "input": "Invalid input",
+          "expected_output": "Error / Graceful handling"
+        }
+      ]
+    },
+    {
+      "id": 90,
+      "title": "Two Sum Sorted",
+      "question_statement": "Write a Python program to solve the problem: Two Sum Sorted.",
+      "difficulty": "easy",
+      "max_score": 100,
+      "sample_input": "Sample Input",
+      "sample_output": "Sample Output",
+      "solution_explanation": "Solve using standard Python control structures, loops, functions, and data structures.",
+      "test_cases": [
+        {
+          "input": "Sample Input",
+          "expected_output": "Sample Output"
+        },
+        {
+          "input": "Edge case input",
+          "expected_output": "Handled correctly"
+        },
+        {
+          "input": "Invalid input",
+          "expected_output": "Error / Graceful handling"
+        }
+      ]
+    },
+    {
+      "id": 91,
+      "title": "Replace Negatives with Avg",
+      "question_statement": "Write a Python program to solve the problem: Replace Negatives with Avg.",
+      "difficulty": "easy",
+      "max_score": 100,
+      "sample_input": "Sample Input",
+      "sample_output": "Sample Output",
+      "solution_explanation": "Solve using standard Python control structures, loops, functions, and data structures.",
+      "test_cases": [
+        {
+          "input": "Sample Input",
+          "expected_output": "Sample Output"
+        },
+        {
+          "input": "Edge case input",
+          "expected_output": "Handled correctly"
+        },
+        {
+          "input": "Invalid input",
+          "expected_output": "Error / Graceful handling"
+        }
+      ]
+    },
+    {
+      "id": 92,
+      "title": "Sum of Multiples",
+      "question_statement": "Write a Python program to solve the problem: Sum of Multiples.",
+      "difficulty": "easy",
+      "max_score": 100,
+      "sample_input": "Sample Input",
+      "sample_output": "Sample Output",
+      "solution_explanation": "Solve using standard Python control structures, loops, functions, and data structures.",
+      "test_cases": [
+        {
+          "input": "Sample Input",
+          "expected_output": "Sample Output"
+        },
+        {
+          "input": "Edge case input",
+          "expected_output": "Handled correctly"
+        },
+        {
+          "input": "Invalid input",
+          "expected_output": "Error / Graceful handling"
+        }
+      ]
+    },
+    {
+      "id": 93,
+      "title": "Job Assignment Profit",
+      "question_statement": "Write a Python program to solve the problem: Job Assignment Profit.",
+      "difficulty": "easy",
+      "max_score": 100,
+      "sample_input": "Sample Input",
+      "sample_output": "Sample Output",
+      "solution_explanation": "Solve using standard Python control structures, loops, functions, and data structures.",
+      "test_cases": [
+        {
+          "input": "Sample Input",
+          "expected_output": "Sample Output"
+        },
+        {
+          "input": "Edge case input",
+          "expected_output": "Handled correctly"
+        },
+        {
+          "input": "Invalid input",
+          "expected_output": "Error / Graceful handling"
+        }
+      ]
+    },
+    {
+      "id": 94,
+      "title": "Frequency of Elements",
+      "question_statement": "Write a Python program to solve the problem: Frequency of Elements.",
+      "difficulty": "easy",
+      "max_score": 100,
+      "sample_input": "Sample Input",
+      "sample_output": "Sample Output",
+      "solution_explanation": "Solve using standard Python control structures, loops, functions, and data structures.",
+      "test_cases": [
+        {
+          "input": "Sample Input",
+          "expected_output": "Sample Output"
+        },
+        {
+          "input": "Edge case input",
+          "expected_output": "Handled correctly"
+        },
+        {
+          "input": "Invalid input",
+          "expected_output": "Error / Graceful handling"
+        }
+      ]
+    },
+    {
+      "id": 95,
+      "title": "Find Duplicate Number",
+      "question_statement": "Write a Python program to solve the problem: Find Duplicate Number.",
+      "difficulty": "easy",
+      "max_score": 100,
+      "sample_input": "Sample Input",
+      "sample_output": "Sample Output",
+      "solution_explanation": "Solve using standard Python control structures, loops, functions, and data structures.",
+      "test_cases": [
+        {
+          "input": "Sample Input",
+          "expected_output": "Sample Output"
+        },
+        {
+          "input": "Edge case input",
+          "expected_output": "Handled correctly"
+        },
+        {
+          "input": "Invalid input",
+          "expected_output": "Error / Graceful handling"
+        }
+      ]
+    },
+    {
+      "id": 96,
+      "title": "Search in Matrix",
+      "question_statement": "Write a Python program to solve the problem: Search in Matrix.",
+      "difficulty": "easy",
+      "max_score": 100,
+      "sample_input": "Sample Input",
+      "sample_output": "Sample Output",
+      "solution_explanation": "Solve using standard Python control structures, loops, functions, and data structures.",
+      "test_cases": [
+        {
+          "input": "Sample Input",
+          "expected_output": "Sample Output"
+        },
+        {
+          "input": "Edge case input",
+          "expected_output": "Handled correctly"
+        },
+        {
+          "input": "Invalid input",
+          "expected_output": "Error / Graceful handling"
+        }
+      ]
+    },
+    {
+      "id": 97,
+      "title": "Dictionary Letter Combinations",
+      "question_statement": "Write a Python program to solve the problem: Dictionary Letter Combinations.",
+      "difficulty": "easy",
+      "max_score": 100,
+      "sample_input": "Sample Input",
+      "sample_output": "Sample Output",
+      "solution_explanation": "Solve using standard Python control structures, loops, functions, and data structures.",
+      "test_cases": [
+        {
+          "input": "Sample Input",
+          "expected_output": "Sample Output"
+        },
+        {
+          "input": "Edge case input",
+          "expected_output": "Handled correctly"
+        },
+        {
+          "input": "Invalid input",
+          "expected_output": "Error / Graceful handling"
+        }
+      ]
+    }
+  ]
+}
