@@ -87,19 +87,31 @@ const generateFlashcardsFlow = ai.defineFlow(
         'Here is the source content:'
     ].filter(Boolean).join('\n\n');
 
-    const { output } = await ai.generate({
-        prompt: [
-            { text: promptInstructions },
-            sourceContentForPrompt
-        ],
-        output: { schema: z.object({ flashcards: z.array(FlashcardSchema) }) },
-        model: 'googleai/gemini-2.0-flash'
-    });
-    
-    if (!output?.flashcards || output.flashcards.length === 0) {
-        return { flashcards: [], error: "The AI failed to generate flashcards from the provided content. Please try again with different content or be more specific with your topic." };
+    try {
+      const { output } = await ai.generate({
+          prompt: [
+              { text: promptInstructions },
+              sourceContentForPrompt
+          ],
+          output: { schema: z.object({ flashcards: z.array(FlashcardSchema) }) },
+          model: 'googleai/gemini-3.5-flash'
+      });
+      
+      if (!output?.flashcards || output.flashcards.length === 0) {
+          return { flashcards: [], error: "The AI failed to generate flashcards from the provided content. Please try again with different content or be more specific with your topic." };
+      }
+  
+      return { flashcards: output.flashcards };
+    } catch (apiError: any) {
+      console.error("Gemini API Error in flashcard generation:", apiError);
+      let userFriendlyMessage = "An error occurred with the Gemini API. Please try again.";
+      const errMsg = apiError.message || String(apiError);
+      if (errMsg.includes("quota") || errMsg.includes("429") || errMsg.includes("Quota") || errMsg.includes("limit")) {
+        userFriendlyMessage = "Gemini API Quota Exceeded (429 Too Many Requests). Please wait a minute and try again.";
+      } else {
+        userFriendlyMessage = `Gemini API Error: ${errMsg.replace(/\s+/g, ' ').substring(0, 150)}`;
+      }
+      return { flashcards: [], error: userFriendlyMessage };
     }
-
-    return { flashcards: output.flashcards };
   }
 );

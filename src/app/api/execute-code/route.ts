@@ -1,6 +1,10 @@
 
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
+import { execSync } from 'child_process';
+import * as fs from 'fs';
+import * as path from 'path';
+import * as os from 'os';
 import type { TestCase } from '@/types';
 
 // --- Piston API Integration ---
@@ -41,6 +45,7 @@ interface PistonResponse {
 let cachedRuntimes: PistonRuntime[] | null = null;
 let lastRuntimeFetchTime: number = 0;
 const RUNTIME_CACHE_DURATION = 24 * 60 * 60 * 1000; // 24 hours
+const PISTON_API_BASE = process.env.PISTON_API_URL || 'https://emkc.org/api/v2/piston';
 
 // Helper to clean up error messages
 const cleanErrorMessage = (message: string): string => {
@@ -57,7 +62,7 @@ async function getPistonRuntimes(): Promise<PistonRuntime[]> {
     return cachedRuntimes;
   }
   try {
-    const response = await fetch('https://emkc.org/api/v2/piston/runtimes');
+    const response = await fetch(`${PISTON_API_BASE}/runtimes`);
     if (!response.ok) {
       console.error('Piston API: Failed to fetch runtimes - Status:', response.status);
       if (cachedRuntimes) return cachedRuntimes; // Return stale cache on error
@@ -295,147 +300,275 @@ async function executeWithMockAPI(body: ExecuteCodeRequestBody): Promise<Execute
     executionError: simulatedExecutionError && executionType === 'submit' ? simulatedExecutionError : undefined,
   };
 }
-// --- End Mock Implementation ---
+function runCodeLocally(language: string, code: string, stdin: string): { stdout: string; stderr: string; success: boolean } {
+  const lang = language.toLowerCase();
+  const tempDir = os.tmpdir();
+  
+  if (lang === 'javascript' || lang === 'js') {
+    const filePath = path.join(tempDir, `sandbox_${Date.now()}.js`);
+    try {
+      fs.writeFileSync(filePath, code);
+      const stdout = execSync(`node "${filePath}"`, { input: stdin, timeout: 5000, encoding: 'utf-8' });
+      return { stdout, stderr: "", success: true };
+    } catch (err: any) {
+      return { stdout: err.stdout || "", stderr: err.stderr || err.message || "Execution error", success: false };
+    } finally {
+      try { fs.unlinkSync(filePath); } catch {}
+    }
+  }
+  
+  if (lang === 'python' || lang === 'py') {
+    const filePath = path.join(tempDir, `sandbox_${Date.now()}.py`);
+    try {
+      fs.writeFileSync(filePath, code);
+      let stdout = "";
+      try {
+        stdout = execSync(`python "${filePath}"`, { input: stdin, timeout: 5000, encoding: 'utf-8' });
+      } catch {
+        stdout = execSync(`python3 "${filePath}"`, { input: stdin, timeout: 5000, encoding: 'utf-8' });
+      }
+      return { stdout, stderr: "", success: true };
+    } catch (err: any) {
+      return { stdout: err.stdout || "", stderr: err.stderr || err.message || "Execution error", success: false };
+    } finally {
+      try { fs.unlinkSync(filePath); } catch {}
+    }
+  }
 
-export async function POST(request: NextRequest) {
+  return { stdout: "", stderr: "Local execution fallback only supported for Python/JavaScript", success: false };
+}
+
+const LANGUAGE_ID_MAP: Record<string, number> = {
+  'c': 50,
+  'c++': 54,
+  'cpp': 54,
+  'java': 62,
+  'python': 71,
+  'py': 71,
+  'javascript': 63,
+  'js': 63,
+  'csharp': 51,
+  'c#': 51,
+  'typescript': 74,
+  'ts': 74,
+  'rust': 73,
+  'go': 60,
+  'ruby': 72,
+  'swift': 83,
+  'kotlin': 78,
+  'php': 68
+};
+
+function detectRiskyCode(code: string, language: string): string[] {
+  const warnings: string[] = [];
+  const trimmed = code.replace(/\s+/g, '');
+  
+  // Infinite loops check
+  if (
+    /while\s*\(\s*(true|1|1==1)\s*\)/i.test(code) ||
+    /for\s*\(\s*;\s*;\s*\)/.test(code) ||
+    /while\s*\(\s*!\s*0\s*\)/.test(code)
+  ) {
+    warnings.push("⚠️ This code may exceed the execution time limit.");
+  }
+  
+  // Huge memory allocations check
+  if (
+    /\[\s*\d{7,}\s*\]/.test(code) || 
+    /new\s+int\s*\[\s*\d{7,}\s*\]/i.test(code) ||
+    /new\s+Array\s*\(\s*\d{7,}\s*\)/i.test(code) ||
+    /arr\s*=\s*\[0\s*\]\s*\*\s*\d{7,}/.test(code)
+  ) {
+    warnings.push("⚠️ This program may exceed the memory limit.");
+  }
+  
+  // Many nested loops check
+  const forLoopsCount = (code.match(/for\s*\(/g) || []).length;
+  if (forLoopsCount >= 3) {
+    let nestingLevel = 0;
+    let maxNesting = 0;
+    const tokens = code.match(/for\s*\(|while\s*\(|\{|\}/g) || [];
+    for (const token of tokens) {
+      if (token.startsWith('for') || token.startsWith('while')) {
+        nestingLevel++;
+        if (nestingLevel > maxNesting) maxNesting = nestingLevel;
+      } else if (token === '}') {
+        if (nestingLevel > 0) nestingLevel--;
+      }
+    }
+    if (maxNesting >= 3) {
+      warnings.push("⚠️ This algorithm may be too slow for large inputs.");
+    }
+  }
+  
+  return warnings;
+}
+
+async function runCodeOnJudge0(language: string, code: string, stdin: string): Promise<{ stdout: string; stderr: string; compile_error?: string; error?: string }> {
+  const host = process.env.JUDGE0_API_URL || 'https://ce.judge0.com';
+  const langId = LANGUAGE_ID_MAP[language.toLowerCase()];
+  if (!langId) {
+    return { stdout: "", stderr: "", error: `Unsupported language: ${language}` };
+  }
+
   try {
-    const body: ExecuteCodeRequestBody = await request.json();
-    const { language: userLang, code, testCases, sampleInput, sampleOutput, executionType } = body;
+    const createRes = await fetch(`${host}/submissions?base64_encoded=false&wait=false`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        source_code: code,
+        language_id: langId,
+        stdin: stdin,
+      }),
+    });
 
-    const pistonRuntimes = await getPistonRuntimes();
-    const langInfo = getLatestVersionAndLanguage(userLang, pistonRuntimes);
-
-    if (!langInfo) {
-      console.warn(`Piston API: Language runtime for "${userLang}" not found. Falling back to mock API.`);
-      const mockResponse = await executeWithMockAPI(body);
-      mockResponse.generalOutput = `Language "${userLang}" not supported by Piston API. Using simulation.\n${mockResponse.generalOutput}`;
-      return NextResponse.json(mockResponse, { status: 200 });
+    if (!createRes.ok) {
+      const errText = await createRes.text();
+      if (errText.includes("queue is full") || createRes.status === 429 || createRes.status === 503) {
+        return { stdout: "", stderr: "", error: "⚠️ Server is busy. Please wait a few seconds and try again." };
+      }
+      return { stdout: "", stderr: "", error: `Judge0 submission failed: ${createRes.status} - ${errText}` };
     }
 
-    const pistonPayloadBase: PistonRequest = {
-      language: langInfo.language,
-      version: langInfo.version,
-      files: [{ name: getPistonFilename(langInfo.language), content: code }],
-      args: [],
-      compile_timeout: 10000, // 10 seconds
-      run_timeout: 5000,     // 5 seconds
-      // compile_memory_limit: -1, // Default (no limit or Piston's default)
-      // run_memory_limit: -1,     // Default
-    };
+    const { token } = await createRes.json();
+    if (!token) {
+      return { stdout: "", stderr: "", error: "Failed to obtain submission token from Judge0." };
+    }
+
+    let attempts = 0;
+    const maxAttempts = 20; // up to 10 seconds
+    while (attempts < maxAttempts) {
+      await new Promise(resolve => setTimeout(resolve, 500));
+      attempts++;
+
+      const pollRes = await fetch(`${host}/submissions/${token}?base64_encoded=false`);
+      if (!pollRes.ok) {
+        continue;
+      }
+
+      const result = await pollRes.json();
+      const statusId = result.status?.id;
+
+      if (statusId === 1 || statusId === 2) {
+        continue;
+      }
+
+      const stdout = result.stdout || "";
+      const stderr = result.stderr || "";
+      const compileError = result.compile_output || "";
+
+      if (statusId === 3) {
+        return { stdout, stderr: "" };
+      } else if (statusId === 5) {
+        return { stdout, stderr: "Time Limit Exceeded", error: "⚠️ Time Limit Exceeded" };
+      } else if (statusId === 6) {
+        return { stdout: "", stderr: compileError || stderr, compile_error: compileError || "Compilation Error" };
+      } else if (statusId >= 7 && statusId <= 12) {
+        return { stdout, stderr: stderr || `Runtime Error (Status ${statusId})` };
+      } else {
+        return { stdout, stderr: stderr || "Internal Server Error during execution" };
+      }
+    }
+
+    return { stdout: "", stderr: "⚠️ Execution Timed Out", error: "Execution Timed Out" };
+  } catch (err: any) {
+    return { stdout: "", stderr: "", error: `Execution error: ${err.message || String(err)}` };
+  }
+}
+
+export async function POST(request: NextRequest) {
+  let body: ExecuteCodeRequestBody | null = null;
+  try {
+    body = await request.json();
+    const { language, code, testCases, sampleInput, sampleOutput, executionType } = body;
+
+    // 1. Risky code checks
+    const riskyWarnings = detectRiskyCode(code, language);
+    let warningsHeader = "";
+    if (riskyWarnings.length > 0) {
+      warningsHeader = riskyWarnings.join('\n') + '\n\n';
+    }
 
     let responseData: ExecuteCodeResponseBody = {
-      generalOutput: "",
+      generalOutput: warningsHeader,
       testCaseResults: [],
     };
 
     if (executionType === 'run') {
-      const payload: PistonRequest = { ...pistonPayloadBase, stdin: sampleInput || "" };
-      const pistonResponseRaw = await fetch('https://emkc.org/api/v2/piston/execute', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload),
-      });
-
-      if (!pistonResponseRaw.ok) {
-        const errorText = await pistonResponseRaw.text();
-        console.error('Piston API Error (run):', errorText);
-        throw new Error(`Piston API request failed: ${pistonResponseRaw.status} - ${errorText}`);
+      const judge0Result = await runCodeOnJudge0(language, code, sampleInput || "");
+      
+      if (judge0Result.error) {
+        throw new Error(judge0Result.error);
       }
-      const result: PistonResponse = await pistonResponseRaw.json();
 
-      let currentCompileError: string | undefined = undefined;
-      let currentExecutionError: string | undefined = undefined;
-      let actualOutput = "";
-
-      if (result.compile && result.compile.stderr) {
-        currentCompileError = cleanErrorMessage(result.compile.stderr);
-      } else if (result.run.stderr) {
-        currentExecutionError = cleanErrorMessage(result.run.stderr);
+      let finalGeneralOutput = warningsHeader;
+      if (judge0Result.compile_error) {
+        finalGeneralOutput += `Compile Error:\n${judge0Result.compile_error}`;
+      } else {
+        finalGeneralOutput += `Run Output:\n${judge0Result.stdout}`;
+        if (judge0Result.stderr) {
+          finalGeneralOutput += `\n\nRuntime Error:\n${judge0Result.stderr}`;
+        }
       }
-      
-      actualOutput = result.run.stdout || "";
-      
-      const passed = sampleOutput !== undefined 
-        ? (actualOutput.trim() === sampleOutput.trim() && !currentCompileError && !currentExecutionError) 
-        : (!currentCompileError && !currentExecutionError);
-      
-      let finalGeneralOutput = `Compile Output:\n${result.compile?.stdout || 'OK'}\n\nRun Output:\n${actualOutput}`;
-      if (currentCompileError) finalGeneralOutput = ``;
-      if (currentExecutionError) finalGeneralOutput = `${actualOutput}`;
+
+      const passed = sampleOutput !== undefined
+        ? (judge0Result.stdout.trim() === sampleOutput.trim() && !judge0Result.compile_error && !judge0Result.stderr)
+        : (!judge0Result.compile_error && !judge0Result.stderr);
 
       responseData.generalOutput = finalGeneralOutput;
       responseData.testCaseResults.push({
         testCaseNumber: 'Sample',
         input: sampleInput || "N/A",
         expectedOutput: sampleOutput || "N/A",
-        actualOutput: actualOutput.trim(),
+        actualOutput: judge0Result.stdout.trim(),
         passed: passed,
-        error: currentCompileError || currentExecutionError,
+        error: judge0Result.compile_error || judge0Result.stderr || undefined,
       });
-      responseData.compileError = currentCompileError;
-      responseData.executionError = currentExecutionError;
+      responseData.compileError = judge0Result.compile_error;
+      responseData.executionError = judge0Result.stderr || undefined;
 
-    } else { // executionType === 'submit'
-      responseData.generalOutput = `Processing submission with Piston API for ${langInfo.language} v${langInfo.version}...\n`;
+    } else { // submit
+      responseData.generalOutput = warningsHeader + `Processing submission with Judge0 CE...\n`;
       if (!testCases || testCases.length === 0) {
         responseData.generalOutput += "No test cases provided for submission.\n";
       } else {
+        let halted = false;
         for (let i = 0; i < testCases.length; i++) {
           const tc = testCases[i];
-          const payload: PistonRequest = { ...pistonPayloadBase, stdin: tc.input };
-          
-          const pistonResponseRaw = await fetch('https://emkc.org/api/v2/piston/execute', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(payload),
-          });
+          const judge0Result = await runCodeOnJudge0(language, code, tc.input);
 
-          if (!pistonResponseRaw.ok) {
-            const errorText = await pistonResponseRaw.text();
-            console.error(`Piston API Error (submit, TC ${i + 1}):`, errorText);
-            responseData.testCaseResults.push({
-              testCaseNumber: i + 1, input: tc.input, expectedOutput: tc.expectedOutput,
-              actualOutput: `Error`, passed: false, error: `Piston API error: ${pistonResponseRaw.status}`,
-            });
-            if (i === 0) { // Critical error on first test case
-              responseData.executionError = `Piston API error on first test case: ${pistonResponseRaw.status}`;
-              break;
-            }
-            continue;
+          if (judge0Result.error) {
+            throw new Error(judge0Result.error);
           }
-          const result: PistonResponse = await pistonResponseRaw.json();
-          
-          let tcCompileError: string | undefined = undefined;
-          let tcRuntimeError: string | undefined = undefined;
-          let tcActualOutput = result.run.stdout || "";
 
-          if (result.compile && result.compile.stderr) {
-            tcCompileError = cleanErrorMessage(result.compile.stderr);
-            if (!responseData.compileError) responseData.compileError = tcCompileError;
-          } else if (result.run.stderr) {
-            tcRuntimeError = cleanErrorMessage(result.run.stderr);
-            if (i === 0 && !responseData.executionError && !responseData.compileError) responseData.executionError = tcRuntimeError;
-          }
-          
-          const passedThisTc = !tcCompileError && !tcRuntimeError && tcActualOutput.trim() === tc.expectedOutput.trim();
+          const passedThisTc = !judge0Result.compile_error && !judge0Result.stderr && judge0Result.stdout.trim() === tc.expectedOutput.trim();
 
           responseData.testCaseResults.push({
-            testCaseNumber: i + 1, input: tc.input, expectedOutput: tc.expectedOutput,
-            actualOutput: tcActualOutput.trim(), passed: passedThisTc,
-            error: tcCompileError || tcRuntimeError,
+            testCaseNumber: i + 1,
+            input: tc.input,
+            expectedOutput: tc.expectedOutput,
+            actualOutput: judge0Result.stdout.trim(),
+            passed: passedThisTc,
+            error: judge0Result.compile_error || judge0Result.stderr || undefined,
           });
 
-          if (responseData.compileError) {
+          if (judge0Result.compile_error) {
+            responseData.compileError = judge0Result.compile_error;
             responseData.generalOutput += `Compilation failed on test case ${i + 1}. Halting submission.\n`;
+            halted = true;
             break;
           }
-          if (i === 0 && responseData.executionError) {
+          if (i === 0 && judge0Result.stderr) {
+            responseData.executionError = judge0Result.stderr;
             responseData.generalOutput += `Execution error on first test case. Halting submission.\n`;
+            halted = true;
             break;
           }
         }
-        if (!responseData.compileError && !responseData.executionError) {
-            responseData.generalOutput += "All test cases processed via Piston API.\n";
+        if (!halted) {
+          responseData.generalOutput += "All test cases processed via Judge0 CE.\n";
         }
       }
     }
@@ -443,17 +576,89 @@ export async function POST(request: NextRequest) {
 
   } catch (error: any) {
     console.error('[API /api/execute-code] Error:', error);
-    // Fallback to mock for other errors if desired, or return a generic server error
-    try {
-        const bodyForMock = await request.json().catch(() => null); 
-        if (bodyForMock) {
-            console.warn("An error occurred with Piston API, falling back to mock API.");
-            const mockResponse = await executeWithMockAPI(bodyForMock as ExecuteCodeRequestBody);
-            mockResponse.generalOutput = `Error with Piston API (${error.message || 'Unknown error'}). Falling back to simulation.\n${mockResponse.generalOutput}`;
-            return NextResponse.json(mockResponse, { status: 200 });
+    if (body) {
+      const { language, code, testCases, sampleInput, sampleOutput, executionType } = body;
+      const lowerLang = language.toLowerCase();
+      const riskyWarnings = detectRiskyCode(code, language);
+      let warningsHeader = "";
+      if (riskyWarnings.length > 0) {
+        warningsHeader = riskyWarnings.join('\n') + '\n\n';
+      }
+      
+      // If language is Python or Javascript, try to run locally!
+      if (['python', 'py', 'javascript', 'js', 'node'].includes(lowerLang)) {
+        console.warn(`Judge0 execution failed (${error.message}). Attempting local sandbox execution...`);
+        try {
+          const responseData: ExecuteCodeResponseBody = {
+            generalOutput: warningsHeader + `Judge0 API unavailable (${error.message}). Executing locally on sandbox host...\n`,
+            testCaseResults: [],
+          };
+          
+          if (executionType === 'run') {
+            const localRun = runCodeLocally(language, code, sampleInput || "");
+            const passed = sampleOutput !== undefined 
+              ? (localRun.stdout.trim() === sampleOutput.trim() && localRun.success) 
+              : localRun.success;
+            
+            responseData.generalOutput += localRun.success
+              ? `Run Output:\n${localRun.stdout}`
+              : `Execution Error:\n${localRun.stderr}`;
+              
+            responseData.testCaseResults.push({
+              testCaseNumber: 'Sample',
+              input: sampleInput || "N/A",
+              expectedOutput: sampleOutput || "N/A",
+              actualOutput: localRun.stdout.trim(),
+              passed: passed,
+              error: localRun.success ? undefined : localRun.stderr,
+            });
+            if (!localRun.success) {
+              responseData.executionError = localRun.stderr;
+            }
+          } else { // submit
+            let firstExecutionErrorEncountered: string | undefined = undefined;
+            if (testCases && testCases.length > 0) {
+              for (let i = 0; i < testCases.length; i++) {
+                const tc = testCases[i];
+                const localRun = runCodeLocally(language, code, tc.input);
+                const passedThisTc = localRun.success && localRun.stdout.trim() === tc.expectedOutput.trim();
+                
+                responseData.testCaseResults.push({
+                  testCaseNumber: i + 1,
+                  input: tc.input,
+                  expectedOutput: tc.expectedOutput,
+                  actualOutput: localRun.stdout.trim(),
+                  passed: passedThisTc,
+                  error: localRun.success ? undefined : localRun.stderr,
+                });
+                
+                if (!localRun.success) {
+                  firstExecutionErrorEncountered = localRun.stderr;
+                  responseData.generalOutput += `Execution error on test case ${i + 1}. Halting submission.\n`;
+                  break;
+                }
+              }
+              if (!firstExecutionErrorEncountered) {
+                responseData.generalOutput += `All test cases processed successfully locally.\n`;
+              } else {
+                responseData.executionError = firstExecutionErrorEncountered;
+              }
+            } else {
+              responseData.generalOutput += `No test cases provided.\n`;
+            }
+          }
+          
+          return NextResponse.json(responseData, { status: 200 });
+        } catch (localError: any) {
+          console.error("Local execution fallback failed:", localError);
         }
-    } catch (fallbackError) {
-        console.error('[API /api/execute-code] Fallback mock API error:', fallbackError);
+      }
+      
+      // Fallback to mock API if local run is not supported or failed
+      console.warn("Falling back to mock API simulation.");
+      const mockResponse = await executeWithMockAPI(body);
+      mockResponse.generalOutput = warningsHeader + `Judge0 API failed (${error.message || 'Unknown error'}). Fallback simulation enabled.\n${mockResponse.generalOutput}`;
+      return NextResponse.json(mockResponse, { status: 200 });
     }
 
     return NextResponse.json(

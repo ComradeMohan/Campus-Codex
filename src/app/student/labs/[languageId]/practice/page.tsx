@@ -9,7 +9,12 @@ import { db } from '@/lib/firebase';
 import { doc, getDoc, collection, query, getDocs, orderBy, updateDoc, increment, serverTimestamp, FieldValue, where } from 'firebase/firestore';
 
 import { Button } from '@/components/ui/button';
-import { MonacoCodeEditor } from '@/components/editor/MonacoCodeEditor';
+import dynamic from 'next/dynamic';
+
+const MonacoCodeEditor = dynamic(
+  () => import('@/components/editor/MonacoCodeEditor').then((mod) => mod.MonacoCodeEditor),
+  { ssr: false, loading: () => <div className="flex h-full min-h-[400px] w-full items-center justify-center p-8 text-muted-foreground"><span className="mr-2">Loading Code Editor...</span></div> }
+);
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
@@ -471,8 +476,8 @@ export default function StudentPracticePage() {
 
 
   return (
-    <div className="container mx-auto py-4 md:py-8 space-y-6">
-      <div className="flex justify-between items-center flex-wrap gap-2">
+    <div className="w-full max-w-7xl mx-auto px-2 sm:px-4 py-4 md:py-8 space-y-4 md:space-y-6">
+      <div className="flex justify-between items-center flex-wrap gap-2 px-1">
         <h1 className="text-2xl md:text-3xl font-headline flex items-center">
           {isPlacementCourse ? <Briefcase className="w-7 h-7 md:w-8 md:h-8 mr-2 md:mr-3 text-primary" /> : <BookOpen className="w-7 h-7 md:w-8 md:h-8 mr-2 md:mr-3 text-primary" />}
           Practice: {language?.name || 'Subject'} {isSingleQuestionMode && questions.length > 0 ? ` - Question ${currentQuestionIndex + 1}` : ''}
@@ -492,13 +497,13 @@ export default function StudentPracticePage() {
       </div>
 
       {language && enrollmentProgress && totalPossibleLanguageScore > 0 && !isSingleQuestionMode && (
-        <Card className="shadow-md">
-          <CardHeader className="py-3 px-4 md:p-6">
-            <CardTitle className="text-md md:text-lg font-semibold">Overall {language.name} Progress</CardTitle>
+        <Card className="shadow-md border-border/40">
+          <CardHeader className="py-3 px-3 md:p-6">
+            <CardTitle className="text-sm md:text-lg font-semibold">Overall {language.name} Progress</CardTitle>
           </CardHeader>
-          <CardContent className="py-3 px-4 md:p-6">
-            <Progress value={currentProgressPercent} className="w-full h-2.5 md:h-3 mb-1" />
-            <p className="text-xs md:text-sm text-muted-foreground text-right">
+          <CardContent className="py-3 px-3 md:p-6">
+            <Progress value={currentProgressPercent} className="w-full h-2 mb-1" />
+            <p className="text-[10px] md:text-sm text-muted-foreground text-right font-medium">
               {enrollmentProgress.currentScore} / {totalPossibleLanguageScore} points ({currentProgressPercent}%)
             </p>
           </CardContent>
@@ -506,12 +511,12 @@ export default function StudentPracticePage() {
       )}
 
       {isPlacementCourse && !isLoadingPageData && (
-        <Card className="shadow-md">
-            <CardHeader className="py-3 px-4 md:p-6">
-                <CardTitle className="text-md md:text-lg">Select Language to Solve</CardTitle>
-                <CardDescription className="text-xs md:text-sm">Choose one of your enrolled languages to attempt placement questions.</CardDescription>
+        <Card className="shadow-md border-border/40">
+            <CardHeader className="py-3 px-3 md:p-6">
+                <CardTitle className="text-sm md:text-lg">Select Language to Solve</CardTitle>
+                <CardDescription className="text-[10px] md:text-sm">Choose one of your enrolled languages to attempt placement questions.</CardDescription>
             </CardHeader>
-            <CardContent className="py-3 px-4 md:p-6">
+            <CardContent className="py-3 px-3 md:p-6">
                 {allStudentEnrolledLanguages.length > 0 ? (
                     <div className="max-w-xs">
                         <Label htmlFor="placement-language-select" className="text-xs md:text-sm">Solving Language</Label>
@@ -560,11 +565,11 @@ export default function StudentPracticePage() {
         </Card>
       ) : currentQuestion && languageForEditorAndExecution ? (
         <>
-          <Card className="shadow-lg">
-            <CardHeader className="py-3 px-4 md:p-6">
+          <Card className="shadow-lg border-border/40">
+            <CardHeader className="py-3 px-3 md:p-6">
               <div className="flex justify-between items-start flex-wrap gap-2">
                 <div>
-                    <CardTitle className="text-lg md:text-xl font-semibold mb-1">
+                    <CardTitle className="text-base md:text-xl font-semibold mb-1">
                       {isSingleQuestionMode ? `Question (from Course)` : `Question ${currentQuestionIndex + 1} of ${questions.length}`}
                     </CardTitle>
                     <div className="flex items-center gap-2 flex-wrap mt-1">
@@ -599,8 +604,8 @@ export default function StudentPracticePage() {
               </div>
               <CardDescription className="mt-3 text-xs md:text-sm">Read the problem statement carefully and write your solution below.</CardDescription>
             </CardHeader>
-            <CardContent className="space-y-3 md:space-y-4 py-3 px-4 md:p-6">
-              <p className="text-sm md:text-base whitespace-pre-wrap">{currentQuestion.questionText}</p>
+            <CardContent className="space-y-3 md:space-y-4 py-3 px-3 md:p-6">
+              <p className="text-xs md:text-base whitespace-pre-wrap">{currentQuestion.questionText}</p>
               {currentQuestion.sampleInput && (
                 <div>
                   <h4 className="font-semibold text-xs md:text-sm mb-1">Sample Input:</h4>
@@ -617,11 +622,11 @@ export default function StudentPracticePage() {
           </Card>
 
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 md:gap-6">
-            <Card className="shadow-md">
-              <CardHeader className="py-3 px-4 md:p-6">
-                <CardTitle className="text-md md:text-lg flex items-center"><Terminal className="w-4 h-4 md:w-5 md:w-5 mr-2" /> Your Code ({languageForEditorAndExecution.name})</CardTitle>
+            <Card className="shadow-md border-border/40">
+              <CardHeader className="py-3 px-3 md:p-6">
+                <CardTitle className="text-sm md:text-lg flex items-center"><Terminal className="w-4 h-4 md:w-5 md:w-5 mr-2" /> Your Code ({languageForEditorAndExecution.name})</CardTitle>
               </CardHeader>
-              <CardContent className="py-0 px-0 md:p-0 h-[40vh] md:h-[50vh] lg:h-[500px]">
+              <CardContent className="py-0 px-0 md:p-0 h-[45vh] md:h-[50vh] lg:h-[500px]">
                 <MonacoCodeEditor
                   language={languageForEditorAndExecution.name}
                   value={editorDisplayCode}
@@ -632,11 +637,11 @@ export default function StudentPracticePage() {
               </CardContent>
             </Card>
 
-            <Card className="shadow-md">
-              <CardHeader className="py-3 px-4 md:p-6">
-                <CardTitle className="text-md md:text-lg flex items-center"><Lightbulb className="w-4 h-4 md:w-5 md:w-5 mr-2" /> Output / Console</CardTitle>
+            <Card className="shadow-md border-border/40">
+              <CardHeader className="py-3 px-3 md:p-6">
+                <CardTitle className="text-sm md:text-lg flex items-center"><Lightbulb className="w-4 h-4 md:w-5 md:w-5 mr-2" /> Output / Console</CardTitle>
               </CardHeader>
-              <CardContent className="py-3 px-4 md:p-6">
+              <CardContent className="py-3 px-3 md:p-6">
                 {compileError && (
                     <div className="mb-3 p-2 md:p-3 bg-destructive/10 border border-destructive/50 text-destructive rounded-md text-xs md:text-sm">
                         <div className="flex items-center font-semibold mb-1"><AlertTriangle className="w-3.5 h-3.5 md:w-4 md:w-4 mr-2" />Compilation Error:</div>
@@ -651,34 +656,34 @@ export default function StudentPracticePage() {
                 )}
                 
                 {isExecutingCode && !compileError && !executionError && (
-                     <pre className="font-mono text-xs md:text-sm bg-muted/50 p-3 md:p-4 rounded-md min-h-[100px] max-h-[200px] md:min-h-[150px] md:max-h-[300px] overflow-y-auto whitespace-pre-wrap">
+                     <pre className="font-mono text-xs md:text-sm bg-muted/50 p-2.5 md:p-4 rounded-md min-h-[100px] max-h-[200px] md:min-h-[150px] md:max-h-[300px] overflow-y-auto whitespace-pre-wrap">
                         {output || "Executing..."}
                      </pre>
                 )}
 
                 {!isExecutingCode && !compileError && !executionError && output && (
-                     <pre className="font-mono text-xs md:text-sm bg-muted/50 p-3 md:p-4 rounded-md min-h-[100px] max-h-[200px] md:min-h-[150px] md:max-h-[300px] overflow-y-auto whitespace-pre-wrap">
+                     <pre className="font-mono text-xs md:text-sm bg-muted/50 p-2.5 md:p-4 rounded-md min-h-[100px] max-h-[200px] md:min-h-[150px] md:max-h-[300px] overflow-y-auto whitespace-pre-wrap">
                         {output}
                      </pre>
                 )}
 
                 {!isExecutingCode && !compileError && !executionError && !output && testResults.length === 0 && (
-                     <pre className="font-mono text-xs md:text-sm bg-muted/50 p-3 md:p-4 rounded-md min-h-[100px] md:min-h-[150px]">
+                     <pre className="font-mono text-xs md:text-sm bg-muted/50 p-2.5 md:p-4 rounded-md min-h-[100px] md:min-h-[150px]">
                         Code output and test results will appear here...
                      </pre>
                 )}
 
                 {testResults.length > 0 && !compileError && (
                   <div className="mt-3 space-y-2 md:space-y-3 max-h-[200px] md:max-h-[250px] overflow-y-auto">
-                    <h4 className="text-sm md:text-md font-semibold">Test Case Results:</h4>
+                    <h4 className="text-xs md:text-md font-semibold">Test Case Results:</h4>
                     {testResults.map((result) => (
-                      <Card key={result.testCaseNumber.toString()} className={`p-2 md:p-3 ${result.passed ? 'bg-green-500/10 border-green-500' : 'bg-red-500/10 border-red-500'}`}>
+                      <Card key={result.testCaseNumber.toString()} className={`p-2.5 md:p-3 ${result.passed ? 'bg-green-500/10 border-green-500/30' : 'bg-red-500/10 border-red-500/30'}`}>
                         <div className="flex justify-between items-center mb-1">
                           <span className="font-medium text-xs md:text-sm">Test Case {result.testCaseNumber}</span>
                           {result.passed ? (
-                            <span className="text-xs font-semibold text-green-700 bg-green-200 px-1.5 py-0.5 rounded-full flex items-center"><CheckCircle className="w-2.5 h-2.5 md:w-3 md:w-3 mr-1"/> PASSED</span>
+                            <span className="text-[10px] md:text-xs font-semibold text-green-700 bg-green-200 px-1.5 py-0.5 rounded-full flex items-center"><CheckCircle className="w-2.5 h-2.5 md:w-3 md:w-3 mr-1"/> PASSED</span>
                           ) : (
-                            <span className="text-xs font-semibold text-red-700 bg-red-200 px-1.5 py-0.5 rounded-full flex items-center"><XCircle className="w-2.5 h-2.5 md:w-3 md:w-3 mr-1"/> FAILED</span>
+                            <span className="text-[10px] md:text-xs font-semibold text-red-700 bg-red-200 px-1.5 py-0.5 rounded-full flex items-center"><XCircle className="w-2.5 h-2.5 md:w-3 md:w-3 mr-1"/> FAILED</span>
                           )}
                         </div>
                         <div className="text-xs space-y-1">

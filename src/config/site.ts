@@ -58,12 +58,12 @@ export const siteConfig = {
   },
   // Firebase configuration (placeholders - replace with your actual config)
   firebaseConfig: {
-    apiKey: "AIzaSyCVZJ9HsosLnGNtWofpB0UDYXGzhjJonYI",
-  authDomain: "tester-c330a.firebaseapp.com",
-  projectId: "tester-c330a",
-  storageBucket: "tester-c330a.appspot.com",
-  messagingSenderId: "457957223942",
-  appId: "1:457957223942:web:26a2d88dde5fb12b839d87"
+    apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY || "AIzaSyCVZJ9HsosLnGNtWofpB0UDYXGzhjJonYI",
+    authDomain: process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN || "tester-c330a.firebaseapp.com",
+    projectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID || "tester-c330a",
+    storageBucket: process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET || "tester-c330a.appspot.com",
+    messagingSenderId: process.env.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID || "457957223942",
+    appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID || "1:457957223942:web:26a2d88dde5fb12b839d87"
   },
 };
 

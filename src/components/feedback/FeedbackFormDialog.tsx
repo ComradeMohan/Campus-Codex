@@ -72,11 +72,9 @@ export function FeedbackFormDialog({ isOpen, onOpenChange, studentProfile }: Fee
         createdAt: serverTimestamp(),
       });
 
-      // Update the college document to indicate new feedback
-      const collegeDocRef = doc(db, 'colleges', studentProfile.collegeId);
-      await updateDoc(collegeDocRef, {
-        hasUnreadFeedback: true,
-      });
+
+      // Note: Admin checks unread feedback via Firestore query (where isRead==false)
+      // so we do not need to write a hasUnreadFeedback flag to the college document.
 
       toast({
         title: 'Feedback Submitted!',

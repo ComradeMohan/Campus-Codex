@@ -13,8 +13,13 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
-import { Sheet, SheetContent, SheetTrigger, SheetClose } from '@/components/ui/sheet';
-import { MonacoCodeEditor } from '@/components/editor/MonacoCodeEditor';
+import { Sheet, SheetContent, SheetTrigger, SheetClose, SheetTitle } from '@/components/ui/sheet';
+import dynamic from 'next/dynamic';
+
+const MonacoCodeEditor = dynamic(
+  () => import('@/components/editor/MonacoCodeEditor').then((mod) => mod.MonacoCodeEditor),
+  { ssr: false, loading: () => <div className="flex h-full min-h-[400px] w-full items-center justify-center p-8 text-muted-foreground"><span className="mr-2">Loading Code Editor...</span></div> }
+);
 import { LabAIChatAssistant } from '@/components/student/LabAIChatAssistant';
 import { useToast } from '@/hooks/use-toast';
 import { Loader2, Save, Play, Trash2, PlusCircle, FileCode, Terminal, AlertTriangle, ClipboardType, Share, PanelLeftOpen, X, GripHorizontal, Sparkles, Users } from 'lucide-react';
@@ -570,6 +575,19 @@ export default function StudentSandboxPage() {
   };
   const getCurrentCodeForAI = () => currentCode;
 
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
+        e.preventDefault();
+        const isDisabled = programmingLanguages.length === 0 && !selectedLanguage;
+        if (!isExecuting && !isSaving && currentCode.trim() && selectedLanguage && !isDisabled) {
+          handleRunCode();
+        }
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [isExecuting, isSaving, currentCode, selectedLanguage, programmingLanguages, handleRunCode]);
 
   const handleMouseDownOnResizer = (e: React.MouseEvent) => {
     e.preventDefault();
@@ -757,6 +775,7 @@ export default function StudentSandboxPage() {
             </Button>
           </SheetTrigger>
           <SheetContent side="left" className="w-[280px] p-0 flex flex-col">
+            <SheetTitle className="sr-only">Saved Programs File Explorer</SheetTitle>
             {sidebarContent(true)}
           </SheetContent>
         </Sheet>
@@ -834,10 +853,13 @@ export default function StudentSandboxPage() {
           
           <div
             onMouseDown={handleMouseDownOnResizer}
-            className="h-2.5 bg-muted hover:bg-accent cursor-row-resize w-full flex items-center justify-center shrink-0"
-            title="Drag to resize panel"
+            className="h-2 bg-border/20 hover:bg-primary/20 cursor-row-resize w-full flex items-center justify-center shrink-0 transition-colors border-y border-border/40 relative group"
+            title="Drag to resize panel (Ctrl + Enter to run)"
           >
-            <GripHorizontal className="w-4 h-4 text-muted-foreground group-hover:text-accent-foreground" />
+            <div className="h-[2px] w-8 bg-muted-foreground/35 group-hover:bg-primary/70 rounded transition-colors"></div>
+            <span className="absolute right-4 text-[9px] text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity font-mono hidden sm:inline">
+              Ctrl + Enter to Run
+            </span>
           </div>
 
           <div
@@ -868,18 +890,58 @@ export default function StudentSandboxPage() {
                 </TabsContent>
                 <TabsContent value="output" className="h-full mt-0 p-0">
                   <ScrollArea className="h-full bg-background">
-                    <pre className="p-2 text-xs md:text-sm whitespace-pre-wrap font-mono min-h-full">
-                      {isExecuting && !output && !errorOutput && <div className="flex justify-center items-center h-full"><Loader2 className="h-5 w-5 animate-spin" /></div>}
-                      {output || (!isExecuting && "Code output will appear here.")}
-                    </pre>
+                    <div className="min-h-full">
+                      {isExecuting && !output && !errorOutput ? (
+                        <div className="flex flex-col items-center justify-center py-10 px-4 h-full space-y-4 text-center select-none">
+                          <div className="relative flex items-center justify-center">
+                            <div className="absolute h-16 w-16 rounded-full border border-primary/30 animate-ping duration-1000"></div>
+                            <div className="absolute h-12 w-12 rounded-full border border-accent/20 animate-pulse"></div>
+                            <div className="h-10 w-10 rounded-full border-2 border-primary border-t-transparent animate-spin flex items-center justify-center bg-card shadow-lg">
+                              <Terminal className="h-4 w-4 text-primary animate-pulse" />
+                            </div>
+                          </div>
+                          <div className="space-y-1 max-w-xs animate-pulse">
+                            <h4 className="text-xs font-bold font-mono text-foreground flex items-center justify-center gap-1.5">
+                              <span className="h-2 w-2 rounded-full bg-emerald-500 animate-ping"></span>
+                              Running Sandbox VM...
+                            </h4>
+                            <p className="text-[10px] text-muted-foreground font-sans">Spinning up Judge0 isolated container. Please wait...</p>
+                          </div>
+                        </div>
+                      ) : (
+                        <pre className="p-2 text-xs md:text-sm whitespace-pre-wrap font-mono">
+                          {output || (!isExecuting && "Code output will appear here.")}
+                        </pre>
+                      )}
+                    </div>
                   </ScrollArea>
                 </TabsContent>
                 <TabsContent value="errors" className="h-full mt-0 p-0">
                   <ScrollArea className="h-full bg-background">
-                    <pre className="p-2 text-xs md:text-sm text-destructive whitespace-pre-wrap font-mono min-h-full">
-                       {isExecuting && !output && !errorOutput && <div className="flex justify-center items-center h-full"><Loader2 className="h-5 w-5 animate-spin" /></div>}
-                      {errorOutput || (!isExecuting && "Compilation or runtime errors will appear here.")}
-                    </pre>
+                    <div className="min-h-full">
+                      {isExecuting && !output && !errorOutput ? (
+                        <div className="flex flex-col items-center justify-center py-10 px-4 h-full space-y-4 text-center select-none">
+                          <div className="relative flex items-center justify-center">
+                            <div className="absolute h-16 w-16 rounded-full border border-primary/30 animate-ping duration-1000"></div>
+                            <div className="absolute h-12 w-12 rounded-full border border-accent/20 animate-pulse"></div>
+                            <div className="h-10 w-10 rounded-full border-2 border-primary border-t-transparent animate-spin flex items-center justify-center bg-card shadow-lg">
+                              <Terminal className="h-4 w-4 text-primary animate-pulse" />
+                            </div>
+                          </div>
+                          <div className="space-y-1 max-w-xs animate-pulse">
+                            <h4 className="text-xs font-bold font-mono text-foreground flex items-center justify-center gap-1.5">
+                              <span className="h-2 w-2 rounded-full bg-amber-500 animate-ping"></span>
+                              Checking Code Syntax...
+                            </h4>
+                            <p className="text-[10px] text-muted-foreground font-sans">Parsing source code and checking compilation rules...</p>
+                          </div>
+                        </div>
+                      ) : (
+                        <pre className="p-2 text-xs md:text-sm text-destructive whitespace-pre-wrap font-mono">
+                          {errorOutput || (!isExecuting && "Compilation or runtime errors will appear here.")}
+                        </pre>
+                      )}
+                    </div>
                   </ScrollArea>
                 </TabsContent>
               </div>

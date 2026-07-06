@@ -88,21 +88,23 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
       setCurrentUser(user);
       await fetchUserProfile(user); // Initial fetch on auth state change
+
+      // Fetch colleges inside onAuthStateChanged so request.auth is always set
+      // (prevents Firestore permission errors on the login/landing page)
+      if (user) {
+        try {
+          const collegesCollection = collection(db, 'colleges');
+          const collegeSnapshot = await getDocs(collegesCollection);
+          const collegeList = collegeSnapshot.docs.map(docSnap => ({ id: docSnap.id, ...docSnap.data() } as College));
+          setColleges(collegeList);
+        } catch (error) {
+          console.error("Error fetching colleges: ", error);
+        }
+      }
+
       setLoading(false);
     });
 
-    const fetchColleges = async () => {
-      try {
-        const collegesCollection = collection(db, 'colleges');
-        const collegeSnapshot = await getDocs(collegesCollection);
-        const collegeList = collegeSnapshot.docs.map(docSnap => ({ id: docSnap.id, ...docSnap.data() } as College));
-        setColleges(collegeList);
-      } catch (error) {
-        console.error("Error fetching colleges: ", error);
-      }
-    };
-
-    fetchColleges();
     return () => unsubscribe();
   }, []);
 

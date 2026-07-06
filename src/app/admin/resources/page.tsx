@@ -131,97 +131,146 @@ export default function ManageCollegeResourcesPage() {
   }
 
   return (
-    <div className="space-y-8">
-      <div className="flex justify-between items-center flex-wrap gap-4">
-        <h1 className="text-3xl font-headline flex items-center">
-          <ExternalLink className="w-8 h-8 mr-3 text-primary" />
-          Manage College Resources
-        </h1>
-        <Button asChild variant="outline">
-          <Link href="/admin/dashboard" className="flex items-center gap-2">
-            <ArrowLeft className="h-4 w-4" /> Back to Dashboard
+    <div className="space-y-6 md:space-y-8 animate-in fade-in duration-500">
+      {/* Header section */}
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 pb-2 border-b border-border/30">
+        <div className="space-y-1">
+          <h1 className="text-2xl md:text-3xl font-extrabold tracking-tight font-headline text-foreground flex items-center gap-2">
+            <ExternalLink className="w-6 h-6 md:w-8 md:h-8 text-primary" />
+            Manage College Resources
+          </h1>
+          <p className="text-xs md:text-sm text-muted-foreground">Share links, coding guides, and internship resources with students.</p>
+        </div>
+        <Button asChild variant="outline" size="sm" className="h-8 text-xs font-semibold w-fit">
+          <Link href="/admin/dashboard" className="flex items-center gap-1.5">
+            <ArrowLeft className="h-3.5 w-3.5" /> Back to Dashboard
           </Link>
         </Button>
       </div>
 
-      <Card className="shadow-lg">
-        <CardHeader>
-          <CardTitle className="text-xl font-headline">Add New Resource</CardTitle>
-          <CardDescription>Share helpful external links with your students.</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <Form {...form}>
-            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-              <FormField control={form.control} name="title" render={({ field }) => (
-                <FormItem><FormLabel>Title</FormLabel><FormControl><Input placeholder="e.g., Awesome Resume Builder" {...field} /></FormControl><FormMessage /></FormItem>
-              )}/>
-              <FormField control={form.control} name="description" render={({ field }) => (
-                <FormItem><FormLabel>Description</FormLabel><FormControl><Textarea placeholder="A brief description of the resource..." {...field} rows={3} /></FormControl><FormMessage /></FormItem>
-              )}/>
-              <FormField control={form.control} name="url" render={({ field }) => (
-                <FormItem><FormLabel>URL</FormLabel><FormControl><Input type="url" placeholder="https://example.com/resource" {...field} /></FormControl><FormMessage /></FormItem>
-              )}/>
-              <FormField control={form.control} name="category" render={({ field }) => (
-                <FormItem><FormLabel>Category</FormLabel><FormControl><Input placeholder="e.g., Resume, Coding, Internships, Free Courses" {...field} /></FormControl><FormMessage /></FormItem>
-              )}/>
-              <Button type="submit" disabled={isSubmitting}>
-                {isSubmitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <PlusCircle className="mr-2 h-4 w-4" />}
-                Add Resource
-              </Button>
-            </form>
-          </Form>
-        </CardContent>
-      </Card>
+      {/* Main split grid layout for laptop viewports */}
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+        {/* Left Column: Add New Resource Form */}
+        <Card className="lg:col-span-5 shadow-md border-border/40">
+          <CardHeader className="py-4 px-5 border-b border-border/30 bg-muted/10">
+            <CardTitle className="text-sm md:text-base font-bold font-headline">Add New Resource</CardTitle>
+            <CardDescription className="text-[10px] md:text-xs">Publish useful external reference bookmarks.</CardDescription>
+          </CardHeader>
+          <CardContent className="p-4 md:p-6">
+            <Form {...form}>
+              <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+                <FormField control={form.control} name="title" render={({ field }) => (
+                  <FormItem>
+                    <FormLabel className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Title</FormLabel>
+                    <FormControl><Input placeholder="e.g., Awesome Resume Builder" className="rounded-xl" {...field} /></FormControl>
+                    <FormMessage className="text-[10px]" />
+                  </FormItem>
+                )}/>
+                <FormField control={form.control} name="description" render={({ field }) => (
+                  <FormItem>
+                    <FormLabel className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Description</FormLabel>
+                    <FormControl><Textarea placeholder="A brief description of the resource..." className="rounded-xl resize-none" {...field} rows={3} /></FormControl>
+                    <FormMessage className="text-[10px]" />
+                  </FormItem>
+                )}/>
+                <FormField control={form.control} name="url" render={({ field }) => (
+                  <FormItem>
+                    <FormLabel className="text-xs font-bold uppercase tracking-wider text-muted-foreground">URL Link</FormLabel>
+                    <FormControl><Input type="url" placeholder="https://example.com/resource" className="rounded-xl" {...field} /></FormControl>
+                    <FormMessage className="text-[10px]" />
+                  </FormItem>
+                )}/>
+                <FormField control={form.control} name="category" render={({ field }) => (
+                  <FormItem>
+                    <FormLabel className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Category Tag</FormLabel>
+                    <FormControl><Input placeholder="e.g., Resume, Coding, Internships" className="rounded-xl" {...field} /></FormControl>
+                    <FormMessage className="text-[10px]" />
+                  </FormItem>
+                )}/>
+                <Button type="submit" className="w-full text-xs font-bold rounded-xl h-10 mt-2" disabled={isSubmitting}>
+                  {isSubmitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <PlusCircle className="mr-2 h-4 w-4" />}
+                  Add Resource
+                </Button>
+              </form>
+            </Form>
+          </CardContent>
+        </Card>
 
-      <Card className="shadow-lg mt-8">
-        <CardHeader>
-          <CardTitle className="text-xl font-headline">Existing Resources</CardTitle>
-          <CardDescription>List of resources currently available to students of {userProfile.collegeName}.</CardDescription>
-        </CardHeader>
-        <CardContent>
-          {isLoadingResources ? (
-            <div className="flex items-center justify-center py-6"><Loader2 className="h-6 w-6 animate-spin text-primary" /> <span className="ml-2">Loading resources...</span></div>
-          ) : resources.length === 0 ? (
-            <p className="text-muted-foreground text-center py-4">No resources added yet.</p>
-          ) : (
-            <div className="space-y-4">
-              {resources.map((resource) => (
-                <Card key={resource.id} className="bg-card border">
-                  <CardHeader className="pb-3">
-                    <div className="flex justify-between items-start flex-wrap gap-2">
-                        <CardTitle className="text-lg">{resource.title}</CardTitle>
-                        <div className="flex items-center gap-2">
-                             <Badge variant="secondary" className="text-xs"><Tag className="w-3 h-3 mr-1"/>{resource.category}</Badge>
-                            <AlertDialog onOpenChange={(open) => !open && setResourceToDelete(null)}>
-                                <AlertDialogTrigger asChild>
-                                    <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive hover:text-destructive hover:bg-destructive/10" onClick={() => setResourceToDelete(resource)}>
-                                        <Trash2 className="h-4 w-4" />
-                                    </Button>
-                                </AlertDialogTrigger>
-                                {resourceToDelete?.id === resource.id && (
-                                <AlertDialogContent>
-                                    <AlertDialogHeader><AlertDialogTitle>Delete "{resourceToDelete.title}"?</AlertDialogTitle><AlertDialogDescription>This action cannot be undone.</AlertDialogDescription></AlertDialogHeader>
-                                    <AlertDialogFooter>
-                                        <AlertDialogCancel onClick={() => setResourceToDelete(null)}>Cancel</AlertDialogCancel>
-                                        <AlertDialogAction onClick={handleDeleteResource} disabled={isSubmitting} className="bg-destructive hover:bg-destructive/90">{isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}Delete</AlertDialogAction>
-                                    </AlertDialogFooter>
-                                </AlertDialogContent>
-                                )}
-                            </AlertDialog>
-                        </div>
+        {/* Right Column: Existing Resources List */}
+        <Card className="lg:col-span-7 shadow-md border-border/40">
+          <CardHeader className="py-4 px-5 border-b border-border/30 bg-muted/10">
+            <CardTitle className="text-sm md:text-base font-bold font-headline">Existing Resources</CardTitle>
+            <CardDescription className="text-[10px] md:text-xs">List of resources currently available to students of {userProfile.collegeName}.</CardDescription>
+          </CardHeader>
+          <CardContent className="p-4 md:p-6">
+            {isLoadingResources ? (
+              <div className="flex flex-col items-center justify-center py-10 space-y-2 select-none">
+                <Loader2 className="h-6 w-6 animate-spin text-primary" />
+                <span className="text-xs font-mono text-muted-foreground">Loading resources...</span>
+              </div>
+            ) : resources.length === 0 ? (
+              <div className="text-center py-10">
+                <p className="text-xs text-muted-foreground font-sans">No resources published yet. Fill the form to create one!</p>
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                {resources.map((resource) => (
+                  <Card key={resource.id} className="group bg-card/30 border border-border/45 hover:border-primary/20 transition-all duration-300 flex flex-col justify-between p-4 rounded-2xl shadow-sm relative min-h-[140px]">
+                    <div className="space-y-2">
+                      <div className="flex justify-between items-start gap-2">
+                        <Badge variant="secondary" className="text-[9px] uppercase font-bold tracking-wider font-mono">
+                          {resource.category}
+                        </Badge>
+                        
+                        <AlertDialog onOpenChange={(open) => !open && setResourceToDelete(null)}>
+                          <AlertDialogTrigger asChild>
+                            <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive opacity-0 group-hover:opacity-100 focus:opacity-100 transition-opacity rounded-lg hover:bg-destructive/10" onClick={() => setResourceToDelete(resource)}>
+                              <Trash2 className="h-3.5 w-3.5" />
+                            </Button>
+                          </AlertDialogTrigger>
+                          {resourceToDelete?.id === resource.id && (
+                            <AlertDialogContent>
+                              <AlertDialogHeader>
+                                <AlertDialogTitle>Delete Resource?</AlertDialogTitle>
+                                <AlertDialogDescription>Are you sure you want to delete "{resourceToDelete.title}"? This action cannot be undone.</AlertDialogDescription>
+                              </AlertDialogHeader>
+                              <AlertDialogFooter>
+                                <AlertDialogCancel onClick={() => setResourceToDelete(null)}>Cancel</AlertDialogCancel>
+                                <AlertDialogAction onClick={handleDeleteResource} disabled={isSubmitting} className="bg-destructive hover:bg-destructive/90">
+                                  Delete
+                                </AlertDialogAction>
+                              </AlertDialogFooter>
+                            </AlertDialogContent>
+                          )}
+                        </AlertDialog>
+                      </div>
+                      
+                      <div className="space-y-1">
+                        <h4 className="font-extrabold text-sm text-foreground group-hover:text-primary transition-colors line-clamp-1">{resource.title}</h4>
+                        <p className="text-[11px] text-muted-foreground line-clamp-2 leading-relaxed">{resource.description}</p>
+                      </div>
                     </div>
-                  </CardHeader>
-                  <CardContent className="space-y-1">
-                    <p className="text-sm text-muted-foreground whitespace-pre-wrap line-clamp-3">{resource.description}</p>
-                    <a href={resource.url} target="_blank" rel="noopener noreferrer" className="text-xs text-primary hover:underline block truncate">{resource.url}</a>
-                     <p className="text-xs text-muted-foreground mt-1">Added {formatDistanceToNowStrict((resource.createdAt as any).toDate(), { addSuffix: true })}</p>
-                  </CardContent>
-                </Card>
-              ))}
-            </div>
-          )}
-        </CardContent>
-      </Card>
+
+                    <div className="pt-3 border-t border-border/30 mt-3 flex items-center justify-between gap-2 min-w-0">
+                      <a 
+                        href={resource.url} 
+                        target="_blank" 
+                        rel="noopener noreferrer" 
+                        className="text-[10px] text-primary hover:underline font-mono truncate max-w-[120px] flex items-center gap-1 shrink-0"
+                      >
+                        <ExternalLink className="w-3 h-3 shrink-0" /> visit
+                      </a>
+                      <span className="text-[9px] text-muted-foreground font-mono truncate shrink">
+                        {resource.createdAt ? formatDistanceToNowStrict((resource.createdAt as any).toDate(), { addSuffix: true }) : 'just now'}
+                      </span>
+                    </div>
+                  </Card>
+                ))}
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      </div>
     </div>
   );
 }

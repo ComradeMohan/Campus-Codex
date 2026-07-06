@@ -43,3 +43,11 @@ next-env.d.ts
 # firebase
 firebase-debug.log
 firestore-debug.log
+
+# local editor/tooling files
+.vscode/
+.history/
+Thumbs.db
+
+#Ignore vscode AI rules
+.github\instructions\codacy.instructions.md

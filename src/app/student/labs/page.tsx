@@ -70,7 +70,14 @@ export default function StudentCodingLabsPage() {
       });
 
       const fetchedDetailedLanguages = await Promise.all(languagesWithCoursesPromises);
-      setDetailedCollegeLanguages(fetchedDetailedLanguages);
+      const sortedLanguages = [...fetchedDetailedLanguages].sort((a, b) => {
+        const aHasCourses = a.courses && a.courses.length > 0;
+        const bHasCourses = b.courses && b.courses.length > 0;
+        if (aHasCourses && !bHasCourses) return 1;
+        if (!aHasCourses && bHasCourses) return -1;
+        return 0;
+      });
+      setDetailedCollegeLanguages(sortedLanguages);
 
     } catch (error) {
       console.error('Error fetching college languages and courses:', error);
@@ -328,7 +335,7 @@ export default function StudentCodingLabsPage() {
             </CardContent>
         </Card>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6 items-start">
           {detailedCollegeLanguages.map((language) => {
             const LanguageIcon = language.iconComponent;
             const isCurrentlyEnrollingInLanguage = isEnrolling[language.id];
@@ -336,29 +343,34 @@ export default function StudentCodingLabsPage() {
             const hasPublishedTestsForLanguage = languageHasPublishedTests.get(language.id) === true;
 
             return (
-              <Card key={language.id} className="shadow-lg hover:shadow-xl transition-shadow duration-300 ease-in-out bg-card flex flex-col h-full">
+              <Card key={language.id} className="shadow-md hover:shadow-lg border border-border/40 hover:border-primary/20 hover-glow transition-all duration-300 bg-card/60 backdrop-blur-sm flex flex-col rounded-2xl overflow-hidden">
                 <CardHeader className="flex flex-row items-start gap-4 pb-4">
-                  <LanguageIcon className="w-12 h-12 text-primary flex-shrink-0" />
-                  <div className="flex-grow">
-                    <CardTitle className="text-xl font-semibold font-headline">{language.name}</CardTitle>
-                    <CardDescription className="text-sm mt-1 text-muted-foreground line-clamp-2">
+                  <div className="p-3 rounded-2xl bg-primary/10 text-primary w-fit flex-shrink-0">
+                    <LanguageIcon className="w-7 h-7" />
+                  </div>
+                  <div className="flex-grow min-w-0">
+                    <CardTitle className="text-xl font-bold font-headline truncate">{language.name}</CardTitle>
+                    <CardDescription className="text-xs mt-1 text-muted-foreground line-clamp-2 leading-relaxed">
                       {language.description || 'Core programming subject for practice and assessments.'}
                     </CardDescription>
                   </div>
                 </CardHeader>
-                <CardContent className="space-y-4 flex-grow">
+                
+                <CardContent className="space-y-5 pb-6">
+                  {/* General Labs Practice/Enroll Actions */}
+                  <div className="space-y-3">
                     <div className="flex flex-col sm:flex-row gap-3">
                       {isAlreadyEnrolledInLanguage ? (
                         <>
-                          <Button asChild variant="secondary" className="w-full sm:flex-1 text-sm">
-                            <Link href={`/student/labs/${language.id}/practice`}>
-                              <PlayCircle className="mr-2 h-5 w-5" /> Practice Labs
+                          <Button asChild variant="secondary" className="w-full sm:flex-1 text-xs font-bold rounded-xl py-5 hover:scale-[1.02] active:scale-[0.98] transition-all">
+                            <Link href={`/student/labs/${language.id}/practice`} className="flex items-center justify-center gap-1.5">
+                              <PlayCircle className="h-4 w-4" /> Practice Labs
                             </Link>
                           </Button>
                           {hasPublishedTestsForLanguage && (
-                            <Button asChild variant="outline" className="w-full sm:flex-1 text-sm">
-                              <Link href={`/student/labs/${language.id}/tests`}>
-                                <ListChecks className="mr-2 h-5 w-5" /> View Tests
+                            <Button asChild variant="outline" className="w-full sm:flex-1 text-xs font-bold rounded-xl py-5 hover:scale-[1.02] active:scale-[0.98] transition-all border-primary/20 text-primary hover:bg-primary/5">
+                              <Link href={`/student/labs/${language.id}/tests`} className="flex items-center justify-center gap-1.5">
+                                <ListChecks className="h-4 w-4" /> View Tests
                               </Link>
                             </Button>
                           )}
@@ -367,74 +379,94 @@ export default function StudentCodingLabsPage() {
                         <Button 
                           onClick={() => handleEnrollInLanguage(language)} 
                           disabled={isCurrentlyEnrollingInLanguage || !userProfile?.uid} 
-                          className="w-full text-sm py-3" 
+                          className="w-full text-xs font-bold py-5 rounded-xl bg-primary hover:bg-primary/95 text-white hover:scale-[1.01] active:scale-[0.99] transition-all flex items-center justify-center" 
                           variant="default"
                         >
-                          {isCurrentlyEnrollingInLanguage ? <Loader2 className="mr-2 h-5 w-5 animate-spin" /> : <GraduationCap className="mr-2 h-5 w-5" />} 
+                          {isCurrentlyEnrollingInLanguage ? <Loader2 className="h-4 w-4 animate-spin mr-1.5" /> : <GraduationCap className="h-4 w-4 mr-1.5" />} 
                           Enroll in {language.name} Labs
                         </Button>
                       )}
                     </div>
+                  </div>
 
-                    {language.courses.length > 0 && (
-                      <>
-                        <Separator className="my-4" />
-                        <div>
-                            <h4 className="text-md font-semibold mb-3 text-foreground">
-                                Faculty-Led Courses
-                            </h4>
-                            <div className="grid grid-cols-1 gap-3">
-                                {language.courses.map(course => {
-                                    const enrollmentStatusInfo = getStudentCourseEnrollmentStatus(course);
-                                    const currentEnrollment = course.enrolledStudentUids?.length || 0;
-                                    const isCourseFullForNewEnrollment = currentEnrollment >= course.strength && (enrollmentStatusInfo.status === 'not_requested' || enrollmentStatusInfo.status === 'rejected_can_request_again');
-
-                                    return (
-                                        <Card key={course.id} className="bg-background hover:bg-muted/30 transition-colors shadow-sm">
-                                            <CardHeader className="pb-2 pt-4 px-4">
-                                                <CardTitle className="text-md font-medium line-clamp-1">{course.name}</CardTitle>
-                                                <CardDescription className="text-xs mt-0.5">By: {course.facultyName}</CardDescription>
-                                            </CardHeader>
-                                            <CardContent className="px-4 pb-3 space-y-1.5">
-                                                {course.description && <p className="text-xs text-muted-foreground line-clamp-2">{course.description}</p>}
-                                                <div className="text-xs text-muted-foreground flex items-center">
-                                                    <Users2 className="w-3.5 h-3.5 mr-1.5 text-primary"/> Capacity: {currentEnrollment} / {course.strength}
-                                                </div>
-                                            </CardContent>
-                                            <CardFooter className="px-4 pb-4 pt-2">
-                                                {enrollmentStatusInfo.status === 'enrolled' ? (
-                                                    <Button size="sm" variant="default" className="w-full text-xs h-8" asChild>
-                                                        <Link href={`/student/courses/${course.id}?languageId=${language.id}`}>
-                                                           <FileText className="mr-2 h-3.5 w-3.5"/> View Course Content
-                                                        </Link>
-                                                    </Button>
-                                                ) : enrollmentStatusInfo.status === 'pending' ? (
-                                                    <Button size="sm" variant="secondary" className="w-full text-xs h-8" disabled><Hourglass className="mr-2 h-3.5 w-3.5"/> Enrollment Pending</Button>
-                                                ) : enrollmentStatusInfo.status === 'rejected_can_request_again' ? (
-                                                    <div className="w-full space-y-1.5">
-                                                        <div className="w-full p-1.5 text-center text-xs bg-destructive/10 text-destructive rounded-md flex items-center justify-center gap-1"><Info className="h-3.5 w-3.5 shrink-0"/> {enrollmentStatusInfo.message}</div>
-                                                        <Button size="sm" className="w-full text-xs h-8" onClick={() => handleCourseEnrollmentRequest(course)} disabled={isProcessingCourseEnrollment[course.id] || !isAlreadyEnrolledInLanguage || isCourseFullForNewEnrollment} title={!isAlreadyEnrolledInLanguage ? `Enroll in ${language.name} labs first` : isCourseFullForNewEnrollment ? "Course is full" : `Request enrollment for ${course.name}`}>
-                                                            {isProcessingCourseEnrollment[course.id] ? <Loader2 className="mr-2 h-3.5 w-3.5 animate-spin"/> : <Send className="mr-2 h-3.5 w-3.5"/>} Request to Enroll Again
-                                                        </Button>
-                                                    </div>
-                                                ) : enrollmentStatusInfo.status === 'full' || isCourseFullForNewEnrollment ? (
-                                                    <Button size="sm" variant="outline" className="w-full text-xs h-8" disabled><UserX className="mr-2 h-3.5 w-3.5 text-muted-foreground"/> Course Full</Button>
-                                                ) : ( // status is 'not_requested'
-                                                    <Button size="sm" className="w-full text-xs h-8" onClick={() => handleCourseEnrollmentRequest(course)} disabled={isProcessingCourseEnrollment[course.id] || !isAlreadyEnrolledInLanguage} title={!isAlreadyEnrolledInLanguage ? `Enroll in ${language.name} labs first` : `Request enrollment for ${course.name}`}>
-                                                        {isProcessingCourseEnrollment[course.id] ? <Loader2 className="mr-2 h-3.5 w-3.5 animate-spin"/> : <Send className="mr-2 h-3.5 w-3.5"/>} Request to Enroll
-                                                    </Button>
-                                                )}
-                                                {!isAlreadyEnrolledInLanguage && (enrollmentStatusInfo.status === 'not_requested' || enrollmentStatusInfo.status === 'rejected_can_request_again') && !isCourseFullForNewEnrollment && (<p className="text-xs text-muted-foreground mt-1 text-center">Enroll in "{language.name}" labs first to request course enrollment.</p>)}
-                                            </CardFooter>
-                                        </Card>
-                                    );
-                                })}
-                            </div>
+                  {/* Courses Section */}
+                  {language.courses.length > 0 ? (
+                    <div className="flex flex-col pt-4 border-t border-border/40 min-h-0">
+                      <h4 className="text-xs font-bold uppercase tracking-wider text-muted-foreground mb-3 flex items-center gap-1.5">
+                        <Users className="h-3.5 w-3.5 text-primary" /> Faculty-Led Courses
+                      </h4>
+                      
+                      {!isAlreadyEnrolledInLanguage && (
+                        <div className="flex items-start gap-2 p-2.5 rounded-xl bg-amber-500/5 text-amber-600 dark:bg-amber-500/10 dark:text-amber-400 border border-amber-500/10 text-xs mb-3">
+                          <Info className="h-4 w-4 shrink-0 mt-0.5 text-amber-500" />
+                          <p className="leading-relaxed font-sans">
+                            Enroll in the <strong>{language.name} Labs</strong> above to request course enrollment.
+                          </p>
                         </div>
-                      </>
-                    )}
+                      )}
+
+                      <div className="space-y-3 max-h-[240px] overflow-y-auto pr-1 scrollbar-thin">
+                        {language.courses.map(course => {
+                          const enrollmentStatusInfo = getStudentCourseEnrollmentStatus(course);
+                          const currentEnrollment = course.enrolledStudentUids?.length || 0;
+                          const isCourseFullForNewEnrollment = currentEnrollment >= course.strength && (enrollmentStatusInfo.status === 'not_requested' || enrollmentStatusInfo.status === 'rejected_can_request_again');
+
+                          return (
+                            <div key={course.id} className="p-3.5 rounded-xl border border-border/40 bg-background/40 hover:bg-background/80 transition-colors flex flex-col justify-between gap-3">
+                              <div className="space-y-1">
+                                <div className="flex items-start justify-between gap-2">
+                                  <h5 className="text-sm font-bold text-foreground line-clamp-1 leading-snug">{course.name}</h5>
+                                  <span className="shrink-0 inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-secondary text-[10px] font-bold text-secondary-foreground font-mono">
+                                    {currentEnrollment}/{course.strength}
+                                  </span>
+                                </div>
+                                <p className="text-[11px] text-muted-foreground">Instructor: <span className="font-semibold text-foreground/80">{course.facultyName}</span></p>
+                                {course.description && <p className="text-xs text-muted-foreground/80 line-clamp-2 leading-relaxed pt-0.5">{course.description}</p>}
+                              </div>
+
+                              <div className="w-full">
+                                {enrollmentStatusInfo.status === 'enrolled' ? (
+                                  <Button size="sm" variant="default" className="w-full text-xs h-9 bg-primary hover:bg-primary/95 text-white rounded-lg font-bold" asChild>
+                                    <Link href={`/student/courses/${course.id}?languageId=${language.id}`} className="flex items-center justify-center gap-1.5">
+                                      <FileText className="h-3.5 w-3.5"/> View Course
+                                    </Link>
+                                  </Button>
+                                ) : enrollmentStatusInfo.status === 'pending' ? (
+                                  <Button size="sm" variant="secondary" className="w-full text-xs h-9 rounded-lg font-bold" disabled>
+                                    <Hourglass className="mr-1.5 h-3.5 w-3.5"/> Request Pending
+                                  </Button>
+                                ) : enrollmentStatusInfo.status === 'rejected_can_request_again' ? (
+                                  <div className="space-y-2">
+                                    <div className="p-2 text-center text-[10px] leading-relaxed bg-destructive/10 text-destructive rounded-lg flex items-center justify-center gap-1">
+                                      <Info className="h-3 w-3 shrink-0"/> {enrollmentStatusInfo.message}
+                                    </div>
+                                    <Button size="sm" className="w-full text-xs h-9 rounded-lg font-bold bg-primary text-white" onClick={() => handleCourseEnrollmentRequest(course)} disabled={isProcessingCourseEnrollment[course.id] || !isAlreadyEnrolledInLanguage || isCourseFullForNewEnrollment}>
+                                      {isProcessingCourseEnrollment[course.id] ? <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin"/> : <Send className="mr-1.5 h-3.5 w-3.5"/>} Request Again
+                                    </Button>
+                                  </div>
+                                ) : enrollmentStatusInfo.status === 'full' || isCourseFullForNewEnrollment ? (
+                                  <Button size="sm" variant="outline" className="w-full text-xs h-9 rounded-lg font-bold" disabled>
+                                    <UserX className="mr-1.5 h-3.5 w-3.5 text-muted-foreground"/> Course Full
+                                  </Button>
+                                ) : (
+                                  <Button size="sm" className="w-full text-xs h-9 rounded-lg font-bold bg-primary hover:bg-primary/95 text-white hover:scale-[1.01] active:scale-[0.99] transition-all" onClick={() => handleCourseEnrollmentRequest(course)} disabled={isProcessingCourseEnrollment[course.id] || !isAlreadyEnrolledInLanguage}>
+                                    {isProcessingCourseEnrollment[course.id] ? <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin"/> : <Send className="mr-1.5 h-3.5 w-3.5"/>} Request to Enroll
+                                  </Button>
+                                )}
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  ) : (
+                    isAlreadyEnrolledInLanguage && (
+                      <p className="text-[11px] text-muted-foreground text-center pt-3 border-t border-border/40 leading-relaxed font-sans">
+                        No faculty courses scheduled. General practice labs are open.
+                      </p>
+                    )
+                  )}
                 </CardContent>
-                {language.courses.length === 0 && isAlreadyEnrolledInLanguage && (<CardFooter><p className="text-xs text-muted-foreground text-center w-full">No specific faculty-led courses listed yet. You can still access general practice labs and tests.</p></CardFooter>)}
               </Card>
             );
           })}

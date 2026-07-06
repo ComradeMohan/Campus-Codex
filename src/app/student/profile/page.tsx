@@ -179,174 +179,179 @@ export default function StudentProfilePage() {
   }
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-6 md:space-y-8 animate-in fade-in duration-500">
+      {/* Email Verification Alert */}
       {!userProfile.isEmailVerified && (
-        <Card className="border-amber-500 bg-amber-50 dark:bg-amber-900/20 dark:border-amber-700 shadow-lg">
-          <CardHeader>
-            <CardTitle className="flex items-center text-amber-800 dark:text-amber-400">
-              <AlertTriangle className="mr-2 h-6 w-6" />
-              Verify Your Email Address
-            </CardTitle>
-            <CardDescription className="text-amber-700 dark:text-amber-500">
-              Your account is not yet verified. Please check your inbox for a verification link to ensure full account functionality.
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <p className="text-sm text-amber-600 dark:text-amber-600 mb-4">If you didn't receive the email or it has expired, you can request a new one.</p>
-            <div className="flex flex-wrap gap-3">
-              <Button onClick={handleResendVerification} disabled={isResending || isRefreshing} size="sm" variant="default" className="bg-amber-600 hover:bg-amber-700 text-white">
-                {isResending ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
-                Resend Verification Email
-              </Button>
-              <Button onClick={handleRefreshStatus} variant="secondary" disabled={isRefreshing || isResending} size="sm">
-                {isRefreshing ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <RefreshCw className="mr-2 h-4 w-4" />}
-                I've Verified, Refresh Status
-              </Button>
+        <div className="border border-amber-500/20 bg-amber-500/5 text-amber-900 dark:text-amber-300 dark:bg-amber-500/10 rounded-2xl p-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+          <div className="flex items-start gap-3">
+            <AlertTriangle className="h-5 w-5 text-amber-500 shrink-0 mt-0.5" />
+            <div className="space-y-1">
+              <h4 className="font-bold text-sm leading-snug">Verify your email address</h4>
+              <p className="text-xs text-muted-foreground leading-relaxed max-w-xl font-sans">
+                Your account is unverified. Check your inbox ({userProfile.email}) for a verification link to ensure full account access.
+              </p>
             </div>
-          </CardContent>
-        </Card>
+          </div>
+          <div className="flex gap-2 w-full sm:w-auto shrink-0">
+            <Button onClick={handleResendVerification} disabled={isResending || isRefreshing} size="sm" className="h-8 rounded-lg text-xs font-bold bg-amber-600 hover:bg-amber-700 text-white flex-1 sm:flex-none">
+              {isResending ? <Loader2 className="h-3 w-3 animate-spin mr-1" /> : null} Resend Email
+            </Button>
+            <Button onClick={handleRefreshStatus} variant="outline" disabled={isRefreshing || isResending} size="sm" className="h-8 rounded-lg text-xs font-bold border-amber-500/20 hover:bg-amber-500/10 flex-1 sm:flex-none">
+              {isRefreshing ? <Loader2 className="h-3 w-3 animate-spin mr-1" /> : <RefreshCw className="h-3 w-3 mr-1" />} Refresh
+            </Button>
+          </div>
+        </div>
       )}
 
-      <Card className="shadow-xl">
-        <CardHeader className="bg-gradient-to-br from-primary/5 via-background to-accent/5 dark:from-primary/10 dark:via-background dark:to-accent/10">
-          <div className="flex flex-col sm:flex-row items-center space-y-4 sm:space-y-0 sm:space-x-6">
-            <Avatar className="h-24 w-24 text-3xl">
+      {/* Combined Profile Overview Row */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        {/* Profile Card */}
+        <div className="lg:col-span-2 border border-border/40 bg-card/60 backdrop-blur-sm rounded-2xl p-5 md:p-6 shadow-md relative overflow-hidden flex flex-col justify-between">
+          <div className="absolute top-0 left-0 w-full h-[3px] bg-gradient-to-r from-primary to-accent"></div>
+          
+          <div className="flex flex-col sm:flex-row items-center sm:items-start gap-4 md:gap-5">
+            <Avatar className="h-20 w-20 md:h-24 md:w-24 text-2xl border-2 border-primary/20 shrink-0">
               <AvatarImage src={undefined} alt={userProfile.fullName} />
-              <AvatarFallback className="bg-primary text-primary-foreground">
+              <AvatarFallback className="bg-primary/10 text-primary font-bold">
                 {getInitials(userProfile.fullName)}
               </AvatarFallback>
             </Avatar>
-            <div>
-              <CardTitle className="text-3xl font-headline">{userProfile.fullName}</CardTitle>
-              <CardDescription className="text-md">
-                Student at {displayedCollegeName || 'N/A'}
-              </CardDescription>
-              <p className="text-sm text-muted-foreground">Reg. No: {userProfile.registrationNumber || 'N/A'}</p>
+            
+            <div className="text-center sm:text-left space-y-1.5 min-w-0 flex-1">
+              <h2 className="text-2xl md:text-3xl font-extrabold font-headline tracking-tight text-foreground">{userProfile.fullName}</h2>
+              <p className="text-xs md:text-sm font-semibold text-muted-foreground line-clamp-1">{displayedCollegeName || 'Student Portal'}</p>
+              {userProfile.registrationNumber && (
+                <p className="text-[10px] md:text-xs font-mono text-muted-foreground/80 bg-muted/50 px-2 py-0.5 rounded border border-border/20 w-fit mx-auto sm:mx-0">
+                  Reg No: {userProfile.registrationNumber}
+                </p>
+              )}
+              
+              <div className="pt-3 grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs text-muted-foreground font-sans">
+                <div className="flex items-center justify-center sm:justify-start gap-2 min-w-0">
+                  <Mail className="w-4 h-4 text-primary shrink-0" />
+                  <span className="truncate">{userProfile.email}</span>
+                </div>
+                {userProfile.phoneNumber && (
+                  <div className="flex items-center justify-center sm:justify-start gap-2 min-w-0">
+                    <Phone className="w-4 h-4 text-primary shrink-0" />
+                    <span className="truncate">{userProfile.phoneNumber}</span>
+                  </div>
+                )}
+              </div>
             </div>
           </div>
-        </CardHeader>
-        <CardContent className="pt-6 grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-4">
-          <div className="flex items-center space-x-3">
-            <Mail className="w-5 h-5 text-primary" />
-            <span className="text-muted-foreground">Email:</span>
-            <span>{userProfile.email}</span>
-            {!userProfile.isEmailVerified && <Badge variant="destructive" className="ml-2">Unverified</Badge>}
+        </div>
+
+        {/* Overall Progress Widget */}
+        <div className="border border-border/40 bg-card/60 backdrop-blur-sm rounded-2xl p-5 md:p-6 shadow-md relative overflow-hidden flex flex-col justify-center gap-4">
+          <div className="absolute top-0 left-0 w-full h-[3px] bg-gradient-to-r from-accent to-primary"></div>
+          <div className="space-y-1">
+            <h3 className="text-sm font-bold uppercase tracking-wider text-muted-foreground font-mono flex items-center gap-1.5">
+              <BarChart2 className="w-4 h-4 text-primary" /> Learning Progress
+            </h3>
+            <p className="text-[10px] text-muted-foreground font-sans">Your total performance metrics across all subjects.</p>
           </div>
-          {displayedCollegeName && (
-            <div className="flex items-center space-x-3">
-              <Building className="w-5 h-5 text-primary" />
-              <span className="text-muted-foreground">College:</span>
-              <span>{displayedCollegeName}</span>
-            </div>
-          )}
-          {userProfile.phoneNumber && (
-            <div className="flex items-center space-x-3">
-              <Phone className="w-5 h-5 text-primary" />
-              <span className="text-muted-foreground">Phone:</span>
-              <span>{userProfile.phoneNumber}</span>
-            </div>
-          )}
-        </CardContent>
-      </Card>
+          
+          <div className="space-y-2">
+            {isLoadingProgress ? (
+              <div className="flex items-center gap-2 py-2">
+                <Loader2 className="h-4 w-4 animate-spin text-primary" />
+                <span className="text-xs text-muted-foreground">Calculating progress...</span>
+              </div>
+            ) : totalPossibleOverallScore > 0 ? (
+              <div className="space-y-2.5">
+                <Progress value={(totalOverallScore / totalPossibleOverallScore) * 100} className="h-3" />
+                <div className="flex items-center justify-between text-xs font-semibold">
+                  <span className="text-primary font-bold">{Math.round((totalOverallScore / totalPossibleOverallScore) * 100)}% Complete</span>
+                  <span className="text-muted-foreground">{totalOverallScore} / {totalPossibleOverallScore} pts</span>
+                </div>
+              </div>
+            ) : (
+              <div className="text-xs text-muted-foreground leading-relaxed pt-1">
+                {enrolledCoursesDetails.length > 0 ? "No scorable questions published in your enrolled subjects yet." : "You are not enrolled in any lab subjects yet."}
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
 
-      <Card className="shadow-lg">
-        <CardHeader>
-          <CardTitle className="text-xl font-headline flex items-center">
-            <BarChart2 className="w-6 h-6 mr-2 text-primary" />
-            Overall Learning Progress
-          </CardTitle>
-          <CardDescription>Your total score accumulated across all enrolled courses.</CardDescription>
-        </CardHeader>
-        <CardContent>
-          {isLoadingProgress ? (
-            <div className="flex items-center space-x-2">
-                <Loader2 className="h-5 w-5 animate-spin text-primary" />
-                <span>Loading overall progress...</span>
-            </div>
-          ) : totalPossibleOverallScore > 0 ? (
-            <>
-              <Progress value={(totalOverallScore / totalPossibleOverallScore) * 100} className="w-full h-3 mb-1" />
-              <p className="text-sm text-muted-foreground text-right">
-                Total Score: <span className="font-semibold text-primary">{totalOverallScore}</span>
-                {' / '}{totalPossibleOverallScore}
-                &nbsp;({Math.round((totalOverallScore / totalPossibleOverallScore) * 100)}%)
-              </p>
-            </>
-          ) : (
-             <p className="text-muted-foreground">
-                Total Score: <span className="font-semibold text-primary">{totalOverallScore}</span>.
-                {enrolledCoursesDetails.length > 0 ? " (No scorable items in enrolled courses yet to calculate a percentage.)" : " (Not enrolled in any scorable courses yet.)"}
-             </p>
-          )}
-        </CardContent>
-      </Card>
-
-      <Card className="shadow-lg">
-        <CardHeader>
-          <CardTitle className="text-xl font-headline flex items-center">
-            <Award className="w-6 h-6 mr-2 text-primary" />
-            Progress per Course
-          </CardTitle>
-          <CardDescription>Detailed progress for each programming language you are enrolled in.</CardDescription>
-        </CardHeader>
-        <CardContent>
-          {isLoadingProgress ? (
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {[1,2].map(i => (
-                    <Card key={i} className="p-4 space-y-2">
-                        <div className="flex items-center space-x-3 mb-2">
-                            <Loader2 className="h-6 w-6 animate-spin text-primary" />
-                            <div className="h-6 bg-muted rounded w-1/2"></div>
-                        </div>
-                        <div className="h-3 bg-muted rounded w-full mb-1"></div>
-                        <div className="h-4 bg-muted rounded w-3/4"></div>
-                    </Card>
-                ))}
-            </div>
-          ) : enrolledCoursesDetails.length > 0 ? (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {enrolledCoursesDetails.map(course => {
-                const LanguageIcon = course.languageIcon;
-                const progressPercent = course.totalPossibleScore > 0 ? Math.round((course.currentScore / course.totalPossibleScore) * 100) : 0;
-                return (
-                  <Card key={course.languageId} className="shadow-md hover:shadow-lg transition-shadow">
-                    <CardHeader className="flex flex-row items-center space-x-3 pb-2">
-                        <LanguageIcon className="w-8 h-8 text-primary" />
-                        <CardTitle className="text-lg font-semibold">{course.languageName}</CardTitle>
-                    </CardHeader>
-                    <CardContent className="space-y-2">
+      {/* Progress per Course Section */}
+      <section className="space-y-4">
+        <h2 className="text-xl md:text-2xl font-bold font-headline flex items-center gap-2">
+          <Award className="w-5 h-5 text-primary" />
+          Progress per Course
+        </h2>
+        
+        {isLoadingProgress ? (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6">
+            {[1, 2, 3].map(i => (
+              <Card key={i} className="border border-border/40 rounded-2xl shadow-sm">
+                <CardHeader className="pb-2"><div className="h-5 bg-muted rounded w-3/4 animate-pulse"></div></CardHeader>
+                <CardContent className="space-y-2 pb-4">
+                  <div className="h-2.5 bg-muted rounded w-full animate-pulse"></div>
+                  <div className="h-4 bg-muted rounded w-1/3 animate-pulse"></div>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        ) : enrolledCoursesDetails.length > 0 ? (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6">
+            {enrolledCoursesDetails.map(course => {
+              const LanguageIcon = course.languageIcon;
+              const progressPercent = course.totalPossibleScore > 0 ? Math.round((course.currentScore / course.totalPossibleScore) * 100) : 0;
+              return (
+                <div 
+                  key={course.languageId} 
+                  className="rounded-2xl border border-border/40 bg-card/40 hover:bg-card/85 hover:border-primary/20 transition-all p-5 flex flex-col justify-between gap-4"
+                >
+                  <div className="space-y-3.5">
+                    <div className="flex items-center gap-3">
+                      <div className="p-2.5 rounded-xl bg-primary/10 text-primary">
+                        <LanguageIcon className="w-5 h-5" />
+                      </div>
+                      <div>
+                        <h3 className="text-sm md:text-base font-bold text-foreground leading-tight">{course.languageName}</h3>
+                        <p className="text-[9px] text-muted-foreground mt-0.5">Enrolled: {new Date(course.enrolledAt.seconds * 1000).toLocaleDateString()}</p>
+                      </div>
+                    </div>
+                    
+                    <div className="space-y-2">
                       {course.totalPossibleScore > 0 ? (
                         <>
-                            <Progress value={progressPercent} className="h-2.5" />
-                            <p className="text-xs text-muted-foreground text-right">
-                                Score: {course.currentScore} / {course.totalPossibleScore} ({progressPercent}%)
-                            </p>
+                          <Progress value={progressPercent} className="h-2" />
+                          <div className="flex justify-between items-center text-[10px] font-semibold text-muted-foreground">
+                            <span>Score: {course.currentScore} / {course.totalPossibleScore}</span>
+                            <span className="text-primary font-bold">{progressPercent}%</span>
+                          </div>
                         </>
                       ) : (
-                        <p className="text-xs text-muted-foreground">No scorable questions yet for this course. Current score: {course.currentScore}</p>
+                        <p className="text-[10px] text-muted-foreground italic">No scorable questions published yet.</p>
                       )}
-                       <p className="text-xs text-muted-foreground pt-1">Enrolled: {new Date(course.enrolledAt.seconds * 1000).toLocaleDateString()}</p>
-                    </CardContent>
-                    <CardFooter>
-                        <Button asChild variant="outline" className="w-full">
-                            <Link href={`/student/labs/${course.languageId}/practice`}>
-                                <BookOpen className="mr-2 h-4 w-4" /> Continue Practice
-                            </Link>
-                        </Button>
-                    </CardFooter>
-                  </Card>
-                );
-              })}
-            </div>
-          ) : (
-            <p className="text-muted-foreground text-center py-4">You are not enrolled in any courses yet, or progress data is unavailable.</p>
-          )}
-        </CardContent>
-      </Card>
+                    </div>
+                  </div>
+                  
+                  <Button asChild variant="secondary" size="sm" className="w-full h-8 rounded-lg text-xs font-bold">
+                    <Link href={`/student/labs/${course.languageId}/practice`} className="flex items-center justify-center gap-1.5">
+                      <BookOpen className="h-3.5 w-3.5" /> Continue Practice
+                    </Link>
+                  </Button>
+                </div>
+              );
+            })}
+          </div>
+        ) : (
+          <Card className="border border-border/40 rounded-2xl shadow-sm">
+            <CardContent className="py-12 text-center">
+              <BookOpen className="h-8 w-8 text-muted-foreground/60 mx-auto mb-3" />
+              <p className="text-sm text-muted-foreground font-sans">You are not enrolled in any courses yet, or progress data is unavailable.</p>
+            </CardContent>
+          </Card>
+        )}
+      </section>
       
       <div className="text-center mt-8">
-        <Button asChild variant="outline">
-            <Link href="/student/dashboard"><ArrowLeft className="mr-2 h-4 w-4"/> Back to Dashboard</Link>
+        <Button asChild variant="outline" className="rounded-lg text-xs font-bold h-9">
+            <Link href="/student/dashboard" className="flex items-center gap-1.5"><ArrowLeft className="h-4 w-4"/> Back to Dashboard</Link>
         </Button>
       </div>
     </div>

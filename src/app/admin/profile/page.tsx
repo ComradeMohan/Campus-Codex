@@ -97,86 +97,121 @@ export default function AdminProfilePage() {
   };
 
   return (
-    <div className="space-y-6">
-      <div className="flex justify-between items-center">
-        <h1 className="text-3xl font-headline">Admin Profile</h1>
-         <Button asChild variant="outline">
-            <Link href="/admin/dashboard">Back to Dashboard</Link>
+    <div className="space-y-6 md:space-y-8 animate-in fade-in duration-500">
+      {/* Header Area */}
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 pb-2 border-b border-border/30">
+        <div className="space-y-1">
+          <h1 className="text-2xl md:text-3xl font-extrabold tracking-tight font-headline text-foreground">Admin Profile</h1>
+          <p className="text-xs md:text-sm text-muted-foreground">Manage your credentials and access admin quick actions.</p>
+        </div>
+        <Button asChild variant="outline" size="sm" className="h-8 text-xs font-semibold w-fit">
+          <Link href="/admin/dashboard">Back to Dashboard</Link>
         </Button>
       </div>
-      <Card className="shadow-lg">
-        <CardHeader className="bg-gradient-to-br from-primary/5 via-background to-accent/5 dark:from-primary/10 dark:via-background dark:to-accent/10">
-          <div className="flex flex-col sm:flex-row items-center space-y-4 sm:space-y-0 sm:space-x-6">
-            <Avatar className="h-24 w-24 text-3xl">
+
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+        {/* Profile Card Info */}
+        <Card className="lg:col-span-7 shadow-md border-border/40 overflow-hidden">
+          <div className="bg-gradient-to-r from-primary/5 to-accent/5 p-5 border-b border-border/30 flex items-center gap-4">
+            <Avatar className="h-14 w-14 text-lg border-2 border-primary/20 shrink-0">
               <AvatarImage src={undefined} alt={userProfile.fullName} />
-              <AvatarFallback className="bg-primary text-primary-foreground">
+              <AvatarFallback className="bg-primary text-primary-foreground font-extrabold">
                 {getInitials(userProfile.fullName)}
               </AvatarFallback>
             </Avatar>
-            <div>
-              <CardTitle className="text-3xl font-headline">{userProfile.fullName}</CardTitle>
-              <CardDescription className="text-md">
-                Administrator at {userProfile.collegeName || 'Your College'}
-              </CardDescription>
+            <div className="min-w-0">
+              <h3 className="font-extrabold text-lg md:text-xl text-foreground truncate">{userProfile.fullName}</h3>
+              <p className="text-xs text-muted-foreground truncate capitalize">{userProfile.role} • {userProfile.collegeName || 'Campus Codex Admin'}</p>
             </div>
           </div>
-        </CardHeader>
-        <CardContent className="pt-6 space-y-4">
-          <div className="flex items-center space-x-3">
-            <Mail className="w-5 h-5 text-primary" />
-            <span className="text-muted-foreground">Email:</span>
-            <span>{userProfile.email}</span>
-          </div>
-          {userProfile.collegeName && (
-            <div className="flex items-center space-x-3">
-              <Building className="w-5 h-5 text-primary" />
-              <span className="text-muted-foreground">College:</span>
-              <span>{userProfile.collegeName}</span>
+          
+          <CardContent className="p-4 md:p-6 space-y-3.5">
+            <div className="flex items-center gap-3 text-xs md:text-sm">
+              <div className="p-1.5 bg-primary/10 text-primary rounded-lg shrink-0">
+                <Mail className="w-4 h-4" />
+              </div>
+              <div className="min-w-0 flex-1">
+                <p className="text-[10px] uppercase font-bold text-muted-foreground tracking-wider font-mono">Email Address</p>
+                <p className="font-medium text-foreground truncate">{userProfile.email}</p>
+              </div>
             </div>
-          )}
-          {userProfile.phoneNumber && (
-            <div className="flex items-center space-x-3">
-              <Phone className="w-5 h-5 text-primary" />
-              <span className="text-muted-foreground">Phone:</span>
-              <span>{userProfile.phoneNumber}</span>
-            </div>
-          )}
-           <div className="flex items-center space-x-3">
-            <UserCog className="w-5 h-5 text-primary" />
-            <span className="text-muted-foreground">Role:</span>
-            <span className="capitalize">{userProfile.role}</span>
-          </div>
-        </CardContent>
-        <CardFooter className="border-t pt-4 flex flex-wrap gap-3">
-            <Button variant="outline" onClick={() => setIsChangePasswordDialogOpen(true)}>
-                <KeyRound className="mr-2 h-4 w-4" /> Change Password
+
+            {userProfile.collegeName && (
+              <div className="flex items-center gap-3 text-xs md:text-sm">
+                <div className="p-1.5 bg-primary/10 text-primary rounded-lg shrink-0">
+                  <Building className="w-4 h-4" />
+                </div>
+                <div className="min-w-0 flex-1">
+                  <p className="text-[10px] uppercase font-bold text-muted-foreground tracking-wider font-mono">College Affiliation</p>
+                  <p className="font-medium text-foreground truncate">{userProfile.collegeName}</p>
+                </div>
+              </div>
+            )}
+
+            {userProfile.phoneNumber && (
+              <div className="flex items-center gap-3 text-xs md:text-sm">
+                <div className="p-1.5 bg-primary/10 text-primary rounded-lg shrink-0">
+                  <Phone className="w-4 h-4" />
+                </div>
+                <div className="min-w-0 flex-1">
+                  <p className="text-[10px] uppercase font-bold text-muted-foreground tracking-wider font-mono">Contact Phone</p>
+                  <p className="font-medium text-foreground truncate">{userProfile.phoneNumber}</p>
+                </div>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
+        {/* Admin Actions Panel */}
+        <Card className="lg:col-span-5 shadow-md border-border/40">
+          <CardHeader className="py-4 px-5 border-b border-border/30">
+            <CardTitle className="text-sm font-bold font-headline flex items-center gap-2">
+              <UserCog className="w-4 h-4 text-primary" /> Quick Actions
+            </CardTitle>
+          </CardHeader>
+          
+          <CardContent className="p-4 space-y-2.5">
+            <Button 
+              variant="outline" 
+              onClick={() => setIsChangePasswordDialogOpen(true)}
+              className="w-full justify-start text-left border-border/50 hover:bg-primary/5 hover:text-primary transition-all text-xs font-bold h-10 rounded-xl"
+            >
+              <KeyRound className="mr-2 h-4 w-4 shrink-0 text-primary" /> Change Password
             </Button>
-             {userProfile.role === 'admin' && (
-              <Button asChild variant="outline">
-                <Link href="/admin/feedback" className="flex items-center gap-2">
-                  <Mailbox className="h-4 w-4" />
-                  View Feedback
+
+            {userProfile.role === 'admin' && (
+              <Button asChild variant="outline" className="w-full justify-start text-left border-border/50 hover:bg-primary/5 hover:text-primary transition-all text-xs font-bold h-10 rounded-xl">
+                <Link href="/admin/feedback" className="flex items-center w-full">
+                  <Mailbox className="mr-2 h-4 w-4 shrink-0 text-primary" />
+                  <span className="flex-1">View Student Feedback</span>
                   {unreadFeedbackCount > 0 && (
-                    <Badge variant="destructive" className="ml-2 scale-90 px-1.5 py-0.5">
+                    <Badge variant="destructive" className="ml-2 px-1.5 py-0.5 text-[9px]">
                       {unreadFeedbackCount}
                     </Badge>
                   )}
                 </Link>
               </Button>
             )}
+
             {userProfile.role === 'admin' && (
-              <Button asChild variant="outline">
-                <Link href="/admin/users" className="flex items-center gap-2">
-                  <Users className="h-4 w-4" />
-                  Manage Users
+              <Button asChild variant="outline" className="w-full justify-start text-left border-border/50 hover:bg-primary/5 hover:text-primary transition-all text-xs font-bold h-10 rounded-xl">
+                <Link href="/admin/users">
+                  <Users className="mr-2 h-4 w-4 shrink-0 text-primary" /> Manage Accounts
                 </Link>
               </Button>
             )}
-            <Button variant="outline" onClick={() => setIsFeatureRequestDialogOpen(true)}>
-                <Lightbulb className="mr-2 h-4 w-4" /> Suggest a Feature
+
+            <Button 
+              variant="outline" 
+              onClick={() => setIsFeatureRequestDialogOpen(true)}
+              className="w-full justify-start text-left border-border/50 hover:bg-primary/5 hover:text-primary transition-all text-xs font-bold h-10 rounded-xl"
+            >
+              <Lightbulb className="mr-2 h-4 w-4 shrink-0 text-primary" /> Suggest a Feature
             </Button>
-        </CardFooter>
-      </Card>
+          </CardContent>
+        </Card>
+      </div>
+
       <ChangePasswordDialog 
         email={userProfile.email}
         isOpen={isChangePasswordDialogOpen}

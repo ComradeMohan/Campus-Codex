@@ -5,8 +5,8 @@ import {config} from 'dotenv';
 // Ensure dotenv config is called to load environment variables
 config();
 
-// Default to Gemini 2.0 Flash if no specific model is provided in environment
-const geminiModelName = process.env.GEMINI_MODEL || 'googleai/gemini-2.0-flash';
+// Default to Gemini 3.5 Flash if no specific model is provided in environment
+const geminiModelName = process.env.GEMINI_MODEL || 'googleai/gemini-3.5-flash';
 
 export const ai = genkit({
   plugins: [

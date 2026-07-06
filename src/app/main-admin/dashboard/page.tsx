@@ -16,6 +16,7 @@ import { useToast } from '@/hooks/use-toast';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 import { Input } from '@/components/ui/input';
 import { Dialog, DialogTrigger, DialogContent, DialogHeader, DialogTitle as DialogPrimitiveTitle, DialogDescription as DialogPrimitiveDescription, DialogFooter as DialogPrimitiveFooter, DialogClose } from '@/components/ui/dialog';
+import { Skeleton } from '@/components/ui/skeleton';
 
 interface PlatformStats {
   totalColleges: number;
@@ -311,9 +312,69 @@ export default function MainAdminDashboardPage() {
 
   if (isLoading) {
     return (
-      <div className="container mx-auto py-8 flex justify-center items-center min-h-[calc(100vh-10rem)]">
-        <Loader2 className="h-12 w-12 animate-spin text-primary" />
-        <span className="ml-4 text-lg">Loading Platform Analytics...</span>
+      <div className="space-y-6 md:space-y-8 animate-pulse">
+        {/* Header Skeleton */}
+        <div className="space-y-2 pb-2 border-b border-border/30">
+          <Skeleton className="h-9 w-1/3 rounded-lg bg-muted/40" />
+          <Skeleton className="h-4 w-2/3 rounded-md bg-muted/40" />
+        </div>
+
+        {/* Stats Grid Skeleton */}
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4">
+          {[...Array(6)].map((_, i) => (
+            <Card key={i} className="border border-border/40 bg-card/45 p-4 rounded-xl flex items-center justify-between">
+              <div className="space-y-1.5 min-w-0 flex-1 mr-3">
+                <Skeleton className="h-3 w-1/2 rounded bg-muted/40" />
+                <Skeleton className="h-6 w-2/3 rounded-md bg-muted/40" />
+              </div>
+              <Skeleton className="h-8 w-8 rounded-lg shrink-0 bg-muted/40" />
+            </Card>
+          ))}
+        </div>
+
+        {/* Pending Registrations Skeleton */}
+        <Card className="shadow-md border-border/40">
+          <CardHeader className="py-4 px-5 border-b border-border/30 bg-muted/10 space-y-2">
+            <Skeleton className="h-5 w-1/4 rounded bg-muted/40" />
+            <Skeleton className="h-3.5 w-1/2 rounded bg-muted/40" />
+          </CardHeader>
+          <CardContent className="p-4 md:p-6 space-y-4">
+            {[...Array(2)].map((_, i) => (
+              <div key={i} className="flex justify-between items-center gap-4 py-2 border-b border-border/10 pb-4">
+                <div className="space-y-1.5 flex-1">
+                  <Skeleton className="h-4 w-1/3 rounded bg-muted/40" />
+                  <Skeleton className="h-3 w-1/2 rounded bg-muted/40" />
+                </div>
+                <div className="flex gap-2">
+                  <Skeleton className="h-8 w-20 rounded-lg bg-muted/40" />
+                  <Skeleton className="h-8 w-20 rounded-lg bg-muted/40" />
+                </div>
+              </div>
+            ))}
+          </CardContent>
+        </Card>
+
+        {/* Registered Colleges Skeleton */}
+        <Card className="shadow-md border-border/40">
+          <CardHeader className="py-4 px-5 border-b border-border/30 bg-muted/10 space-y-2">
+            <Skeleton className="h-5 w-1/4 rounded bg-muted/40" />
+            <Skeleton className="h-3.5 w-1/2 rounded bg-muted/40" />
+          </CardHeader>
+          <CardContent className="p-4 md:p-6 space-y-4">
+            {[...Array(3)].map((_, i) => (
+              <div key={i} className="flex justify-between items-center gap-4 py-2 border-b border-border/10 pb-4">
+                <div className="space-y-1.5 flex-1">
+                  <Skeleton className="h-4 w-1/4 rounded bg-muted/40" />
+                  <Skeleton className="h-3 w-1/3 rounded bg-muted/40" />
+                </div>
+                <div className="flex gap-2">
+                  <Skeleton className="h-8 w-24 rounded-lg bg-muted/40" />
+                  <Skeleton className="h-8 w-24 rounded-lg bg-muted/40" />
+                </div>
+              </div>
+            ))}
+          </CardContent>
+        </Card>
       </div>
     );
   }
@@ -347,147 +408,252 @@ export default function MainAdminDashboardPage() {
 
 
   return (
-    <div className="space-y-8">
-      <Card className="shadow-xl bg-gradient-to-br from-primary/5 via-background to-accent/5 dark:from-primary/10 dark:via-background dark:to-accent/10">
-        <CardHeader className="p-6 md:p-8">
-          <div className="flex items-center space-x-4">
-            <BarChartHorizontalBig className="w-12 h-12 text-primary" />
-            <div>
-              <CardTitle className="text-3xl md:text-4xl font-headline text-primary">Main Admin Dashboard</CardTitle>
-              <CardDescription className="text-lg md:text-xl text-muted-foreground mt-1">
-                Global platform overview and key metrics for Campus Codex.
-              </CardDescription>
-            </div>
-          </div>
-        </CardHeader>
-      </Card>
+    <div className="space-y-6 md:space-y-8 animate-in fade-in duration-500">
+      {/* Header section */}
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 pb-2 border-b border-border/30">
+        <div className="space-y-1">
+          <h1 className="text-2xl md:text-3xl font-extrabold tracking-tight font-headline text-foreground flex items-center gap-2">
+            <BarChartHorizontalBig className="w-6 h-6 md:w-8 md:h-8 text-primary" />
+            Main Admin Console
+          </h1>
+          <p className="text-xs md:text-sm text-muted-foreground">Global platform overview, diagnostics, and college registrations for Campus Codex.</p>
+        </div>
+      </div>
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+      {/* KPI Stats Grid - 6 metrics in a single line on desktop */}
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4">
         {statCards.map(stat => (
-            <Card key={stat.title} className="shadow-lg hover:shadow-xl transition-shadow duration-300 ease-in-out transform hover:-translate-y-1">
-                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 pt-4 px-4">
-                    <CardTitle className="text-md font-semibold text-muted-foreground">{stat.title}</CardTitle>
-                    <stat.icon className={`h-6 w-6 ${stat.color || 'text-primary'}`} />
-                </CardHeader>
-                <CardContent className="pb-4 px-4">
-                    <div className="text-4xl font-bold text-foreground">{stat.value}</div>
-                </CardContent>
-            </Card>
+          <Card key={stat.title} className="border border-border/40 bg-card/45 backdrop-blur-sm p-3.5 rounded-xl flex items-center justify-between shadow-sm relative overflow-hidden transition-all duration-300 hover:border-primary/20">
+            <div className="space-y-0.5 min-w-0">
+              <span className="text-[9px] md:text-[10px] uppercase font-bold tracking-wider text-muted-foreground font-mono block truncate">
+                {stat.title.replace('Total ', '')}
+              </span>
+              <h3 className="text-xl md:text-2xl font-extrabold text-foreground leading-none">{stat.value}</h3>
+            </div>
+            <div className={`p-2 bg-primary/10 rounded-lg shrink-0 ${stat.color || 'text-primary'}`}>
+              <stat.icon className="w-4 h-4" />
+            </div>
+          </Card>
         ))}
       </div>
 
-      <Card className="shadow-lg">
-        <CardHeader>
-          <CardTitle className="text-xl font-headline">Pending College Registrations ({pendingCollegeRequests.length})</CardTitle>
-          <CardDescription>Review and approve or reject new college sign-ups.</CardDescription>
+      {/* Pending Registrations Section */}
+      <Card className="shadow-md border-border/40">
+        <CardHeader className="py-4 px-5 border-b border-border/30 bg-muted/10">
+          <CardTitle className="text-sm md:text-base font-bold font-headline flex items-center gap-1.5">
+            Pending Registrations 
+            <span className="text-xs font-mono px-1.5 py-0.5 bg-primary/10 text-primary rounded-full">
+              {pendingCollegeRequests.length}
+            </span>
+          </CardTitle>
+          <CardDescription className="text-[10px] md:text-xs">Review and approve or reject new college sign-ups.</CardDescription>
         </CardHeader>
-        <CardContent>
+        <CardContent className="p-4 md:p-6">
           {pendingCollegeRequests.length === 0 ? (
-            <p className="text-muted-foreground text-center py-4">No pending college registration requests.</p>
+            <p className="text-xs text-muted-foreground text-center py-6 font-sans">No pending college registration requests.</p>
           ) : (
-            <div className="overflow-x-auto">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>College Name</TableHead>
-                    <TableHead>Admin Name</TableHead>
-                    <TableHead>Admin Email</TableHead>
-                    <TableHead>Requested At</TableHead>
-                    <TableHead className="text-right">Actions</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {pendingCollegeRequests.map((req) => (
-                    <TableRow key={req.id}>
-                      <TableCell className="font-medium">{req.collegeName}</TableCell>
-                      <TableCell>{req.fullName}</TableCell>
-                      <TableCell>{req.email}</TableCell>
-                      <TableCell>{req.requestedAt?.toDate ? req.requestedAt.toDate().toLocaleDateString() : 'N/A'}</TableCell>
-                      <TableCell className="text-right space-x-2">
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          onClick={() => handleProcessCollegeRequest(req.id, 'approved')}
-                          disabled={processingRequestId === req.id}
-                          className="text-green-600 border-green-600 hover:bg-green-50 hover:text-green-700"
-                        >
-                          {processingRequestId === req.id && newStatusRef.current === 'approved' ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <UserCheck className="mr-1 h-4 w-4" />} Approve
-                        </Button>
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          onClick={() => handleProcessCollegeRequest(req.id, 'rejected')}
-                          disabled={processingRequestId === req.id}
-                          className="text-red-600 border-red-600 hover:bg-red-50 hover:text-red-700"
-                        >
-                          {processingRequestId === req.id && newStatusRef.current === 'rejected' ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <UserX className="mr-1 h-4 w-4" />} Reject
-                        </Button>
-                      </TableCell>
+            <>
+              {/* Desktop View: Table */}
+              <div className="hidden sm:block overflow-x-auto">
+                <Table>
+                  <TableHeader>
+                    <TableRow className="hover:bg-transparent">
+                      <TableHead className="h-9 text-[11px] font-bold uppercase font-mono">College Name</TableHead>
+                      <TableHead className="h-9 text-[11px] font-bold uppercase font-mono">Admin Name</TableHead>
+                      <TableHead className="h-9 text-[11px] font-bold uppercase font-mono">Admin Email</TableHead>
+                      <TableHead className="h-9 text-[11px] font-bold uppercase font-mono">Requested At</TableHead>
+                      <TableHead className="h-9 text-[11px] font-bold uppercase font-mono text-right">Actions</TableHead>
                     </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </div>
+                  </TableHeader>
+                  <TableBody>
+                    {pendingCollegeRequests.map((req) => (
+                      <TableRow key={req.id} className="hover:bg-muted/10">
+                        <TableCell className="font-semibold text-xs md:text-sm py-3">{req.collegeName}</TableCell>
+                        <TableCell className="text-xs py-3">{req.fullName}</TableCell>
+                        <TableCell className="text-xs py-3">{req.email}</TableCell>
+                        <TableCell className="text-xs font-mono py-3">
+                          {req.requestedAt?.toDate ? req.requestedAt.toDate().toLocaleDateString() : 'N/A'}
+                        </TableCell>
+                        <TableCell className="text-right py-3 space-x-2">
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => handleProcessCollegeRequest(req.id, 'approved')}
+                            disabled={processingRequestId === req.id}
+                            className="text-xs text-green-600 border-green-600/30 bg-green-500/5 hover:bg-green-500/10 h-8 rounded-lg px-2.5 font-bold"
+                          >
+                            {processingRequestId === req.id && newStatusRef.current === 'approved' ? (
+                              <Loader2 className="mr-1.5 h-3 w-3 animate-spin" />
+                            ) : (
+                              <UserCheck className="mr-1 h-3.5 w-3.5" />
+                            )}
+                            Approve
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => handleProcessCollegeRequest(req.id, 'rejected')}
+                            disabled={processingRequestId === req.id}
+                            className="text-xs text-red-600 border-red-600/30 bg-red-500/5 hover:bg-red-500/10 h-8 rounded-lg px-2.5 font-bold"
+                          >
+                            {processingRequestId === req.id && newStatusRef.current === 'rejected' ? (
+                              <Loader2 className="mr-1.5 h-3 w-3 animate-spin" />
+                            ) : (
+                              <UserX className="mr-1 h-3.5 w-3.5" />
+                            )}
+                            Reject
+                          </Button>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
+
+              {/* Mobile View: Cards */}
+              <div className="space-y-3 sm:hidden">
+                {pendingCollegeRequests.map((req) => (
+                  <div key={req.id} className="p-3 border border-border/45 rounded-2xl space-y-3 bg-muted/5">
+                    <div className="space-y-1">
+                      <h4 className="font-extrabold text-sm text-foreground leading-snug">{req.collegeName}</h4>
+                      <p className="text-xs text-muted-foreground">{req.fullName} • {req.email}</p>
+                      <p className="text-[10px] text-muted-foreground font-mono">
+                        Requested: {req.requestedAt?.toDate ? req.requestedAt.toDate().toLocaleDateString() : 'N/A'}
+                      </p>
+                    </div>
+                    <div className="flex gap-2 pt-2.5 border-t border-border/30">
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => handleProcessCollegeRequest(req.id, 'approved')}
+                        disabled={processingRequestId === req.id}
+                        className="flex-1 text-xs text-green-600 border-green-600/30 bg-green-500/5 hover:bg-green-500/10 h-8 rounded-lg font-bold"
+                      >
+                        Approve
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => handleProcessCollegeRequest(req.id, 'rejected')}
+                        disabled={processingRequestId === req.id}
+                        className="flex-1 text-xs text-red-600 border-red-600/30 bg-red-500/5 hover:bg-red-500/10 h-8 rounded-lg font-bold"
+                      >
+                        Reject
+                      </Button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </>
           )}
         </CardContent>
       </Card>
 
-      <Card className="shadow-lg">
-        <CardHeader>
-          <CardTitle className="text-xl font-headline">Registered Colleges ({collegesWithStats.length})</CardTitle>
-          <CardDescription>Overview of each college on the platform. Manage admin access.</CardDescription>
+      {/* Registered Colleges Section */}
+      <Card className="shadow-md border-border/40">
+        <CardHeader className="py-4 px-5 border-b border-border/30 bg-muted/10">
+          <CardTitle className="text-sm md:text-base font-bold font-headline flex items-center gap-1.5">
+            Registered Colleges
+            <span className="text-xs font-mono px-1.5 py-0.5 bg-primary/10 text-primary rounded-full">
+              {collegesWithStats.length}
+            </span>
+          </CardTitle>
+          <CardDescription className="text-[10px] md:text-xs">Overview of active colleges on the platform. Manage admin access.</CardDescription>
         </CardHeader>
-        <CardContent>
+        <CardContent className="p-4 md:p-6">
           {collegesWithStats.length === 0 ? (
-            <p className="text-muted-foreground text-center py-4">No colleges registered yet.</p>
+            <p className="text-xs text-muted-foreground text-center py-6 font-sans">No colleges registered yet.</p>
           ) : (
-            <div className="overflow-x-auto">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>College Name</TableHead>
-                    <TableHead className="text-center">Students</TableHead>
-                    <TableHead className="text-center">Faculty</TableHead>
-                    <TableHead>Admin Email</TableHead>
-                    <TableHead>Admin Name</TableHead>
-                    <TableHead className="text-right">Admin Actions</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {collegesWithStats.map((college) => (
-                    <TableRow key={college.id}>
-                      <TableCell className="font-medium">{college.name}</TableCell>
-                      <TableCell className="text-center">{college.studentCount}</TableCell>
-                      <TableCell className="text-center">{college.facultyCount}</TableCell>
-                      <TableCell>{college.adminEmail || 'N/A'}</TableCell>
-                      <TableCell>{college.adminName || 'N/A'}</TableCell>
-                      <TableCell className="text-right space-x-2">
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => handleSendPasswordReset(college.adminEmail, college.name)}
-                          disabled={isSendingReset[college.adminEmail || ''] || !college.adminEmail || isSendingAccessLink[college.adminEmail || '']}
-                          title={!college.adminEmail ? "No admin email available" : "Send password reset email"}
-                        >
-                          {isSendingReset[college.adminEmail || ''] ? <Loader2 className="h-4 w-4 animate-spin" /> : <KeyRound className="h-4 w-4" />}
-                          <span className="ml-1.5 hidden sm:inline">Password Reset</span>
-                        </Button>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => handleSendAccessLink(college.adminEmail, college.name)}
-                          disabled={isSendingAccessLink[college.adminEmail || ''] || !college.adminEmail || isSendingReset[college.adminEmail || '']}
-                          title={!college.adminEmail ? "No admin email available" : "Send magic sign-in link"}
-                        >
-                          {isSendingAccessLink[college.adminEmail || ''] ? <Loader2 className="h-4 w-4 animate-spin" /> : <LinkIcon className="h-4 w-4" />}
-                          <span className="ml-1.5 hidden sm:inline">Access Link</span>
-                        </Button>
-                      </TableCell>
+            <>
+              {/* Desktop View: Table */}
+              <div className="hidden sm:block overflow-x-auto">
+                <Table>
+                  <TableHeader>
+                    <TableRow className="hover:bg-transparent">
+                      <TableHead className="h-9 text-[11px] font-bold uppercase font-mono">College Name</TableHead>
+                      <TableHead className="h-9 text-[11px] font-bold uppercase font-mono text-center">Students</TableHead>
+                      <TableHead className="h-9 text-[11px] font-bold uppercase font-mono text-center">Faculty</TableHead>
+                      <TableHead className="h-9 text-[11px] font-bold uppercase font-mono">Admin Name</TableHead>
+                      <TableHead className="h-9 text-[11px] font-bold uppercase font-mono">Admin Email</TableHead>
+                      <TableHead className="h-9 text-[11px] font-bold uppercase font-mono text-right">Admin Actions</TableHead>
                     </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </div>
+                  </TableHeader>
+                  <TableBody>
+                    {collegesWithStats.map((college) => (
+                      <TableRow key={college.id} className="hover:bg-muted/10">
+                        <TableCell className="font-semibold text-xs md:text-sm py-3">{college.name}</TableCell>
+                        <TableCell className="text-center text-xs py-3">{college.studentCount}</TableCell>
+                        <TableCell className="text-center text-xs py-3">{college.facultyCount}</TableCell>
+                        <TableCell className="text-xs py-3">{college.adminName || 'N/A'}</TableCell>
+                        <TableCell className="text-xs py-3">{college.adminEmail || 'N/A'}</TableCell>
+                        <TableCell className="text-right py-3 space-x-2">
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => handleSendPasswordReset(college.adminEmail, college.name)}
+                            disabled={isSendingReset[college.adminEmail || ''] || !college.adminEmail || isSendingAccessLink[college.adminEmail || '']}
+                            title={!college.adminEmail ? "No admin email available" : "Send password reset email"}
+                            className="h-8 text-xs rounded-lg border-border/50 hover:bg-primary/5 hover:text-primary transition-all font-bold px-2.5"
+                          >
+                            {isSendingReset[college.adminEmail || ''] ? <Loader2 className="h-3 w-3 animate-spin" /> : <KeyRound className="h-3.5 w-3.5" />}
+                            <span className="ml-1.5 hidden md:inline">Reset Pass</span>
+                          </Button>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => handleSendAccessLink(college.adminEmail, college.name)}
+                            disabled={isSendingAccessLink[college.adminEmail || ''] || !college.adminEmail || isSendingReset[college.adminEmail || '']}
+                            title={!college.adminEmail ? "No admin email available" : "Send magic sign-in link"}
+                            className="h-8 text-xs rounded-lg border-border/50 hover:bg-primary/5 hover:text-primary transition-all font-bold px-2.5"
+                          >
+                            {isSendingAccessLink[college.adminEmail || ''] ? <Loader2 className="h-3 w-3 animate-spin" /> : <LinkIcon className="h-3.5 w-3.5" />}
+                            <span className="ml-1.5 hidden md:inline">Access Link</span>
+                          </Button>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
+
+              {/* Mobile View: Cards */}
+              <div className="space-y-3 sm:hidden">
+                {collegesWithStats.map((college) => (
+                  <div key={college.id} className="p-3 border border-border/45 rounded-2xl space-y-3 bg-muted/5">
+                    <div className="space-y-1">
+                      <h4 className="font-extrabold text-sm text-foreground leading-snug">{college.name}</h4>
+                      <p className="text-xs text-muted-foreground">Admin: {college.adminName || 'N/A'} ({college.adminEmail || 'N/A'})</p>
+                      <div className="flex gap-4 text-[10px] text-muted-foreground font-mono">
+                        <span>Students: <strong className="text-foreground">{college.studentCount}</strong></span>
+                        <span>Faculty: <strong className="text-foreground">{college.facultyCount}</strong></span>
+                      </div>
+                    </div>
+                    <div className="flex gap-2 pt-2.5 border-t border-border/30">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => handleSendPasswordReset(college.adminEmail, college.name)}
+                        disabled={isSendingReset[college.adminEmail || ''] || !college.adminEmail || isSendingAccessLink[college.adminEmail || '']}
+                        className="flex-1 text-[10px] h-8 rounded-lg font-bold"
+                      >
+                        {isSendingReset[college.adminEmail || ''] ? <Loader2 className="h-3 w-3 animate-spin mr-1" /> : <KeyRound className="h-3.5 w-3.5 mr-1" />}
+                        Reset Pass
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => handleSendAccessLink(college.adminEmail, college.name)}
+                        disabled={isSendingAccessLink[college.adminEmail || ''] || !college.adminEmail || isSendingReset[college.adminEmail || '']}
+                        className="flex-1 text-[10px] h-8 rounded-lg font-bold"
+                      >
+                        {isSendingAccessLink[college.adminEmail || ''] ? <Loader2 className="h-3 w-3 animate-spin mr-1" /> : <LinkIcon className="h-3.5 w-3.5 mr-1" />}
+                        Access Link
+                      </Button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </>
           )}
         </CardContent>
       </Card>
@@ -521,7 +687,6 @@ export default function MainAdminDashboardPage() {
           </DialogPrimitiveFooter>
         </DialogContent>
       </Dialog>
-
     </div>
   );
 }

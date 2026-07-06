@@ -65,76 +65,107 @@ export default function AdminDashboardPage() {
   }, [userProfile, toast]);
 
   return (
-    <div className="space-y-8">
-      <Card className="shadow-lg">
-        <CardHeader>
-          <CardTitle className="text-3xl font-headline">Admin Dashboard</CardTitle>
-          <CardDescription>Welcome, {userProfile?.fullName || 'Admin'}! Manage Campus Codex efficiently from here.</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <p>This is your central hub for overseeing all aspects of the Campus Codex platform. Use the sections below to navigate to different management areas.</p>
-        </CardContent>
-      </Card>
-      
-      {/* Temporary Seeding Utility Button */}
-       <Card className="border-amber-500 bg-amber-50">
-        <CardHeader>
-            <CardTitle className="flex items-center text-amber-800"><Database className="mr-2 h-5 w-5" /> Temporary DB Seed Utility</CardTitle>
-        </CardHeader>
-        <CardContent>
-            <p className="text-sm text-amber-700 mb-3">Click the button below to seed the database with the provided Java questions. This is a one-time operation.</p>
-            <Button asChild variant="secondary">
-                <Link href="/admin/seed">Go to Seeding Page</Link>
-            </Button>
-        </CardContent>
-       </Card>
+    <div className="space-y-6 md:space-y-8 animate-in fade-in duration-500">
+      {/* Header and Welcome Section */}
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 pb-2 border-b border-border/30">
+        <div className="space-y-1">
+          <h1 className="text-2xl md:text-3xl font-extrabold tracking-tight font-headline text-foreground">Admin Dashboard</h1>
+          <p className="text-xs md:text-sm text-muted-foreground">Welcome back, {userProfile?.fullName || 'Admin'}! Manage college workspace settings and labs.</p>
+        </div>
+        
+        <Button asChild size="sm" variant="outline" className="border-amber-500/20 bg-amber-500/5 text-amber-800 dark:text-amber-300 dark:hover:bg-amber-500/10 hover:bg-amber-500/10 h-8 rounded-lg text-xs font-bold w-fit">
+          <Link href="/admin/seed" className="flex items-center gap-1.5">
+            <Database className="h-3.5 w-3.5" /> Database Seeder
+          </Link>
+        </Button>
+      </div>
 
-      <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-        {dashboardItems.sort((a,b) => a.title.localeCompare(b.title)).map((item) => (
-          <Card key={item.title} className="shadow-md hover:shadow-lg transition-shadow">
-            <CardHeader className="flex flex-row items-center space-x-3 pb-2">
-              <item.icon className="w-8 h-8 text-primary" />
-              <CardTitle className="text-xl font-headline">{item.title}</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-3">
-              <p className="text-sm text-muted-foreground h-16 line-clamp-3">{item.description}</p>
-              <Button variant="outline" asChild className="w-full border-primary text-primary hover:bg-primary/10">
-                <Link href={item.href}>Go to {item.title}</Link>
-              </Button>
-            </CardContent>
-          </Card>
-        ))}
+      {/* KPI Stats widgets */}
+      <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+        <div className="border border-border/40 bg-card/40 backdrop-blur-sm p-4 rounded-2xl flex items-center justify-between shadow-sm relative overflow-hidden">
+          <div className="space-y-0.5">
+            <span className="text-[10px] uppercase font-bold tracking-wider text-muted-foreground font-mono">Total Students</span>
+            {isLoadingStats ? (
+              <Loader2 className="h-5 w-5 animate-spin text-primary mt-1" />
+            ) : (
+              <h3 className="text-2xl font-extrabold text-foreground">{studentCount ?? 0}</h3>
+            )}
+          </div>
+          <div className="p-2.5 bg-primary/10 text-primary rounded-xl shrink-0">
+            <Users className="w-5 h-5" />
+          </div>
+        </div>
+
+        <div className="border border-border/40 bg-card/40 backdrop-blur-sm p-4 rounded-2xl flex items-center justify-between shadow-sm relative overflow-hidden">
+          <div className="space-y-0.5">
+            <span className="text-[10px] uppercase font-bold tracking-wider text-muted-foreground font-mono">Active Subjects</span>
+            {isLoadingStats ? (
+              <Loader2 className="h-5 w-5 animate-spin text-primary mt-1" />
+            ) : (
+              <h3 className="text-2xl font-extrabold text-foreground">{activeCoursesCount ?? 0}</h3>
+            )}
+          </div>
+          <div className="p-2.5 bg-primary/10 text-primary rounded-xl shrink-0">
+            <BookOpen className="w-5 h-5" />
+          </div>
+        </div>
+
+        <div className="border border-border/40 bg-card/40 backdrop-blur-sm p-4 rounded-2xl flex items-center justify-between shadow-sm relative overflow-hidden col-span-2 md:col-span-1">
+          <div className="space-y-0.5 min-w-0">
+            <span className="text-[10px] uppercase font-bold tracking-wider text-muted-foreground font-mono">College Portal</span>
+            <h3 className="text-sm font-extrabold text-foreground truncate max-w-[150px] sm:max-w-[200px] md:max-w-[180px]">{userProfile?.collegeName || 'Portal Admin'}</h3>
+          </div>
+          <div className="p-2.5 bg-primary/10 text-primary rounded-xl shrink-0">
+            <SlidersHorizontal className="w-5 h-5" />
+          </div>
+        </div>
+      </div>
+
+      {/* Main Grid Actions */}
+      <div className="space-y-4">
+        <h2 className="text-lg font-bold font-headline flex items-center gap-2 px-1">
+          <Settings className="w-4 h-4 text-primary" />
+          Management Portal
+        </h2>
+        
+        <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
+          {dashboardItems.sort((a,b) => a.title.localeCompare(b.title)).map((item) => {
+            const Icon = item.icon;
+            return (
+              <Link 
+                key={item.title} 
+                href={item.href}
+                className="group border border-border/45 bg-card/50 hover:bg-card hover:border-primary/20 transition-all duration-300 p-5 rounded-2xl shadow-sm hover:shadow-md flex items-start gap-4 cursor-pointer relative overflow-hidden"
+              >
+                <div className="p-3 bg-primary/10 text-primary rounded-xl group-hover:bg-primary group-hover:text-primary-foreground transition-all duration-300 shrink-0">
+                  <Icon className="w-5 h-5" />
+                </div>
+                
+                <div className="space-y-1 pr-4 min-w-0">
+                  <h3 className="font-bold text-sm md:text-base text-foreground group-hover:text-primary transition-colors flex items-center gap-1">
+                    {item.title}
+                  </h3>
+                  <p className="text-xs text-muted-foreground line-clamp-2 leading-relaxed">{item.description}</p>
+                </div>
+                
+                <div className="absolute top-4 right-4 text-muted-foreground/40 group-hover:text-primary group-hover:translate-x-0.5 transition-all">
+                  <ExternalLink className="w-3.5 h-3.5" />
+                </div>
+              </Link>
+            );
+          })}
+        </div>
       </div>
        
-      <div className="grid gap-6 md:grid-cols-2">
-        <Card>
-          <CardHeader>
-            <CardTitle>Recent Activity</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p className="text-muted-foreground">No recent activity to display yet.</p>
-            {/* List recent registrations, test submissions etc. */}
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader>
-            <CardTitle>Quick Stats for {userProfile?.collegeName || 'Your College'}</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-2">
-            {isLoadingStats ? (
-              <div className="flex items-center space-x-2">
-                <Loader2 className="h-5 w-5 animate-spin text-primary" />
-                <span>Loading stats...</span>
-              </div>
-            ) : (
-              <>
-                <div className="flex justify-between"><span>Total Students:</span> <span className="font-semibold">{studentCount ?? 'N/A'}</span></div>
-                <div className="flex justify-between"><span>Active Main Subjects/Languages:</span> <span className="font-semibold">{activeCoursesCount ?? 'N/A'}</span></div>
-              </>
-            )}
-          </CardContent>
-        </Card>
-      </div>
+      {/* Bottom Section */}
+      <Card className="shadow-md border-border/40">
+        <CardHeader className="py-4 px-5">
+          <CardTitle className="text-base font-bold font-headline">Recent System Activities</CardTitle>
+        </CardHeader>
+        <CardContent className="py-0 px-5 pb-5">
+          <p className="text-xs text-muted-foreground font-sans">No recent platform occurrences captured yet. Student logins, course additions, and resource uploads will display here.</p>
+        </CardContent>
+      </Card>
     </div>
   );
 }

@@ -3,19 +3,59 @@ import type { Metadata, Viewport } from 'next';
 import Script from 'next/script';
 import { Toaster } from '@/components/ui/toaster';
 import { AuthProvider } from '@/contexts/AuthContext';
-import { CustomCursor } from '@/components/ui/CustomCursor';
 import './globals.css';
 
 const GA_MEASUREMENT_ID = process.env.NEXT_PUBLIC_GA_MEASUREMENT_ID || "G-CVD1KGT6GM"; // Updated ID
 const HOTJAR_ID = 6441159; // Your Hotjar Site ID
 
 export const metadata: Metadata = {
-  title: 'Campus Codex',
-  description: 'A learning platform for college students, offering interactive coding labs and online assessments to master programming languages.',
-  manifest: '/manifest.webmanifest', // next-pwa typically generates this
+  title: 'Campus Codex - Interactive Coding Labs & Online Assessments',
+  description: 'A learning platform for college students, offering interactive coding labs and online assessments to master programming languages like Python, Java, and more.',
+  keywords: ['coding', 'programming', 'learn to code', 'online coding labs', 'programming assessments', 'college coding', 'Python', 'Java', 'C++', 'JavaScript', 'computer science', 'coding practice', 'programming exercises', 'student learning platform'],
+  authors: [{ name: 'Campus Codex' }],
+  creator: 'Campus Codex',
+  publisher: 'Campus Codex',
+  manifest: '/manifest.webmanifest',
   icons: {
-    icon: '/icons/icon-192x192.png', // Default icon
-    apple: '/icons/icon-192x192.png', // Apple touch icon
+    icon: '/favicon.ico',
+    apple: '/favicon.ico',
+  },
+  openGraph: {
+    type: 'website',
+    locale: 'en_US',
+    url: 'https://campuscodex.com',
+    title: 'Campus Codex - Interactive Coding Labs & Online Assessments',
+    description: 'A learning platform for college students, offering interactive coding labs and online assessments to master programming languages.',
+    siteName: 'Campus Codex',
+    images: [
+      {
+        url: '/favicon.ico',
+        width: 512,
+        height: 512,
+        alt: 'Campus Codex Logo',
+      },
+    ],
+  },
+  twitter: {
+    card: 'summary_large_image',
+    title: 'Campus Codex - Interactive Coding Labs & Online Assessments',
+    description: 'A learning platform for college students, offering interactive coding labs and online assessments to master programming languages.',
+    images: ['/favicon.ico'],
+    creator: '@campuscodex',
+  },
+  robots: {
+    index: true,
+    follow: true,
+    googleBot: {
+      index: true,
+      follow: true,
+      'max-video-preview': -1,
+      'max-image-preview': 'large',
+      'max-snippet': -1,
+    },
+  },
+  verification: {
+    google: 'your-google-verification-code',
   },
 };
 
@@ -44,6 +84,24 @@ export default function RootLayout({
         <meta name="msapplication-TileColor" content="#29ABE2" />
         <meta name="msapplication-tap-highlight" content="no" />
         
+        {/* Theme Initialization Script to prevent flash and preserve theme on pages without Navbar */}
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `
+              (function() {
+                try {
+                  const storedTheme = localStorage.getItem('theme') || 'dark';
+                  if (storedTheme === 'dark') {
+                    document.documentElement.classList.add('dark');
+                  } else {
+                    document.documentElement.classList.remove('dark');
+                  }
+                } catch (_) {}
+              })();
+            `,
+          }}
+        />
+
         {/* Google Analytics */}
         {process.env.NODE_ENV === 'production' && GA_MEASUREMENT_ID && GA_MEASUREMENT_ID !== "G-XXXXXXXXXX" && (
           <>
@@ -85,7 +143,6 @@ export default function RootLayout({
         )}
       </head>
       <body className="font-body antialiased">
-        <CustomCursor />
         <AuthProvider>
           {children}
           <Toaster />

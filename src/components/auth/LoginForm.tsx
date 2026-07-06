@@ -24,7 +24,7 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { useEffect, useState } from 'react';
 import { useAuth }  from '@/contexts/AuthContext';
-import { Loader2, Eye, EyeOff } from 'lucide-react';
+import { Loader2, Eye, EyeOff, Terminal } from 'lucide-react';
 
 const loginSchema = z.object({
   username: z.string().min(3, { message: 'Please enter your email or phone number.' }),
@@ -254,39 +254,113 @@ export function LoginForm() {
   
   if (isMagicLinkFlow || isLoading && isMagicLinkFlow) { 
     return (
-      <Card className="w-full max-w-md shadow-xl">
-        <CardHeader>
-          <CardTitle className="text-2xl font-headline text-primary">Logging In...</CardTitle>
-          <CardDescription>
+      <Card className="w-full max-w-md border border-border/40 bg-card/60 backdrop-blur-md shadow-2xl rounded-2xl p-2 relative overflow-hidden">
+        <div className="absolute top-0 left-0 w-full h-[3px] bg-gradient-to-r from-primary to-accent"></div>
+        <CardHeader className="text-center pt-8">
+          <div className="mx-auto p-3 rounded-2xl bg-primary/10 text-primary w-fit mb-4 animate-pulse">
+            <Terminal className="h-8 w-8" />
+          </div>
+          <CardTitle className="text-2xl font-extrabold font-headline">Logging In...</CardTitle>
+          <CardDescription className="text-sm text-muted-foreground mt-1.5 font-sans">
             Please wait while we securely log you in. This might take a moment.
           </CardDescription>
         </CardHeader>
-        <CardContent className="flex justify-center py-8">
-          <Loader2 className="h-12 w-12 animate-spin text-primary" />
+        <CardContent className="flex justify-center py-10">
+          <Loader2 className="h-10 w-10 animate-spin text-primary" />
         </CardContent>
       </Card>
     );
   }
-
   return (
-    <Card className="w-full max-w-md shadow-xl">
-      <CardHeader>
-        <CardTitle className="text-2xl font-headline text-primary">Welcome Back!</CardTitle>
-        <CardDescription>
-          Login to your Campus Codex account to continue.
-        </CardDescription>
-      </CardHeader>
-      <CardContent>
+    <div className="w-full max-w-md lg:max-w-4xl lg:w-full border border-border/40 bg-card/70 backdrop-blur-md shadow-2xl rounded-2xl lg:rounded-3xl relative overflow-hidden lg:grid lg:grid-cols-12 animate-in fade-in slide-in-from-bottom-4 duration-500">
+      {/* Decorative top line */}
+      <div className="absolute top-0 left-0 w-full h-[3px] bg-gradient-to-r from-primary to-accent z-20"></div>
+
+      {/* Left Column: Visual Panel (Visible only on lg screens) */}
+      <div className="hidden lg:flex lg:col-span-5 bg-gradient-to-br from-primary via-indigo-600 to-accent text-white p-12 flex-col justify-between relative overflow-hidden">
+        {/* Visual elements */}
+        <div className="absolute inset-0 bg-[linear-gradient(to_right,#ffffff0a_1px,transparent_1px),linear-gradient(to_bottom,#ffffff0a_1px,transparent_1px)] bg-[size:14px_24px]"></div>
+        <div className="absolute top-[-20%] left-[-20%] h-[300px] w-[300px] rounded-full bg-white/10 blur-[80px] pointer-events-none"></div>
+
+        <div className="relative z-10 space-y-8">
+          <Link href="/" className="flex items-center space-x-2 group">
+            <div className="p-2 rounded-xl bg-white/15 text-white group-hover:bg-white/25 transition-all duration-300">
+              <Terminal className="h-6 w-6" />
+            </div>
+            <span className="font-extrabold text-xl font-headline tracking-tight text-white">Campus Codex</span>
+          </Link>
+
+          <div className="space-y-4 pt-12">
+            <h3 className="text-3xl font-extrabold font-headline leading-tight">Welcome Back!</h3>
+            <p className="text-sm text-white/80 leading-relaxed font-sans">
+              Log in to access your dashboard, resume your interactive coding sessions, and review your progress.
+            </p>
+          </div>
+
+          <ul className="space-y-4 pt-4">
+            <li className="flex items-center gap-3 text-sm text-white/90">
+              <div className="p-1 rounded-full bg-white/15 text-white">
+                <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="3"><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7"/></svg>
+              </div>
+              <span>Access your personalized dashboard</span>
+            </li>
+            <li className="flex items-center gap-3 text-sm text-white/90">
+              <div className="p-1 rounded-full bg-white/15 text-white">
+                <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="3"><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7"/></svg>
+              </div>
+              <span>Write and execute code in sandboxes</span>
+            </li>
+            <li className="flex items-center gap-3 text-sm text-white/90">
+              <div className="p-1 rounded-full bg-white/15 text-white">
+                <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="3"><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7"/></svg>
+              </div>
+              <span>Master concepts with AI flashcards</span>
+            </li>
+          </ul>
+        </div>
+
+        <div className="relative z-10 pt-8 border-t border-white/10 text-xs text-white/70">
+          <p className="font-mono">Empowering modern programming classrooms.</p>
+        </div>
+      </div>
+
+      {/* Right Column: Login Form */}
+      <div className="lg:col-span-7 p-6 sm:p-10 flex flex-col justify-center">
+        <div className="mb-6 lg:mb-8 text-center lg:text-left">
+          <Link href="/" className="lg:hidden mx-auto lg:mx-0 p-3 rounded-2xl bg-primary/10 text-primary w-fit mb-4 hover:scale-105 active:scale-95 transition-all duration-300 flex items-center justify-center">
+            <Terminal className="h-6 w-6" />
+          </Link>
+          <h2 className="text-2xl font-extrabold font-headline tracking-tight text-foreground">Welcome Back!</h2>
+          <p className="text-sm text-muted-foreground mt-1.5 font-sans">
+            Login to your Campus Codex account to continue.
+          </p>
+        </div>
+
         <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+          <div 
+            className="space-y-6"
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') {
+                e.preventDefault();
+                form.handleSubmit(onSubmit)();
+              }
+            }}
+          >
             <FormField
               control={form.control}
               name="username"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Email or Phone Number</FormLabel>
+                  <FormLabel className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Email or Phone Number</FormLabel>
                   <FormControl>
-                    <Input placeholder="user@example.com or 1234567890" {...field} />
+                    <Input 
+                      id="username"
+                      name="username"
+                      autoComplete="username"
+                      placeholder="user@example.com or 1234567890" 
+                      className="rounded-xl bg-background/50 border-border/50 focus-visible:ring-primary focus-visible:border-primary/50 py-5 px-4 text-sm transition-all" 
+                      {...field} 
+                    />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -298,35 +372,43 @@ export function LoginForm() {
               render={({ field }) => (
                 <FormItem>
                   <div className="flex justify-between items-center">
-                    <FormLabel>Password</FormLabel>
+                    <FormLabel className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Password</FormLabel>
                     <Button
                       type="button"
                       variant="link"
-                      className="px-0 h-auto text-sm text-primary hover:underline"
+                      className="px-0 h-auto text-xs text-primary hover:text-primary/80 transition-colors h-auto p-0 font-semibold"
                       onClick={handleForgotPassword}
                       disabled={isLoading || isSendingResetEmail}
                     >
                        {isSendingResetEmail ? (
-                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                         <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" />
                        ) : null}
                       Forgot Password?
                     </Button>
                   </div>
                   <FormControl>
                    <div className="relative">
-                      <Input type={showPassword ? "text" : "password"} placeholder="********" {...field} />
+                      <Input 
+                        id="password"
+                        name="password"
+                        autoComplete="current-password"
+                        type={showPassword ? "text" : "password"} 
+                        placeholder="••••••••" 
+                        className="rounded-xl bg-background/50 border-border/50 focus-visible:ring-primary focus-visible:border-primary/50 py-5 pl-4 pr-12 text-sm transition-all" 
+                        {...field} 
+                      />
                        <Button
                         type="button"
                         variant="ghost"
                         size="sm"
-                        className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent"
+                        className="absolute right-0 top-0 h-full px-3.5 py-2 hover:bg-transparent text-muted-foreground hover:text-foreground transition-colors"
                         onClick={() => setShowPassword((prev) => !prev)}
                         disabled={isLoading}
                       >
                         {showPassword ? (
-                          <EyeOff className="h-4 w-4" aria-hidden="true" />
+                          <EyeOff className="h-4.5 w-4.5" aria-hidden="true" />
                         ) : (
-                          <Eye className="h-4 w-4" aria-hidden="true" />
+                          <Eye className="h-4.5 w-4.5" aria-hidden="true" />
                         )}
                         <span className="sr-only">
                           {showPassword ? "Hide password" : "Show password"}
@@ -338,23 +420,23 @@ export function LoginForm() {
                 </FormItem>
               )}
             />
-            <Button type="submit" className="w-full bg-primary hover:bg-primary/90" disabled={isLoading || isSendingResetEmail}>
+            <Button type="button" onClick={form.handleSubmit(onSubmit)} className="w-full bg-primary hover:bg-primary/95 text-white shadow-lg shadow-primary/20 hover:shadow-primary/35 hover:scale-[1.01] active:scale-[0.99] transition-all duration-300 rounded-xl py-6 text-sm font-bold flex items-center justify-center" disabled={isLoading || isSendingResetEmail}>
               {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
               Login
             </Button>
-          </form>
+          </div>
         </Form>
-        <p className="mt-6 text-center text-sm text-muted-foreground">
+        <p className="mt-8 text-center text-xs text-muted-foreground leading-relaxed pt-4 border-t border-border/40">
           Don&apos;t have an account?{' '}
-          <Button variant="link" asChild className="px-0.5">
+          <Button variant="link" asChild className="px-0.5 text-xs text-primary hover:text-primary/80 transition-colors h-auto p-0 font-semibold">
             <Link href="/register/student">Register as Student</Link>
           </Button>
            {' or '}
-          <Button variant="link" asChild className="px-0.5">
+          <Button variant="link" asChild className="px-0.5 text-xs text-primary hover:text-primary/80 transition-colors h-auto p-0 font-semibold">
             <Link href="/register/admin">Register College</Link>
           </Button>
         </p>
-      </CardContent>
-    </Card>
+      </div>
+    </div>
   );
 }
